@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.algorithms.dijkstra import dijkstra, dijkstra_many
+from app.algorithms.tour import HELD_KARP_MAX_POINTS
 from app.graph.scenario import baseline_snapshot, build_snapshot, load_scenarios
 from app.main import app
 from mini_cases import MINI, edge_id, load_mini
@@ -143,12 +144,39 @@ def test_far_stop_names_the_stop(client):
     assert "xa" in res.json()["detail"] and "150" in res.json()["detail"]
 
 
-@pytest.mark.parametrize("stops", [[], [{"id": f"s{i}", **P["A"]} for i in range(15)]])
-def test_stop_count_limits(client, stops):
-    assert client.post("/api/tour", json={"depot": P["S"], "stops": stops}).status_code == 422
+def test_stop_count_limits(client):
+    assert client.post("/api/tour", json={"depot": P["S"], "stops": []}).status_code == 422
+    too_many = client.post("/api/tour", json={"depot": P["S"], "stops": [{"id": f"s{i}", **P["A"]} for i in range(15)]})
+    assert too_many.status_code == 422 and too_many.json()["detail"][0]["type"] == "too_long"
+    # 14 điểm qua được giới hạn số lượng; ở mini.json chúng trùng node nên mới bị 422 vì trùng.
+    fourteen = client.post("/api/tour", json={"depot": P["S"], "stops": [{"id": f"s{i}", **P["A"]} for i in range(14)]})
+    assert fourteen.status_code == 422 and "trùng" in fourteen.json()["detail"]
 
 
-def test_optimal_limited_to_ten_points(client):
-    stops = [{"id": f"s{i}", "lat": 10.7725 + i * 1e-5, "lon": 106.698} for i in range(10)]
-    res = client.post("/api/tour", json={"depot": P["S"], "stops": stops, "include_optimal": True})
+def test_optimal_limited_by_held_karp_size(client):
+    over = [{"id": f"s{i}", **P["A"]} for i in range(HELD_KARP_MAX_POINTS)]      # + kho = vượt 1 điểm
+    res = client.post("/api/tour", json={"depot": P["S"], "stops": over, "include_optimal": True})
+    assert res.status_code == 422 and "Held–Karp" in res.json()["detail"]
+    at_limit = over[:HELD_KARP_MAX_POINTS - 1]                                   # vừa đúng giới hạn
+    res = client.post("/api/tour", json={"depot": P["S"], "stops": at_limit, "include_optimal": True})
+    assert res.status_code == 422 and "trùng" in res.json()["detail"]           # qua giới hạn Held–Karp
+
+
+def test_open_tour_not_supported(client):
+    res = tour(client, ["A"], return_to_depot=False)
+    assert res.status_code == 422
+
+
+@pytest.mark.parametrize("path", ["/api/route", "/api/tour"])
+def test_boolean_is_not_an_edge_id(client, path):
+    body = ({"source": P["S"], "target": P["T"]} if path == "/api/route"
+            else {"depot": P["S"], "stops": [stop("A")]})
+    assert client.post(path, json={**body, "blocked_edge_ids": [False]}).status_code == 422
+
+
+@pytest.mark.parametrize("path", ["/api/route", "/api/tour"])
+def test_empty_scenario_id_rejected(client, path):
+    body = ({"source": P["S"], "target": P["T"]} if path == "/api/route"
+            else {"depot": P["S"], "stops": [stop("A")]})
+    res = client.post(path, json={**body, "scenario_id": ""})
     assert res.status_code == 422

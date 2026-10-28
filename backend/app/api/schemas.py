@@ -159,8 +159,9 @@ class TourRequest(BaseModel):
     depot: LatLon
     stops: list[TourStop] = Field(..., min_length=1, max_length=MAX_TOUR_STOPS)
     scenario_id: str | None = "baseline"
-    blocked_edge_ids: list[int] = Field(default_factory=list)
-    include_optimal: bool = False      # Held–Karp làm đối chứng, chỉ khi tổng số điểm ≤ 10
+    blocked_edge_ids: list[StrictInt] = Field(default_factory=list)   # StrictInt: không nhận true/false là id 1/0
+    include_optimal: bool = False      # Held–Karp làm đối chứng, chỉ khi tổng số điểm ≤ HELD_KARP_MAX_POINTS (11)
+    return_to_depot: Literal[True] = True   # chưa hỗ trợ tour mở (TOPIC 15.3): gửi false → 422
 
     @field_validator("stops")
     @classmethod

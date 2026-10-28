@@ -41,7 +41,8 @@ def _snap(graph: Graph, meta: GraphMeta, lat: float, lon: float, which: str) -> 
 def request_snapshot(graph: Graph, meta: GraphMeta, scenario_id: str | None, blocked_edge_ids: list[int],
                      scenarios: dict[str, Scenario]) -> Snapshot:
     """Snapshot cho riêng một request: hệ số ùn tắc của kịch bản + cạnh đóng (D4: không cache)."""
-    scenario_id = scenario_id or "baseline"
+    if scenario_id is None:              # chỉ null mới là baseline; chuỗi rỗng là id không có → 422
+        scenario_id = "baseline"
     if scenario_id not in scenarios:
         raise RouteInputError(f"Không có kịch bản {scenario_id!r}; các kịch bản đang có: {', '.join(scenarios)}")
     try:
