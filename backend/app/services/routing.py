@@ -38,6 +38,19 @@ def _snap(graph: Graph, meta: GraphMeta, lat: float, lon: float, which: str) -> 
     return s.node_id, s.snap_distance_m
 
 
+def request_snapshot(graph: Graph, meta: GraphMeta, scenario_id: str | None, blocked_edge_ids: list[int],
+                     scenarios: dict[str, Scenario]) -> Snapshot:
+    """Snapshot cho riêng một request: hệ số ùn tắc của kịch bản + cạnh đóng (D4: không cache)."""
+    scenario_id = scenario_id or "baseline"
+    if scenario_id not in scenarios:
+        raise RouteInputError(f"Không có kịch bản {scenario_id!r}; các kịch bản đang có: {', '.join(scenarios)}")
+    try:
+        blocked = validate_blocked(graph, blocked_edge_ids)
+    except ValueError as err:
+        raise RouteInputError(f"Cạnh đóng không hợp lệ: {err}") from None
+    return build_snapshot(graph, meta, scenarios[scenario_id], blocked)
+
+
 def build_geometry(
     graph: Graph,
     meta: GraphMeta,
@@ -109,13 +122,7 @@ def route(
     twins: list[int | None],
 ) -> RouteResponse:
     """Xử lý yêu cầu tìm đường theo contract v1 (ARCHITECTURE mục 4). Sai dữ liệu → RouteInputError."""
-    scenario_id = "baseline" if req.scenario_id is None else req.scenario_id   # chuỗi rỗng là id không có → 422
-    if scenario_id not in scenarios:
-        raise RouteInputError(f"Không có kịch bản {scenario_id!r}; các kịch bản đang có: {', '.join(scenarios)}")
-    try:
-        blocked = validate_blocked(graph, req.blocked_edge_ids)
-    except ValueError as err:
-        raise RouteInputError(f"Cạnh đóng không hợp lệ: {err}") from None
+    snap = request_snapshot(graph, meta, req.scenario_id, req.blocked_edge_ids, scenarios)
 
     # 1. Snap điểm đầu và điểm cuối về node gần nhất trong SCC, tối đa 150 m
     s_node, s_dist = _snap(graph, meta, req.source.lat, req.source.lon, "Điểm đi")
@@ -135,9 +142,6 @@ def route(
             snap_distance_m=t_dist,
         ),
     )
-
-    # 2. Snapshot cho riêng request này: hệ số ùn tắc của kịch bản + cạnh đóng (D4: không cache)
-    snap = build_snapshot(graph, meta, scenarios[scenario_id], blocked)
 
     # 3. Đo lường và chạy các thuật toán được yêu cầu
     results: dict[str, AlgorithmRouteResult] = {}

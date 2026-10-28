@@ -162,6 +162,27 @@ Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo ti
 - Kịch bản nạp lúc khởi động từ `SAIGO_SCENARIOS` (mặc định `data/config/scenarios.json`); `scenario_id` không có trong file → 422. `scenario_id: null` nghĩa là `baseline`.
 - `runtime_ms` đo theo đúng định nghĩa của benchmark (EXPERIMENT_PLAN mục 3.1 bước 5): với A*, thời gian dựng heuristic **được** tính vào. `geo_scale` (duyệt mọi cạnh) và bảng cạnh đối tính một lần lúc khởi động, nên request đầu tiên không bị đội giờ.
 
+**`POST /api/tour` (T72).** Tour khép kín kho → các điểm giao → kho, trên cùng snapshot (kịch bản + cạnh đóng) như `/api/route`.
+
+```json
+{"depot": {"lat": 10.7725, "lon": 106.6980},
+ "stops": [{"id": "nha-hat", "lat": 10.7766, "lon": 106.7031}, {"id": "nha-tho", "lat": 10.7798, "lon": 106.6990}],
+ "scenario_id": "baseline", "blocked_edge_ids": [], "include_optimal": false}
+```
+
+| Trường response | Ý nghĩa |
+|---|---|
+| `status` | `"ok"` hoặc `"infeasible_under_model"` (có chặng không đi được; xem `unreachable`) |
+| `snapped` | `"depot"` và id từng điểm giao → `{id, node_id, lat, lon, snap_distance_m}` |
+| `candidates` | `input`, `nearest_neighbor`, `nearest_neighbor_2opt` → `{stop_order, cost_s, distance_m, improvement_pct, edge_ids, geometry}`; rỗng khi không khả thi |
+| `chosen` | Phương án rẻ nhất; hòa thì giữ phương án đứng trước (không thay thứ tự nhập bằng lời giải tệ hơn) |
+| `optimal` | Chỉ khi `include_optimal` và tổng số điểm ≤ 10: `{stop_order, cost_s, gap_pct}` (gap của phương án được chọn) |
+| `unreachable` | Các cặp `{from_id, to_id}` không đi được |
+| `matrix_runtime_ms`, `order_runtime_ms` | Đo riêng thời gian xây ma trận và thời gian sắp thứ tự |
+
+- Ma trận xây bằng Dijkstra một nguồn tới các điểm còn lại cho từng hàng (`dijkstra_many`); tuyến của mỗi phương án ghép từ đúng các chặng đó, nên `cost_s` = tổng trọng số các cạnh trong `edge_ids`.
+- 1–14 điểm giao; id khác nhau và khác `"depot"`. Điểm cách đường > 150 m, hai điểm gắn vào cùng một node, kịch bản/cạnh không có → 422.
+
 ### 4.1. Contract v1 cho walking skeleton [Đã chốt 25/10 — Q6]
 
 Walking skeleton (T13, T14) chỉ dùng **tập con** sau của contract ở trên. Mọi bản sau chỉ được **thêm** trường; không đổi tên hay xóa các trường dưới đây, để UI viết trước không phải làm lại.

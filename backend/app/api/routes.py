@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.api.schemas import DatasetResponse, HealthResponse, RouteRequest, RouteResponse
+from app.api.schemas import DatasetResponse, HealthResponse, RouteRequest, RouteResponse, TourRequest, TourResponse
 from app.graph.model import Graph, GraphMeta
 from app.services.routing import RouteInputError, route
+from app.services.tour import plan_tour
 
 router = APIRouter()
 
@@ -55,5 +56,15 @@ def compute_route(req: RouteRequest, request: Request) -> RouteResponse:
     graph, meta = _loaded(request)
     try:
         return route(graph, meta, req, request.app.state.scenarios, request.app.state.twins)
+    except RouteInputError as err:
+        raise HTTPException(status_code=422, detail=str(err)) from None
+
+
+@router.post("/tour", response_model=TourResponse)
+def compute_tour(req: TourRequest, request: Request) -> TourResponse:
+    """Tour kho → các điểm giao → kho: ba phương án thứ tự (nhập, NN, NN + 2-opt) trên cùng snapshot."""
+    graph, meta = _loaded(request)
+    try:
+        return plan_tour(graph, meta, req, request.app.state.scenarios)
     except RouteInputError as err:
         raise HTTPException(status_code=422, detail=str(err)) from None

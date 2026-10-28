@@ -58,3 +58,37 @@ def dijkstra(graph: Graph, snap: Snapshot, source: int, target: int, *, trace_li
 
     return SearchResult("no_path", None, [], [], None, expanded, expanded, 0, relaxations, pushes,
                         max_frontier, trace, trace_limit > 0 and expanded > trace_limit)
+
+
+def dijkstra_many(graph: Graph, snap: Snapshot, source: int, targets: list[int]) -> tuple[dict[int, float], list[int]]:
+    """Dijkstra một nguồn tới nhiều đích, dừng khi đã pop đủ các đích (dùng để xây ma trận tour, T72).
+
+    Cùng quy tắc heap và lazy deletion như `dijkstra`. Trả `dist[t]` cho từng đích (`math.inf` nếu
+    không tới được) và `pred_edge` để dựng lại đúng các chặng đã dùng trong ma trận (`build_route`).
+    """
+    for t in targets:
+        check_endpoints(graph, source, t)
+    weights, out_edges, edge_v = snap.weights, graph.out_edges, graph.edge_v
+    g = [math.inf] * len(graph.node_lat)
+    pred_edge = [-1] * len(graph.node_lat)
+    g[source] = 0.0
+    remaining = set(targets)
+    heap = [(0.0, 0, source)]
+    counter = 1
+    while heap and remaining:
+        d, _, u = heapq.heappop(heap)
+        if d > g[u]:
+            continue                      # entry lỗi thời
+        remaining.discard(u)
+        for e in out_edges[u]:
+            w = weights[e]
+            if w == math.inf:
+                continue                  # cạnh bị đóng trong snapshot này
+            v = edge_v[e]
+            nd = d + w
+            if nd < g[v]:
+                g[v] = nd
+                pred_edge[v] = e
+                heapq.heappush(heap, (nd, counter, v))
+                counter += 1
+    return {t: g[t] for t in targets}, pred_edge
