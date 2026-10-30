@@ -38,6 +38,8 @@ export interface AlgorithmResult {
   cost_s: number | null
   distance_m: number | null
   edge_ids?: number[] // thêm ngoài v1 (ARCHITECTURE mục 4); T54 dùng để đóng đoạn trên tuyến
+  edge_twin_ids?: (number | null)[] // cạnh đối (v → u) của từng cạnh, null nếu một chiều (T51)
+  edge_geometries?: [number, number][][] // hình học [lon, lat] của từng cạnh (T54)
   geometry: LineString
   expanded: number
   runtime_ms: number

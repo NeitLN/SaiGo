@@ -141,6 +141,15 @@ button:disabled {
   box-shadow: none;
 }
 
+.buttons.closures {
+  align-items: center;
+  margin-top: 10px;
+}
+
+.leaflet-interactive.segment-hit {
+  cursor: pointer;
+}
+
 .busy {
   color: #52606d;
 }

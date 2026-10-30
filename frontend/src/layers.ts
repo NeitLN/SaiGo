@@ -9,6 +9,12 @@ export function toLatLngs(coords: [number, number][]): L.LatLng[] {
   return coords.map(([lon, lat]) => L.latLng(lat, lon))
 }
 
+// Một đoạn người dùng đã đóng: id cạnh (kèm cạnh đối nếu là đường hai chiều) và hình học để vẽ lại.
+export interface ClosedSegment {
+  ids: number[]
+  coords: [number, number][]
+}
+
 function sameRoute(a?: AlgorithmResult, b?: AlgorithmResult): boolean {
   if (!a || !b || a.status !== 'ok' || b.status !== 'ok') return false
   if (a.edge_ids && b.edge_ids) return a.edge_ids.join(',') === b.edge_ids.join(',')
@@ -19,10 +25,14 @@ export class MapLayers {
   private zones = L.layerGroup()
   private points = L.layerGroup()
   private routes = L.layerGroup()
+  private closures = L.layerGroup()
+  private hits = L.layerGroup() // vùng bấm vô hình trên từng cạnh của tuyến (T54)
 
   constructor(map: L.Map) {
     this.zones.addTo(map)
     this.routes.addTo(map)
+    this.closures.addTo(map)
+    this.hits.addTo(map)
     this.points.addTo(map)
   }
 
@@ -90,12 +100,43 @@ export class MapLayers {
     return drawn
   }
 
+  // Mỗi cạnh của tuyến Dijkstra có một vùng bấm vô hình (nét rộng, trong suốt); bấm thì gọi onClose.
+  setClickableSegments(res: RouteResponse, onClose: (seg: ClosedSegment) => void) {
+    this.hits.clearLayers()
+    const r = res.results.dijkstra
+    if (!r || r.status !== 'ok' || !r.edge_ids || !r.edge_geometries) return
+    r.edge_ids.forEach((id, i) => {
+      const twin = r.edge_twin_ids?.[i] ?? null
+      const coords = r.edge_geometries![i]
+      const seg: ClosedSegment = { ids: twin === null ? [id] : [id, twin], coords }
+      L.polyline(toLatLngs(coords), { weight: 18, opacity: 0, className: 'segment-hit' })
+        .bindTooltip(twin === null ? 'Bấm để đóng đoạn này (đường một chiều)' : 'Bấm để đóng đoạn này (cả hai chiều)',
+          { sticky: true })
+        .on('click', (e) => {
+          L.DomEvent.stopPropagation(e) // không để bản đồ hiểu là chọn điểm mới
+          onClose(seg)
+        })
+        .addTo(this.hits)
+    })
+  }
+
+  // Đoạn bị đóng: đỏ, nét đứt (DEMO mục 1.2).
+  setClosures(segments: ClosedSegment[]) {
+    this.closures.clearLayers()
+    for (const seg of segments) {
+      L.polyline(toLatLngs(seg.coords), { color: '#c92a2a', weight: 6, dashArray: '6 6' })
+        .bindTooltip('Đoạn đường bị đóng do người dùng đánh dấu')
+        .addTo(this.closures)
+    }
+  }
+
   clearRoutes() {
     this.routes.clearLayers()
+    this.hits.clearLayers()
   }
 
   clear() {
     this.points.clearLayers()
-    this.routes.clearLayers()
+    this.clearRoutes()
   }
 }
