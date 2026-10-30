@@ -124,3 +124,47 @@ export async function postRoute(req: RouteRequest, signal?: AbortSignal): Promis
   if (!res.ok) throw new Error(errorMessage(res.status, body))
   return body as RouteResponse
 }
+
+// POST /api/tour (T72). Chỉ số theo quy ước của backend/app/algorithms/tour.py: điểm 0 là kho,
+// `order` khép kín bắt đầu bằng 0, tên phương án giống `TourPlan.method`.
+export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt'
+
+export const TOUR_LABEL: Record<TourMethod, string> = {
+  input: 'Thứ tự nhập',
+  nearest_neighbor: 'Nearest Neighbor',
+  nearest_neighbor_2opt: 'NN + 2-opt',
+}
+
+export interface TourRequest {
+  depot: LatLon
+  stops: LatLon[]
+  scenario_id?: string
+}
+
+export interface TourPlanOut {
+  order: number[]
+  cost_s: number
+  distance_m: number
+  geometry: LineString
+}
+
+export interface TourResponse {
+  status: 'ok' | 'infeasible_under_model'
+  snapped: SnappedPoint[] // snapped[i] ứng với điểm i (0 = kho)
+  plans: Partial<Record<TourMethod, TourPlanOut>>
+  chosen: TourMethod | null
+  unreachable: [number, number][]
+}
+
+export async function postTour(req: TourRequest, signal?: AbortSignal): Promise<TourResponse> {
+  const res = await fetch('/api/tour', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+    signal,
+  })
+  if (res.status === 404) throw new Error('API chưa có /api/tour (T72).')
+  const body = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(errorMessage(res.status, body))
+  return body as TourResponse
+}
