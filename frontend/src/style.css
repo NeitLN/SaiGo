@@ -150,6 +150,90 @@ button:disabled {
   cursor: pointer;
 }
 
+.mode-tabs {
+  display: flex;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.tab {
+  flex: 1;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: #52606d;
+}
+
+.tab.active {
+  border-bottom-color: #1c7ed6;
+  color: #1f2933;
+  font-weight: 600;
+}
+
+.tour-points {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9em;
+}
+
+.tour-points li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.badge,
+.tour-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #7048e8;
+  color: #ffffff;
+  font-size: 0.8em;
+  font-weight: 700;
+}
+
+.badge.depot,
+.tour-marker.depot {
+  background: #1f2933;
+}
+
+.tour-marker {
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.tour-card {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.tour-card.selected {
+  border-color: #7048e8;
+  box-shadow: 0 0 0 1px #7048e8;
+}
+
+.tour-card-title {
+  font-weight: 600;
+}
+
+.tour-card-title em {
+  margin-left: 6px;
+  color: #2f9e44;
+  font-size: 0.85em;
+  font-style: normal;
+}
+
 .busy {
   color: #52606d;
 }

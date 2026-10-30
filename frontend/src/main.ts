@@ -4,6 +4,7 @@ import './style.css'
 import { BASELINE, getDataset, getHealth, postRoute, type LatLon, type RouteResponse, type Scenario } from './api'
 import { MapLayers, type ClosedSegment } from './layers'
 import { renderEmpty, renderResults } from './panel'
+import { PRESETS, TourMode } from './tour'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
@@ -14,16 +15,20 @@ app.innerHTML = `
   </header>
   <main class="layout">
     <aside class="panel controls">
-      <h2>Tìm đường hai điểm</h2>
+      <div class="mode-tabs" role="tablist">
+        <button id="tab-route" class="tab active" role="tab">Tìm đường hai điểm</button>
+        <button id="tab-tour" class="tab" role="tab">Tour</button>
+      </div>
+      <label class="field">Kịch bản
+        <select id="scenario"></select>
+      </label>
+      <p id="scenario-note" class="muted small" hidden></p>
+      <div id="route-controls">
       <p id="hint" class="hint"></p>
       <dl class="points">
         <dt>Điểm đi</dt><dd id="source-text">—</dd>
         <dt>Điểm đến</dt><dd id="target-text">—</dd>
       </dl>
-      <label class="field">Kịch bản
-        <select id="scenario"></select>
-      </label>
-      <p id="scenario-note" class="muted small" hidden></p>
       <div class="buttons">
         <button id="btn-route" class="primary" disabled>Tìm đường</button>
         <button id="btn-swap" disabled>Đảo chiều</button>
@@ -35,11 +40,26 @@ app.innerHTML = `
       </div>
       <p id="busy" class="busy" hidden>Đang tính…</p>
       <p id="message" class="message" hidden></p>
+      </div>
+      <div id="tour-controls" hidden>
+        <p id="tour-hint" class="hint"></p>
+        <label class="field">Case demo
+          <select id="tour-preset"></select>
+        </label>
+        <ol id="tour-points" class="tour-points"></ol>
+        <div class="buttons">
+          <button id="btn-plan" class="primary" disabled>Lập tour</button>
+          <button id="btn-tour-clear">Xóa</button>
+        </div>
+        <p id="tour-busy" class="busy" hidden>Đang lập tour…</p>
+        <p id="tour-message" class="message" hidden></p>
+      </div>
     </aside>
     <div id="map"></div>
     <aside class="panel results">
       <h2>Kết quả đo được</h2>
       <div id="results"></div>
+      <div id="tour-results" hidden></div>
     </aside>
   </main>
 `
@@ -59,6 +79,15 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map)
 
 const layers = new MapLayers(map)
+const tour = new TourMode(map, {
+  list: $('tour-points'),
+  hint: $('tour-hint'),
+  btnPlan: $<HTMLButtonElement>('btn-plan'),
+  busy: $('tour-busy'),
+  message: $('tour-message'),
+  results: $('tour-results'),
+}, () => scenario.id)
+let mode: 'route' | 'tour' = 'route'
 
 let source: LatLon | null = null
 let target: LatLon | null = null
@@ -159,6 +188,10 @@ async function findRoute() {
 
 map.on('click', (e: L.LeafletMouseEvent) => {
   const p = { lat: e.latlng.lat, lon: e.latlng.lng }
+  if (mode === 'tour') {
+    tour.addPoint(p)
+    return
+  }
   if (!source || target) {
     // Lần đầu, hoặc đã có đủ hai điểm: bắt đầu lại từ điểm đi.
     clearResult()
@@ -218,6 +251,10 @@ function fillScenarios(list: Scenario[]) {
 scenarioSelect.addEventListener('change', () => {
   scenario = scenarios.find((s) => s.id === scenarioSelect.value) ?? BASELINE
   layers.setZones(scenario)
+  if (mode === 'tour') {
+    tour.scenarioChanged()
+    return
+  }
   // Tìm lại cả khi request trước còn đang chạy; findRoute tự hủy request cũ.
   if (shown || pending) void findRoute()
 })
@@ -240,3 +277,41 @@ getHealth()
   .catch(() => {
     statusEl.textContent = 'Không kết nối được server'
   })
+
+// ---------- Chế độ tour (T73) ----------
+
+const presetSelect = $<HTMLSelectElement>('tour-preset')
+presetSelect.replaceChildren(
+  new Option(PRESETS.length ? '— Chọn case —' : 'Chưa có data/demo/cases.json (T55)', ''),
+  ...PRESETS.map((p) => new Option(p.label, p.id)),
+)
+presetSelect.disabled = PRESETS.length === 0
+presetSelect.addEventListener('change', () => {
+  const preset = PRESETS.find((p) => p.id === presetSelect.value)
+  if (preset) tour.loadPreset(preset)
+})
+$('btn-plan').addEventListener('click', () => void tour.plan())
+$('btn-tour-clear').addEventListener('click', () => {
+  presetSelect.value = ''
+  tour.clear()
+})
+
+// Đổi chế độ: xóa kết quả của chế độ cũ để bản đồ chỉ có lớp của chế độ đang dùng.
+function setMode(next: 'route' | 'tour') {
+  if (next === mode) return
+  mode = next
+  $('tab-route').classList.toggle('active', mode === 'route')
+  $('tab-tour').classList.toggle('active', mode === 'tour')
+  $('route-controls').hidden = mode !== 'route'
+  $('results').hidden = mode !== 'route'
+  $('tour-controls').hidden = mode !== 'tour'
+  $('tour-results').hidden = mode !== 'tour'
+  if (mode === 'tour') {
+    $('btn-clear').click()
+  } else {
+    presetSelect.value = ''
+    tour.clear()
+  }
+}
+$('tab-route').addEventListener('click', () => setMode('route'))
+$('tab-tour').addEventListener('click', () => setMode('tour'))
