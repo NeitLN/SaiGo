@@ -1,12 +1,12 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 03:29 01/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 04:14 02/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=41239105532)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=41350950979)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
 - **Đã đóng:** 79 giờ — có bằng chứng (PR/commit) 79 giờ · **Còn lại:** 57 giờ, 19 task mở
-- **Đường lý tưởng hôm nay:** 68.2 giờ → nhanh hơn kế hoạch 11.2 giờ (trong đó 3 giờ là do cắt phạm vi, không phải do làm xong)
+- **Đường lý tưởng hôm nay:** 62 giờ → nhanh hơn kế hoạch 5.0 giờ (trong đó 3 giờ là do cắt phạm vi, không phải do làm xong)
 - Mốc: cổng G1 05/11 · final ready 12/11 · thuyết trình 19/11 · nộp 22/11
 
 ### Theo tuần
@@ -15,7 +15,7 @@ _Tự động cập nhật 03:29 01/11/2026 (giờ VN) bởi workflow `tracking.
 |---|---:|---:|---:|---:|---:|---:|
 | Tuần 1 · 19–25/10 | 27 | 10 | 3 | 129 | 2 | 3 |
 | Tuần 2 · 26/10–01/11 | 30 | 69 | 24 | 57 | 36 | 60 |
-| Tuần 3 · 02–08/11 | 62 | 0 | 0 | — | 0 | 0 |
+| Tuần 3 · 02–08/11 | 62 | 0 | 0 | 57 | 0 | 0 |
 | Tuần 4 · 09–15/11 | 17 | 0 | 0 | — | 0 | 0 |
 
 ### Theo thành viên
@@ -38,22 +38,6 @@ _Tự động cập nhật 03:29 01/11/2026 (giờ VN) bởi workflow `tracking.
 - 29/10 · #50 T14 · Skeleton phía bản đồ: bấm 2 điểm, vẽ tuyến (3 h, qua PR)
 - 29/10 · #4 T02 · Thử OSMnx trên Windows (2 h, qua PR)
 - 28/10 · #14 T32 · Vẽ mạng đường thật trên bản đồ *(đã cắt 26/10)* (3 h, đã cắt khỏi phạm vi)
-- 26/10 · #49 T13 · Skeleton phía API: `/api/route` tối giản trên `mini.json` (3 h, qua PR)
-- 26/10 · #48 T06 · Bộ nhớ dự án, quyết định đắt nếu đổi, hàng rào kỹ thuật (3 h, qua PR)
-- 26/10 · #33 T71 · Held–Karp làm đối chứng (3 h, qua PR)
-- 26/10 · #32 T70 · Tour trên ma trận: chi phí, NN, 2-opt có hướng (4 h, qua PR)
-- 26/10 · #29 T64 · Vẽ biểu đồ (2 h, qua PR)
-- 26/10 · #19 T50 · Snap điểm về node (2 h, qua PR)
-- 26/10 · #17 T41 · Đóng đoạn đường (cả cạnh đối nếu có) (3 h, qua PR)
-- 26/10 · #16 T40 · Snapshot và luật ùn tắc theo vùng (4 h, qua PR)
-- 26/10 · #11 T22 · Kiểm tra điều kiện heuristic trên dữ liệu (2 h, qua PR)
-- 26/10 · #10 T21 · Đối chứng NetworkX trên đồ thị ngẫu nhiên (3 h, qua PR)
-- 26/10 · #9 T20 · A* với heuristic địa lý (3 h, qua PR)
-- 26/10 · #7 T11 · Dijkstra và SearchResult (4 h, qua PR)
-- 26/10 · #6 T10 · Hàm địa lý (2 h, qua PR)
-- 26/10 · #5 T03 · Bảng kết quả tính tay cho đồ thị mẫu (2 h, qua PR)
-- 26/10 · #3 T01 · Chốt định dạng đồ thị, tạo fixture mẫu và bộ nạp Graph (3 h, qua PR)
-- 26/10 · #2 T00 · Dựng môi trường và xác nhận khung chạy (2 h, qua PR)
 
 ### Ghi chú
 
