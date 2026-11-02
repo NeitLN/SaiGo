@@ -6,10 +6,17 @@ T60 đo một đồ thị mỗi lần chạy, nên E3 (4 kích thước) là 4 t
 buộc truyền `--out` để không ghi hình E3 lẫn vào thư mục của riêng một kích thước. Backend `"Agg"`
 nên chạy được cả trên máy không có màn hình.
 
-Phạm vi (cập nhật 28/10): RQ1b chỉ workload **"fixed trips"**, **4 kích thước**; biểu đồ E5 (tour) thêm ở
-T74. Hình được chọn theo cột `suite`, đúng tên `--suite` trong docs/TASKS.md: `demo` = E2,
-`scaling` = E3, `scenario` = E4. Thiếu dữ liệu cho hình nào thì hình đó bị bỏ qua kèm lý do in ra
-màn hình; các hình còn lại vẫn được vẽ, không làm hỏng cả lần chạy.
+Phạm vi: RQ1b workload **"fixed trips"**, **4 kích thước** — hình chọn theo cột `suite`
+(docs/TASKS.md): `demo` = E2, `scaling` = E3, `scenario` = E4. E5 (tour) đọc thêm
+`tour_measurements.csv` trong **cùng** các thư mục (định dạng E5_proposal.md); thư mục không có
+file này vẫn chạy như cũ, chỉ hình E5 bị bỏ qua. Thiếu dữ liệu cho hình nào thì hình đó bị bỏ qua
+kèm lý do in ra màn hình; các hình còn lại vẫn được vẽ, không làm hỏng cả lần chạy.
+
+Tour (mục 8): một **bộ** điểm là `(run_id, n_stops, set_id)`, các phương án của cùng bộ dùng chung
+ma trận nên `feasible` luôn giống nhau; bộ không khả thi bị loại khỏi mọi chỉ số và chỉ được đếm
+(không gán gap 0). `Improvement% = 100·(C_input − C_phương_án)/C_input` và
+`Gap% = 100·(C_phương_án − C_held_karp)/C_held_karp` tính **từng bộ** rồi mới lấy median + tứ
+phân vị, không lấy tỉ số của hai trung bình.
 
 Mỗi hình ghi `run_id`, **số cặp** và `dataset_id` trong chú thích dưới hình (yêu cầu của mục 10).
 `matplotlib` chỉ được nạp khi thực sự vẽ (extra `bench`), nhờ vậy phần đọc/kiểm CSV vẫn dùng được
@@ -19,6 +26,7 @@ Mỗi hình ghi `run_id`, **số cặp** và `dataset_id` trong chú thích dư�
 from __future__ import annotations
 
 import csv
+import math
 import statistics
 import sys
 from dataclasses import dataclass
@@ -107,6 +115,154 @@ def read_measurements(run_dir: Path | str) -> list[Row]:
                 runtime_ms=_number(path, lineno, raw, "runtime_ns_median") / 1e6,
             ))
     return rows
+
+
+# --- Tour (E5): đọc tour_measurements.csv và tính chỉ số từng bộ (EXPERIMENT_PLAN mục 8) ---
+
+# 15 cột của tour_measurements.csv (E5_proposal.md mục 2)
+TOUR_COLUMNS = (
+    "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
+    "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
+)
+TOUR_METHOD_ORDER = ("input", "nearest_neighbor", "nearest_neighbor_2opt", "held_karp")
+TOUR_METHOD_LABEL = {"input": "thứ tự nhập", "nearest_neighbor": "NN",
+                     "nearest_neighbor_2opt": "NN + 2-opt", "held_karp": "Held–Karp"}
+TOUR_METHOD_COLOR = {"input": "#9467bd", "nearest_neighbor": "#2ca02c",
+                     "nearest_neighbor_2opt": "#ff7f0e", "held_karp": "#7f7f7f"}
+
+
+@dataclass(frozen=True)
+class TourRow:
+    """Một dòng `tour_measurements.csv` đã đọc số (một bộ × một phương án)."""
+
+    run_id: str
+    dataset_id: str
+    set_id: int
+    n_stops: int
+    feasible: bool
+    method: str
+    cost_s: float | None
+    order_ms: float                  # order_ns / 1e6
+
+
+@dataclass(frozen=True)
+class TourStats:
+    """Chỉ số E5 tính **từng bộ** rồi gom theo `(n_stops, phương án)`.
+
+    `improvements` so với `input`, `gaps` so với `held_karp` (chi phí thô×100); `input` không có
+    Improvement (là mốc), `held_karp` không có Gap (là mốc). Bộ `feasible = false` bị loại khỏi
+    mọi danh sách và chỉ được đếm trong `n_total`, không vào `n_feasible` (mục 8: không gán gap 0).
+    """
+
+    improvements: dict[tuple[int, str], list[float]]
+    gaps: dict[tuple[int, str], list[float]]
+    order_ms: dict[tuple[int, str], list[float]]
+    n_feasible: dict[int, int]
+    n_total: dict[int, int]
+    missing_input: int               # số (bộ, phương án) bị bỏ khỏi Improvement vì thiếu `input`
+    missing_held_karp: int           # số (bộ, phương án) bị bỏ khỏi Gap vì thiếu `held_karp`
+
+
+def _boolean(path: Path, lineno: int, raw_value: str, name: str) -> bool:
+    """Đọc ô `true`/`false` (không phân biệt hoa thường); khác là lỗi dữ liệu."""
+    text = (raw_value or "").strip().lower()
+    if text in ("true", "1"):
+        return True
+    if text in ("false", "0"):
+        return False
+    raise ValueError(f"{path}:{lineno}: cột {name} = {raw_value!r} không phải true/false")
+
+
+def read_tour_measurements(run_dir: Path | str) -> list[TourRow]:
+    """Đọc `tour_measurements.csv` (E5_proposal.md mục 2); file vắng mặt → rỗng, không lỗi."""
+    path = Path(run_dir) / "tour_measurements.csv"
+    if not path.is_file():
+        return []
+    rows: list[TourRow] = []
+    with path.open(encoding="utf-8", newline="") as fh:
+        reader = csv.DictReader(fh)
+        missing = [c for c in TOUR_COLUMNS if c not in (reader.fieldnames or [])]
+        if missing:
+            raise ValueError(f"{path}: thiếu cột {', '.join(missing)} (E5_proposal.md mục 2)")
+        for lineno, raw in enumerate(reader, start=2):
+            cost = (raw["cost_s"] or "").strip()
+            rows.append(TourRow(
+                run_id=(raw["run_id"] or "").strip(),
+                dataset_id=(raw["dataset_id"] or "").strip(),
+                set_id=int(_number(path, lineno, raw, "set_id")),
+                n_stops=int(_number(path, lineno, raw, "n_stops")),
+                feasible=_boolean(path, lineno, raw["feasible"], "feasible"),
+                method=(raw["method"] or "").strip().lower(),
+                cost_s=_number(path, lineno, raw, "cost_s") if cost else None,
+                order_ms=_number(path, lineno, raw, "order_ns") / 1e6,
+            ))
+    return rows
+
+
+def percentile(values: Sequence[float], fraction: float) -> float | None:
+    """Phân vị bằng nội suy tuyến tính trên vị trí `(n-1)·p` (mục 3.2, cùng cách của E2/E3/E4)."""
+    ordered = sorted(values)
+    if not ordered:
+        return None
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (len(ordered) - 1) * fraction
+    low, high = math.floor(position), math.ceil(position)
+    return ordered[low] + (ordered[high] - ordered[low]) * (position - low)
+
+
+def tour_stats(tour_rows: Sequence[TourRow]) -> TourStats:
+    """Tính chỉ số E5 **từng bộ** `(run_id, n_stops, set_id)` rồi gom theo `(n_stops, phương án)`.
+
+    Bộ `feasible = false` chỉ được đếm, không gán gap 0; bộ thiếu phương án cần đến bị bỏ khỏi
+    chỉ số đó, mỗi cặp (bộ, phương án) bị bỏ như vậy được đếm vào `missing_input` /
+    `missing_held_karp` để ghi chú thay vì im lặng.
+    """
+    costs: dict[tuple[str, int, int], dict[str, float]] = {}
+    timings: dict[tuple[str, int, int], dict[str, float]] = {}
+    feasible: dict[tuple[str, int, int], bool] = {}
+    seen: dict[tuple[str, int, int], None] = {}   # dict giữ thứ tự xuất hiện, set thì không
+    for row in tour_rows:
+        key = (row.run_id, row.n_stops, row.set_id)
+        seen[key] = None
+        feasible[key] = feasible.get(key, True) and row.feasible
+        if row.cost_s is not None:                     # bộ khả thi mới có chi phí/timing dùng được
+            costs.setdefault(key, {})[row.method] = row.cost_s
+            timings.setdefault(key, {})[row.method] = row.order_ms
+
+    improvements: dict[tuple[int, str], list[float]] = {}
+    gaps: dict[tuple[int, str], list[float]] = {}
+    order_ms: dict[tuple[int, str], list[float]] = {}
+    n_feasible: dict[int, int] = {}
+    n_total: dict[int, int] = {}
+    missing_input = 0
+    missing_held_karp = 0
+    for key in seen:
+        by_method = costs.get(key, {})
+        n_stops = key[1]
+        n_total[n_stops] = n_total.get(n_stops, 0) + 1
+        if not feasible[key] or not by_method:
+            # không khả thi (hoặc thiếu chi phí dùng được): chỉ đếm, không vào các chỉ số
+            continue
+        n_feasible[n_stops] = n_feasible.get(n_stops, 0) + 1
+        base, optimum = by_method.get("input"), by_method.get("held_karp")
+        for method, cost in by_method.items():
+            if method not in ("input", "held_karp"):    # Improvement so với thứ tự nhập
+                if base is not None and base > 0:
+                    improvements.setdefault((n_stops, method), []).append(
+                        (base - cost) / base * 100.0)
+                else:
+                    missing_input += 1
+            if method != "held_karp":                   # Gap so với Held–Karp (mốc tối ưu)
+                if optimum is not None and optimum > 0:
+                    gaps.setdefault((n_stops, method), []).append(
+                        (cost - optimum) / optimum * 100.0)
+                else:
+                    missing_held_karp += 1
+            order_ms.setdefault((n_stops, method), []).append(timings[key][method])
+    return TourStats(improvements=improvements, gaps=gaps, order_ms=order_ms,
+                     n_feasible=n_feasible, n_total=n_total,
+                     missing_input=missing_input, missing_held_karp=missing_held_karp)
 
 
 def _first_seen(values: Iterable[str]) -> list[str]:
@@ -358,13 +514,106 @@ def _fig_ratio_by_scenario(rows: Sequence[Row]) -> tuple[Figure | None, str]:
     return fig, _caption(scenario, n_pairs)
 
 
-# Tên file → (hàm vẽ, tiêu đề). Không có biểu đồ E5 (tour) theo phạm vi chốt 26/10.
-FIGURES: tuple[tuple[str, str, Callable[[Sequence[Row]], tuple[Figure | None, str]]], ...] = (
-    ("fig_e2_expanded_box.png", "E2 — expanded theo tầng chuyến", _fig_expanded_box),
-    ("fig_e2_expanded_scatter.png", "E2 — expanded A* so với Dijkstra", _fig_expanded_scatter),
-    ("fig_e3_expanded_runtime.png", "E3 — median expanded và thời gian theo |V|", _fig_scaling),
-    ("fig_e3_ratio_by_size.png", "E3 — median r theo |V|", _fig_ratio_by_size),
-    ("fig_e4_ratio_by_scenario.png", "E4 — r theo kịch bản", _fig_ratio_by_scenario),
+def _tour_caption(tour_rows: Sequence[TourRow], n_feasible: int, n_total: int) -> str:
+    """Chú thích hình E5: run_id, số bộ khả thi/tổng (bộ `feasible = false` bị bỏ) và dataset_id."""
+    run_ids = _first_seen(r.run_id for r in tour_rows) or ["?"]
+    datasets = _first_seen(r.dataset_id for r in tour_rows) or ["?"]
+    return (f"run_id: {', '.join(run_ids)} · số bộ khả thi: {n_feasible}/{n_total} · "
+            f"dataset_id: {', '.join(datasets)}")
+
+
+def _fig_e5_tour(tour_rows: Sequence[TourRow]) -> tuple[Figure | None, str]:
+    """Hình 6 (E5): median Improvement% (so với thứ tự nhập) và Gap% vs Held–Karp theo `n_stops`.
+
+    Mỗi phương án một đường median + vùng tứ phân vị (nội suy tuyến tính, mục 3.2); hai chỉ số
+    tính **từng bộ** rồi mới gom (mục 8). `input` là mốc của Improvement, `held_karp` là mốc của
+    Gap nên không nằm trên đường nào. Trả `(None, lý do)` nếu không có file tour hoặc không đủ
+    dữ liệu để vẽ đường nào.
+    """
+    if not tour_rows:
+        return None, "không có dòng nào thuộc tour_measurements.csv (E5)"
+    stats = tour_stats(tour_rows)
+    sizes = sorted({n for (n, _method) in {**stats.improvements, **stats.gaps}})
+    if not sizes:
+        return None, "không có cặp (bộ, phương án) nào đủ dữ liệu để tính Improvement/Gap (E5)"
+    present = {m for (_n, m) in stats.improvements} | {m for (_n, m) in stats.gaps}
+    methods = [m for m in TOUR_METHOD_ORDER if m in present]
+    methods += sorted(m for m in present if m not in TOUR_METHOD_ORDER)
+
+    plt = _pyplot()
+    fig, (ax_impr, ax_gap) = plt.subplots(1, 2, figsize=(10.5, 4.2))
+
+    def draw(axis, cells: dict[tuple[int, str], list[float]], names: Iterable[str]) -> bool:
+        """Vẽ mỗi phương án một đường median + vùng tứ phân vị; trả về có vẽ gì không."""
+        drawn = False
+        for method in names:
+            xs, medians, lows, highs = [], [], [], []
+            for size in sizes:
+                values = cells.get((size, method))
+                if not values:
+                    continue
+                xs.append(size)
+                medians.append(statistics.median(values))
+                if len(values) >= 2:
+                    lows.append(percentile(values, 0.25))
+                    highs.append(percentile(values, 0.75))
+                else:
+                    lows.append(None)
+                    highs.append(None)
+            if not xs:
+                continue
+            color = TOUR_METHOD_COLOR.get(method, "#1f77b4")
+            axis.plot(xs, medians, marker="o", markersize=4, color=color,
+                      label=TOUR_METHOD_LABEL.get(method, method))
+            drawn = True
+            # fill_between không nhận None: chỉ tô theo từng đoạn liền có đủ tứ phân vị
+            index, total = 0, len(xs)
+            while index < total:
+                if lows[index] is None:
+                    index += 1
+                    continue
+                start = index
+                while index < total and lows[index] is not None:
+                    index += 1
+                axis.fill_between(xs[start:index], lows[start:index], highs[start:index],
+                                  color=color, alpha=0.15, linewidth=0)
+        return drawn
+
+    drew_impr = draw(ax_impr, stats.improvements,
+                     [m for m in methods if m not in ("input", "held_karp")])
+    drew_gap = draw(ax_gap, stats.gaps, [m for m in methods if m != "held_karp"])
+    if not drew_impr and not drew_gap:
+        plt.close(fig)
+        return None, "không có cặp (bộ, phương án) nào đủ dữ liệu để tính Improvement/Gap (E5)"
+    if drew_gap:
+        ax_gap.axhline(0, color="#555555", linestyle=":", linewidth=1,
+                       label="Held–Karp (mốc tối ưu)")
+    for axis in (ax_impr, ax_gap):
+        axis.set_xlabel("số điểm giao trong bộ (n_stops)")
+        axis.grid(True, alpha=0.3, linewidth=0.5)
+    ax_impr.set_ylabel("median Improvement % (so với thứ tự nhập)")
+    ax_impr.set_title("median Improvement% theo số điểm giao", fontsize=9)
+    ax_gap.set_ylabel("median Gap % (so với Held–Karp)")
+    ax_gap.set_title("median Gap% theo số điểm giao", fontsize=9)
+    ax_impr.legend(frameon=False, fontsize=8)
+    ax_gap.legend(frameon=False, fontsize=8)
+    return fig, _tour_caption(tour_rows, sum(stats.n_feasible.values()),
+                              sum(stats.n_total.values()))
+
+
+# Tên file → (hàm vẽ, tiêu đề, nguồn). Nguồn "tour" đọc tour_measurements.csv thay cho
+# measurements.csv, nên thư mục không có file tour vẫn vẽ được mọi hình còn lại.
+FIGURES: tuple[tuple[str, str, str, Callable[..., tuple[Figure | None, str]]], ...] = (
+    ("fig_e2_expanded_box.png", "E2 — expanded theo tầng chuyến", "measurements",
+     _fig_expanded_box),
+    ("fig_e2_expanded_scatter.png", "E2 — expanded A* so với Dijkstra", "measurements",
+     _fig_expanded_scatter),
+    ("fig_e3_expanded_runtime.png", "E3 — median expanded và thời gian theo |V|", "measurements",
+     _fig_scaling),
+    ("fig_e3_ratio_by_size.png", "E3 — median r theo |V|", "measurements", _fig_ratio_by_size),
+    ("fig_e4_ratio_by_scenario.png", "E4 — r theo kịch bản", "measurements",
+     _fig_ratio_by_scenario),
+    ("fig_e5_tour.png", "E5 — tour: Improvement và Gap theo số điểm giao", "tour", _fig_e5_tour),
 )
 
 
@@ -395,14 +644,22 @@ def plot_run(run_dirs: Sequence[Path | str] | Path | str,
     else:
         out = Path(out_dir)
     rows: list[Row] = []
+    tour_rows: list[TourRow] = []
     for directory in dirs:
-        rows.extend(read_measurements(directory))
+        measure_path = directory / "measurements.csv"
+        tour_path = directory / "tour_measurements.csv"
+        if not measure_path.is_file() and not tour_path.is_file():
+            raise FileNotFoundError(f"không thấy {measure_path}")   # thông báo lỗi như trước
+        if measure_path.is_file():
+            rows.extend(read_measurements(directory))
+        if tour_path.is_file():
+            tour_rows.extend(read_tour_measurements(directory))
     out.mkdir(parents=True, exist_ok=True)
     created: dict[str, Path] = {}
     skipped: dict[str, str] = {}
     captions: dict[str, str] = {}
-    for name, title, build in FIGURES:
-        fig, note = build(rows)
+    for name, title, source, build in FIGURES:
+        fig, note = build(tour_rows if source == "tour" else rows)
         if fig is None:
             skipped[name] = note
             continue
