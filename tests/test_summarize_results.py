@@ -22,6 +22,87 @@ import summarize_results as summary
 
 RUN_ID = "20261029-1552-demo-abc1234"
 
+# --- Helper E5 (tour): tour_measurements.csv đúng định dạng E5_proposal.md mục 2 ---
+
+TOUR_COLUMNS = [
+    "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
+    "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
+]
+TOUR_RUN_ID = "20261105-0800-tour-abc9999"
+# order_ns mặc định theo phương án, dễ tính tay: input 2 ms, NN 4 ms, NN+2-opt 12 ms, HK 200 ms
+ORDER_NS_DEFAULT = {"input": 2_000_000, "nearest_neighbor": 4_000_000,
+                    "nearest_neighbor_2opt": 12_000_000, "held_karp": 200_000_000}
+
+
+def make_tour_row(**values) -> dict[str, str]:
+    """Một dòng tour CSV đủ 15 cột (dữ liệu THỬ, không phải số đo thật)."""
+    row = dict.fromkeys(TOUR_COLUMNS, "")
+    method = values.get("method", "input")
+    row.update({
+        "run_id": TOUR_RUN_ID,
+        "suite": "tour",
+        "dataset_id": "hcm-benthanh-r2000-20261024",
+        "set_id": "0",
+        "n_stops": "4",
+        "seed": "1",
+        "depot_node": "100",
+        "stop_nodes": "10;11;12;13",
+        "method": method,
+        "feasible": "true",
+        "cost_s": "100.0",
+        "order": "0;1;2;3",
+        "matrix_ns": "1500000",
+        "order_ns": str(ORDER_NS_DEFAULT.get(method, 2_000_000)),
+        "route_ns": "800000",
+    })
+    row.update({key: str(value) for key, value in values.items()})
+    return row
+
+
+def write_tour(run_dir: Path, rows: list[dict[str, str]], *, run_id: str = TOUR_RUN_ID,
+               python: str = "3.11.9", commit: str = "def5678", dirty: bool = False) -> Path:
+    """Ghi tour_measurements.csv + env.json + config.json vào `run_dir` (chỉ dữ liệu tour)."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    with (run_dir / "tour_measurements.csv").open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=TOUR_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    (run_dir / "env.json").write_text(json.dumps({
+        "python_version": python, "git_commit": commit, "git_dirty": dirty,
+    }), encoding="utf-8")
+    (run_dir / "config.json").write_text(json.dumps({"run_id": run_id}), encoding="utf-8")
+    return run_dir
+
+
+def tour_scenario_rows() -> list[dict[str, str]]:
+    """5 bộ với số tính tay được (cùng một kịch bản với test E5 của plot_results).
+
+    set0 (n=4): input 100, NN 80, NN+2-opt 60, HK 50 → Imp NN 20 %, 2-opt 40 %; Gap NN 60 %,
+    2-opt 20 %, input 100 %.
+    set1 (n=4): input 200, NN 170, NN+2-opt 120, HK 100 → Imp 15 %/40 %; Gap 70 %/20 %, input 100 %.
+    set2 (n=6): input 150, NN 90, NN+2-opt 90, HK 90 → Imp 40 %/40 %; Gap 0 %/0 %, input 66,67 %.
+    set3 (n=6): `feasible = false`, chi phí rỗng → chỉ đếm.
+    set4 (n=8): input 120, NN 96, NN+2-opt 84, **thiếu held_karp** → Gap bị loại kèm đếm.
+    """
+    methods = ("input", "nearest_neighbor", "nearest_neighbor_2opt", "held_karp")
+    scenario = {
+        (4, 0): {"input": 100.0, "nearest_neighbor": 80.0, "nearest_neighbor_2opt": 60.0,
+                 "held_karp": 50.0},
+        (4, 1): {"input": 200.0, "nearest_neighbor": 170.0, "nearest_neighbor_2opt": 120.0,
+                 "held_karp": 100.0},
+        (6, 2): {"input": 150.0, "nearest_neighbor": 90.0, "nearest_neighbor_2opt": 90.0,
+                 "held_karp": 90.0},
+        (6, 3): {method: None for method in methods},       # bộ không khả thi
+        (8, 4): {"input": 120.0, "nearest_neighbor": 96.0, "nearest_neighbor_2opt": 84.0},
+    }
+    rows: list[dict[str, str]] = []
+    for (n_stops, set_id), costs in scenario.items():
+        for method, cost in costs.items():
+            rows.append(make_tour_row(run_id=TOUR_RUN_ID, set_id=set_id, n_stops=n_stops,
+                                      method=method, feasible=cost is not None,
+                                      cost_s="" if cost is None else cost))
+    return rows
+
 
 def make_row(*, algo: str, expanded: int, runtime_ms: float, query_id: str = "0",
              stratum: str = "", suite: str = "demo", run_id: str = RUN_ID,
@@ -234,6 +315,82 @@ def test_e4_without_baseline_leaves_cost_increase_empty(tmp_path):
     row = single_table_row(section)
     assert row[2] == "—"
     assert any("không có mốc `baseline`" in note for note in section.table.notes)
+
+
+# --- E5 (tour) ---
+
+def test_e5_table_cells_hand_computed(tmp_path):
+    run = write_tour(tmp_path / "run", tour_scenario_rows())
+    section = summary.e5_section(summary.read_tour_rows(run), [summary.read_meta(run)])
+    assert section.table is not None, section.skipped
+    # median/Tứ phân vị tính từng bộ rồi mới gom; sắp theo n_stops rồi theo phương án
+    assert section.table.rows == (
+        ("4", "thứ tự nhập", "—", "—", "100", "[100; 100]", "2", "2/2"),
+        ("4", "NN", "17,5", "[16,25; 18,75]", "65", "[62,5; 67,5]", "4", "2/2"),
+        ("4", "NN + 2-opt", "40", "[40; 40]", "20", "[20; 20]", "12", "2/2"),
+        ("4", "Held–Karp", "—", "—", "—", "—", "200", "2/2"),
+        ("6", "thứ tự nhập", "—", "—", "66,67", "—", "2", "1/2"),
+        ("6", "NN", "40", "—", "0", "—", "4", "1/2"),
+        ("6", "NN + 2-opt", "40", "—", "0", "—", "12", "1/2"),
+        ("6", "Held–Karp", "—", "—", "—", "—", "200", "1/2"),
+        ("8", "thứ tự nhập", "—", "—", "—", "—", "2", "1/1"),
+        ("8", "NN", "20", "—", "—", "—", "4", "1/1"),
+        ("8", "NN + 2-opt", "30", "—", "—", "—", "12", "1/1"),
+    )
+    assert section.table.headers == ("Điểm giao", "Phương án", "Median Improvement %",
+                                     "IQR Improvement %", "Median Gap %", "IQR Gap %",
+                                     "Median order_ms", "Bộ khả thi")
+    assert "run_id `20261105-0800-tour-abc9999`" in section.source
+    assert "· 5 bộ ·" in section.source
+    assert "Python 3.11.9" in section.source and "git def5678" in section.source
+    # ghi chú: 1 bộ không khả thi + 3 (bộ, phương án) n=8 thiếu held_karp bị bỏ khỏi Gap
+    notes = section.table.notes
+    assert any("Bỏ 1 bộ có `feasible = false`" in note for note in notes)
+    assert any("3 bộ–phương án bị bỏ khỏi Gap vì thiếu dòng `held_karp`" in note for note in notes)
+    assert "C_input" in section.table.formulas and "C_held_karp" in section.table.formulas
+
+
+def test_e5_skipped_without_tour_csv_and_other_sections_unchanged(tmp_path):
+    run = write_run(tmp_path / "run", demo_rows())
+    section = summary.e5_section(summary.read_tour_rows(run), [summary.read_meta(run)])
+    assert section.table is None and "tour_measurements.csv" in section.skipped
+    rows = summary.read_rows(run)
+    metas = [summary.read_meta(run)]
+    text = summary.render(rows, metas)
+    assert "Bỏ qua: không có dòng nào thuộc tour_measurements.csv (E5)." in text
+    assert "## E2 — A* vs Dijkstra trên vùng demo" in text          # bảng cũ vẫn như trước
+
+
+def test_e5_missing_input_is_excluded_and_counted(tmp_path):
+    run = write_tour(tmp_path / "run", [
+        make_tour_row(set_id=0, method="nearest_neighbor", cost_s=80.0),
+        make_tour_row(set_id=0, method="held_karp", cost_s=50.0),
+    ])
+    section = summary.e5_section(summary.read_tour_rows(run), [summary.read_meta(run)])
+    assert section.table.rows == (
+        ("4", "NN", "—", "—", "60", "—", "4", "1/1"),
+        ("4", "Held–Karp", "—", "—", "—", "—", "200", "1/1"),
+    )
+    assert any("1 bộ–phương án bị bỏ khỏi Improvement vì thiếu dòng `input`" in note
+               for note in section.table.notes)
+
+
+def test_tour_only_dir_is_accepted_by_cli(tmp_path, capsys):
+    run = write_tour(tmp_path / "run", tour_scenario_rows())
+    assert summary.main([str(run)]) == 0
+    out = capsys.readouterr().out
+    assert "## E5 — Tour: Improvement và Gap theo số điểm giao" in out
+    assert "| Điểm giao | Phương án | Median Improvement % |" in out
+    assert "Bỏ qua: không có dòng nào thuộc suite demo (E2)." in out   # không có measurements.csv
+
+
+def test_inverted_row_order_still_sorts_by_n_stops(tmp_path):
+    # n_stops xuất hiện không theo thứ tự trong CSV (ngược): bảng vẫn sắp 4 → 6
+    rows = list(reversed(tour_scenario_rows()))
+    run = write_tour(tmp_path / "run", rows)
+    section = summary.e5_section(summary.read_tour_rows(run), [summary.read_meta(run)])
+    sizes = [row[0] for row in section.table.rows]
+    assert sizes == sorted(sizes, key=int) and sizes[0] == "4"
 
 
 # --- Lỗi dữ liệu và CLI ---
