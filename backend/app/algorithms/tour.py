@@ -4,7 +4,7 @@ Kho là chỉ số 0 và cố định ở đầu/cuối tour; `order = [0, …]`
 chặng quay về kho. Ma trận **bất đối xứng**: `D[i][j]` là chi phí có hướng, không dùng công thức
 delta của 2-opt đối xứng vì đảo một đoạn còn đảo chiều các chặng bên trong (mục 10.5).
 NN và 2-opt là heuristic: kết quả là "lộ trình được cải thiện", không phải tối ưu toàn cục;
-`held_karp` là đối chứng chính xác cho n ≤ 10 (O(2^n · n²)), chỉ dùng khi đo gap.
+`held_karp` là đối chứng chính xác cho n ≤ 11 (O(2^n · n²)), chỉ dùng khi đo gap.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from typing import Sequence
 Matrix = Sequence[Sequence[float]]
 
 COST_EPS = 1e-9   # giây; chênh lệch nhỏ hơn mức này coi như bằng nhau (sai số số thực)
-HELD_KARP_MAX_POINTS = 10   # 2^n · n²; quá mức này thì dùng heuristic
+HELD_KARP_MAX_POINTS = 11   # gồm cả kho, tức tối đa 10 điểm giao — EXPERIMENT_PLAN mục 8 (O(2^n · n²))
 
 
 @dataclass(frozen=True)
@@ -134,7 +134,7 @@ def choose_tour(D: Matrix, order: Sequence[int]) -> TourPlan:
 
 
 def held_karp(D: Matrix) -> list[int]:
-    """Tour tối ưu toàn cục bằng quy hoạch động Held–Karp cho n ≤ `HELD_KARP_MAX_POINTS`.
+    """Tour tối ưu toàn cục bằng quy hoạch động Held–Karp cho n ≤ `HELD_KARP_MAX_POINTS` (gồm cả kho, tức tối đa 10 điểm giao).
 
     `dp[S][j]` = chi phí nhỏ nhất đi từ kho (0), thăm đúng tập điểm giao `S` (bit của 1..n−1),
     kết thúc ở `j`; khởi tạo `dp[{j}][j] = D[0][j]`, truy hồi
