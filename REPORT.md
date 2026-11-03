@@ -1,12 +1,12 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 06:54 03/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 05:20 04/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=41548929758)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=41729967095)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
 - **Đã đóng:** 79 giờ — có bằng chứng (PR/commit) 79 giờ · **Còn lại:** 57 giờ, 19 task mở
-- **Đường lý tưởng hôm nay:** 55.8 giờ → **chậm** hơn kế hoạch 1.2 giờ
+- **Đường lý tưởng hôm nay:** 49.6 giờ → **chậm** hơn kế hoạch 7.4 giờ
 - Mốc: cổng G1 05/11 · final ready 12/11 · thuyết trình 19/11 · nộp 22/11
 
 ### Theo tuần
@@ -37,7 +37,6 @@ _Tự động cập nhật 06:54 03/11/2026 (giờ VN) bởi workflow `tracking.
 - 30/10 · #12 T30 · Chốt vùng và tải dữ liệu một lần (3 h, qua PR)
 - 29/10 · #50 T14 · Skeleton phía bản đồ: bấm 2 điểm, vẽ tuyến (3 h, qua PR)
 - 29/10 · #4 T02 · Thử OSMnx trên Windows (2 h, qua PR)
-- 28/10 · #14 T32 · Vẽ mạng đường thật trên bản đồ *(đã cắt 26/10)* (3 h, đã cắt khỏi phạm vi)
 
 ### Ghi chú
 
