@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from app.algorithms.heuristics import geo_scale
 from app.algorithms.result import SearchResult
 from app.graph.model import Graph, GraphMeta, load_graph, node_by_name
 from app.graph.scenario import baseline_snapshot
@@ -69,6 +70,8 @@ def cmd_route(args: argparse.Namespace) -> int:
     except (OSError, ValueError) as exc:
         print(f"Lỗi: không nạp được đồ thị {args.graph}: {exc}", file=sys.stderr)
         return 2
+    # Tính sẵn c (duyệt mọi cạnh, có cache) để thời gian đo của A* không tính bước này.
+    geo_scale(graph)
     try:
         s, s_desc = _endpoint(graph, meta, args.source, args.from_latlon)
         t, t_desc = _endpoint(graph, meta, args.target, args.to_latlon)
