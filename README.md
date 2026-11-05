@@ -1,5 +1,7 @@
 # SaiGo
 
+![SaiGo — Chọn đường hợp lý, giao hàng hiệu quả.](docs/brand/readme-header.svg)
+
 **Delivery Route Planning on Ho Chi Minh City Street Networks Using Heuristic Search**
 Lập kế hoạch lộ trình giao hàng trên mạng đường TP.HCM bằng tìm kiếm heuristic.
 

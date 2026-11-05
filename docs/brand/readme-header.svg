@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-label="SaiGo — Chọn đường hợp lý, giao hàng hiệu quả.">
+  <rect width="1280" height="400" fill="#0b3d5c"/>
+  <!-- lưới phố mờ -->
+  <g stroke="#ffffff" stroke-opacity="0.06" stroke-width="2">
+    <path d="M760 0v400M860 0v400M960 0v400M1060 0v400M1160 0v400M700 60h580M700 160h580M700 260h580M700 360h580"/>
+  </g>
+  <!-- tuyến A → B: nét đứt là đường thẳng (heuristic), nét liền là tuyến đi trên phố -->
+  <path d="M800 300 L1120 110" stroke="#ffffff" stroke-opacity="0.35" stroke-width="4" stroke-dasharray="10 12" fill="none"/>
+  <path d="M800 300 V260 H960 V160 H1060 V110 H1120" stroke="#ffb020" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <circle cx="800" cy="300" r="18" fill="#ffffff"/>
+  <circle cx="1120" cy="110" r="18" fill="#ffb020"/>
+  <circle cx="1120" cy="110" r="7" fill="#0b3d5c"/>
+  <!-- chữ -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" fill="#ffffff">
+    <text x="96" y="210" font-size="132" font-weight="800" letter-spacing="-3">Sai<tspan fill="#ffb020">Go</tspan></text>
+    <text x="100" y="270" font-size="34" font-weight="600">Chọn đường hợp lý, giao hàng hiệu quả.</text>
+    <text x="100" y="318" font-size="24" fill-opacity="0.75">Dijkstra · A* trên mạng đường TP.HCM (OpenStreetMap)</text>
+  </g>
+</svg>
