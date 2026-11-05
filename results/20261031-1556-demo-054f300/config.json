@@ -1,0 +1,64 @@
+{
+  "run_id": "20261031-1556-demo-054f300",
+  "suite": "demo",
+  "size_label": "hcm-benthanh-r2000-20261024",
+  "repeats": 5,
+  "warmup": 20,
+  "n_queries": 1000,
+  "cli_args": {
+    "suite": "demo",
+    "graph": "data\\processed\\hcm-benthanh-r2000-20261024.json",
+    "pairs": 1000,
+    "seed": 42,
+    "repeats": 5,
+    "warmup": 20,
+    "workload": "demo",
+    "size_label": "",
+    "side_m": null,
+    "run_id": null,
+    "out": null,
+    "queries": null,
+    "scenario": "baseline",
+    "scenario_file": "data\\config\\scenarios.json",
+    "blocked": []
+  },
+  "sampling": {
+    "L_m": 4000.0,
+    "L_source": "manifest",
+    "target_per_stratum": {
+      "ngan": 333,
+      "trung_binh": 333,
+      "dai": 333
+    },
+    "actual_per_stratum": {
+      "ngan": 333,
+      "trung_binh": 334,
+      "dai": 333
+    },
+    "rejected": {
+      "same_node": 0,
+      "stratum_full": 1700
+    },
+    "fallback_used": false,
+    "strata_stats": {
+      "ngan": {
+        "count": 333,
+        "delta_min": 0.003,
+        "delta_median": 0.1336,
+        "delta_max": 0.1996
+      },
+      "trung_binh": {
+        "count": 334,
+        "delta_min": 0.2006,
+        "delta_median": 0.3633,
+        "delta_max": 0.4996
+      },
+      "dai": {
+        "count": 333,
+        "delta_min": 0.501,
+        "delta_median": 0.6869,
+        "delta_max": 1.2182
+      }
+    }
+  }
+}
