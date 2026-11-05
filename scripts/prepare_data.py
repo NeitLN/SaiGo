@@ -255,10 +255,11 @@ def export_graph(H, scc: set, dataset_id: str, speeds: dict) -> dict:
 
 def build(area: str) -> None:
     """Cắt vùng, chuẩn hóa thuộc tính, gán tốc độ, đánh dấu SCC, đánh lại ID, xuất JSON + manifest."""
+    # load_frozen_raw kiểm file thô trước khi nạp OSMnx; import_osmnx ở đây chỉ lấy lại module đã nạp.
+    raw_manifest, G = load_frozen_raw()
     ox = import_osmnx()
     import networkx as nx
 
-    raw_manifest, G = load_frozen_raw()
     areas = json.loads((CONFIG / "areas.json").read_text(encoding="utf-8"))
     speeds = json.loads((CONFIG / "speeds.json").read_text(encoding="utf-8"))
     if area in ("center", "download") or not isinstance(areas.get(area), dict) or "half_side_m" not in areas[area]:
