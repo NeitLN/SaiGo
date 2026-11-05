@@ -31,7 +31,7 @@ Tỉ số theo **từng cặp** rồi mới lấy median (EXPERIMENT_PLAN mục 
 
 **Kiểm chéo (yêu cầu của T65):** run_id `20261103-crosscheck-demo-minh` · cùng `queries.csv` của run chính thức (`--queries`), cùng tham số · Python 3.14.4, máy Minh · git `6ce33eb`, không dirty.
 - 2.000/2.000 dòng (cặp × thuật toán) **trùng chi phí và trùng expanded** với run chính thức; `r` theo tầng giống hệt.
-- Thời gian nhanh hơn khoảng 1,9 lần (median theo cặp) nhưng cùng bậc: median tất cả Dijkstra 0,540 ms, A* 0,410 ms; p95 Dijkstra 1,731 ms, A* 2,087 ms.
+- Máy kiểm chéo chạy nhanh hơn máy chính thức khoảng 1,9 lần (median của tỉ số thời gian **giữa hai máy**, tính trên từng dòng cặp × thuật toán; không phải tỉ số s giữa hai thuật toán), nhưng cùng bậc: median tất cả Dijkstra 0,540 ms, A* 0,410 ms; p95 Dijkstra 1,731 ms, A* 2,087 ms.
 - `s` theo tầng: ngắn 0,98 · trung bình 1,26 · dài 1,00 · tất cả 1,07; A* chậm hơn ở 444/1.000 cặp.
 
 ### Diễn giải
