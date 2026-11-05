@@ -1,5 +1,5 @@
 // Cột kết quả: bảng so sánh Dijkstra / A* (docs/DEMO.md mục 1.3, nhãn bắt buộc ở mục 1.4).
-import { ALGORITHM_LABEL, type Algorithm, type AlgorithmResult, type RouteResponse } from './api'
+import { ALGORITHM_LABEL, escapeHtml, type Algorithm, type AlgorithmResult, type RouteResponse } from './api'
 import { COLORS } from './layers'
 
 const ALGOS: Algorithm[] = ['dijkstra', 'astar']
@@ -24,7 +24,7 @@ const ROWS: [string, (r: AlgorithmResult) => string][] = [
   ['Thời gian tính toán', (r) => `${num(r.runtime_ms, 2)} ms`],
 ]
 
-export function renderResults(el: HTMLElement, res: RouteResponse) {
+export function renderResults(el: HTMLElement, res: RouteResponse, scenarioLabel?: string) {
   const algos = ALGOS.filter((a) => res.results[a])
   const head = algos
     .map((a) => `<th><span class="swatch" style="background:${COLORS[a]}"></span>${ALGORITHM_LABEL[a]}</th>`)
@@ -32,12 +32,13 @@ export function renderResults(el: HTMLElement, res: RouteResponse) {
   const body = ROWS.map(([label, f]) => `<tr><th scope="row">${label}</th>${algos.map((a) => `<td>${f(res.results[a]!)}</td>`).join('')}</tr>`).join('')
   const match = res.costs_match === true ? 'có' : res.costs_match === false ? '<strong class="bad">không</strong>' : '—'
   el.innerHTML = `
+    ${scenarioLabel ? `<p class="scenario-used">Kịch bản: <strong>${escapeHtml(scenarioLabel)}</strong></p>` : ''}
     <table class="compare">
       <thead><tr><th></th>${head}</tr></thead>
       <tbody>${body}</tbody>
     </table>
     <p class="match">Chi phí trùng khớp: ${match}</p>
-    ${(res.warnings ?? []).map((w) => `<p class="warning">${w}</p>`).join('')}
+    ${(res.warnings ?? []).map((w) => `<p class="warning">${escapeHtml(w)}</p>`).join('')}
   `
 }
 

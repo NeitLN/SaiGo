@@ -1,7 +1,7 @@
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import './style.css'
-import { getHealth, postRoute, type LatLon, type RouteResponse } from './api'
+import { BASELINE, getDataset, getHealth, postRoute, type LatLon, type RouteResponse, type Scenario } from './api'
 import { MapLayers } from './layers'
 import { renderEmpty, renderResults } from './panel'
 
@@ -20,6 +20,10 @@ app.innerHTML = `
         <dt>Điểm đi</dt><dd id="source-text">—</dd>
         <dt>Điểm đến</dt><dd id="target-text">—</dd>
       </dl>
+      <label class="field">Kịch bản
+        <select id="scenario"></select>
+      </label>
+      <p id="scenario-note" class="muted small" hidden></p>
       <div class="buttons">
         <button id="btn-route" class="primary" disabled>Tìm đường</button>
         <button id="btn-swap" disabled>Đảo chiều</button>
@@ -39,6 +43,7 @@ app.innerHTML = `
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 const btnRoute = $<HTMLButtonElement>('btn-route')
 const btnSwap = $<HTMLButtonElement>('btn-swap')
+const scenarioSelect = $<HTMLSelectElement>('scenario')
 
 // Tâm quanh chợ Bến Thành (cùng tâm với data/config/areas.json).
 const map = L.map('map').setView([10.7725, 106.7], 16)
@@ -56,6 +61,8 @@ let target: LatLon | null = null
 let shown: RouteResponse | null = null
 let pending: AbortController | null = null
 let requestId = 0
+let scenarios: Scenario[] = [BASELINE]
+let scenario: Scenario = BASELINE
 
 function fmt(p: LatLon | null): string {
   return p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—'
@@ -101,12 +108,16 @@ async function findRoute() {
   $('busy').hidden = false
   show($('message'), null)
   try {
-    const res = await postRoute({ source, target, algorithms: ['dijkstra', 'astar'] }, pending.signal)
+    const used = scenario
+    const res = await postRoute(
+      { source, target, algorithms: ['dijkstra', 'astar'], scenario_id: used.id },
+      pending.signal,
+    )
     if (id !== requestId) return // đã có request mới hơn
     shown = res
     layers.setSnapped(res)
     layers.drawRoutes(res)
-    renderResults($('results'), res)
+    renderResults($('results'), res, used.label)
     // Không vẽ đường thẳng nối hai điểm khi không có đường.
     if (Object.values(res.results).some((r) => r?.status === 'no_path')) {
       show($('message'), 'Không có đường đi giữa hai điểm này trong kịch bản hiện tại.')
@@ -154,8 +165,33 @@ $('btn-clear').addEventListener('click', () => {
   refresh()
 })
 
+function fillScenarios(list: Scenario[]) {
+  scenarios = list.length ? list : [BASELINE]
+  // Option + textContent: nhãn từ API không được chèn thẳng vào HTML.
+  scenarioSelect.replaceChildren(...scenarios.map((s) => new Option(s.label || s.id, s.id)))
+  // Giữ kịch bản đang chọn nếu còn (danh sách có thể về sau khi đã có kết quả); mặc định là baseline.
+  scenario = scenarios.find((s) => s.id === scenario.id) ?? scenarios.find((s) => s.id === 'baseline') ?? scenarios[0]
+  scenarioSelect.value = scenario.id
+  layers.setZones(scenario)
+}
+
+// Đổi kịch bản: vẽ lại vùng ùn tắc; nếu đang có kết quả thì tìm lại.
+scenarioSelect.addEventListener('change', () => {
+  scenario = scenarios.find((s) => s.id === scenarioSelect.value) ?? BASELINE
+  layers.setZones(scenario)
+  // Tìm lại cả khi request trước còn đang chạy; findRoute tự hủy request cũ.
+  if (shown || pending) void findRoute()
+})
+
 refresh()
 renderEmpty($('results'), 'Chưa có kết quả.')
+fillScenarios([BASELINE])
+getDataset()
+  .then((d) => {
+    if (d) fillScenarios(d.scenarios)
+    else show($('scenario-note'), 'API chưa có /api/dataset (T51): chỉ dùng được kịch bản cơ sở.')
+  })
+  .catch((err) => show($('scenario-note'), `Không tải được danh sách kịch bản: ${(err as Error).message}`))
 
 const statusEl = $('server-status')
 getHealth()
