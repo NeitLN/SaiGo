@@ -1,0 +1,32 @@
+{
+  "run_id": "20261103-crosscheck-demo-minh",
+  "suite": "demo",
+  "size_label": "hcm-benthanh-r2000-20261024",
+  "repeats": 5,
+  "warmup": 20,
+  "n_queries": 1000,
+  "cli_args": {
+    "suite": "demo",
+    "graph": "data\\processed\\hcm-benthanh-r2000-20261024.json",
+    "pairs": 1000,
+    "seed": 42,
+    "repeats": 5,
+    "warmup": 20,
+    "workload": "demo",
+    "size_label": "",
+    "side_m": null,
+    "run_id": "20261103-crosscheck-demo-minh",
+    "out": null,
+    "queries": "results\\20261031-1556-demo-054f300\\queries.csv",
+    "scenario": "baseline",
+    "scenario_file": "data\\config\\scenarios.json",
+    "blocked": []
+  },
+  "sampling": {
+    "source": "reused_queries_file",
+    "file": "results\\20261031-1556-demo-054f300\\queries.csv",
+    "count": 1000,
+    "L_m": 4000.0,
+    "L_source": "manifest"
+  }
+}
