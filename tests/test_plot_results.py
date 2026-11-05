@@ -33,6 +33,84 @@ needs_matplotlib = pytest.mark.skipif(
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
+# --- Dữ liệu giả cho E5 (tour): đúng định dạng tour_measurements.csv (E5_proposal.md mục 2) ---
+
+TOUR_COLUMNS = [
+    "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
+    "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
+]
+TOUR_RUN_ID = "20261105-0800-tour-abc9999"
+# order_ns mặc định theo phương án, dễ tính tay: input 2 ms, NN 4 ms, NN+2-opt 12 ms, HK 200 ms
+ORDER_NS_DEFAULT = {"input": 2_000_000, "nearest_neighbor": 4_000_000,
+                    "nearest_neighbor_2opt": 12_000_000, "held_karp": 200_000_000}
+
+
+def make_tour_row(**values) -> dict[str, str]:
+    """Một dòng tour CSV đủ 15 cột (dữ liệu THỬ, không phải số đo thật)."""
+    row = dict.fromkeys(TOUR_COLUMNS, "")
+    method = values.get("method", "input")
+    row.update({
+        "run_id": TOUR_RUN_ID,
+        "suite": "tour",
+        "dataset_id": "hcm-benthanh-r2000-20261024",
+        "set_id": "0",
+        "n_stops": "4",
+        "seed": "1",
+        "depot_node": "100",
+        "stop_nodes": "10;11;12;13",
+        "method": method,
+        "feasible": "true",
+        "cost_s": "100.0",
+        "order": "0;1;2;3",
+        "matrix_ns": "1500000",
+        "order_ns": str(ORDER_NS_DEFAULT.get(method, 2_000_000)),
+        "route_ns": "800000",
+    })
+    row.update({key: str(value) for key, value in values.items()})
+    return row
+
+
+def write_tour_csv(run_dir: Path, rows: list[dict[str, str]],
+                   columns: list[str] | None = None) -> Path:
+    """Ghi tour_measurements.csv (dữ liệu thử) vào `run_dir` và trả đường dẫn file."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    path = run_dir / "tour_measurements.csv"
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=columns or TOUR_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
+def tour_block(run_id: str = TOUR_RUN_ID) -> list[dict[str, str]]:
+    """5 bộ với số tính tay được: 4 bộ khả thi + 1 bộ `feasible = false`.
+
+    set0 (n=4): input 100, NN 80, NN+2-opt 60, HK 50 → Imp NN 20 %, 2-opt 40 %; Gap NN 60 %,
+    2-opt 20 %, input 100 %.
+    set1 (n=4): input 200, NN 170, NN+2-opt 120, HK 100 → Imp 15 %/40 %; Gap 70 %/20 %, input 100 %.
+    set2 (n=6): input 150, NN 90, NN+2-opt 90, HK 90 → Imp 40 %/40 %; Gap 0 %/0 %, input 66,67 %.
+    set3 (n=6): `feasible = false`, chi phí rỗng → chỉ đếm.
+    set4 (n=8): input 120, NN 96, NN+2-opt 84, **thiếu held_karp** → Gap bị loại kèm đếm.
+    """
+    methods = ("input", "nearest_neighbor", "nearest_neighbor_2opt", "held_karp")
+    scenario = {
+        (4, 0): {"input": 100.0, "nearest_neighbor": 80.0, "nearest_neighbor_2opt": 60.0,
+                 "held_karp": 50.0},
+        (4, 1): {"input": 200.0, "nearest_neighbor": 170.0, "nearest_neighbor_2opt": 120.0,
+                 "held_karp": 100.0},
+        (6, 2): {"input": 150.0, "nearest_neighbor": 90.0, "nearest_neighbor_2opt": 90.0,
+                 "held_karp": 90.0},
+        (6, 3): {method: None for method in methods},       # bộ không khả thi
+        (8, 4): {"input": 120.0, "nearest_neighbor": 96.0, "nearest_neighbor_2opt": 84.0},
+    }
+    rows: list[dict[str, str]] = []
+    for (n_stops, set_id), costs in scenario.items():
+        for method, cost in costs.items():
+            rows.append(make_tour_row(run_id=run_id, set_id=set_id, n_stops=n_stops,
+                                      method=method, feasible=cost is not None,
+                                      cost_s="" if cost is None else cost))
+    return rows
+
 
 def make_row(**values) -> dict[str, str]:
     """Một dòng CSV đủ 27 cột với giá trị mặc định hợp lệ; `values` ghi đè cột cần đổi."""
@@ -284,7 +362,8 @@ def test_header_only_csv_skips_all_figures_without_error(tmp_path):
     write_csv(tmp_path, [])
     report = plot.plot_run(tmp_path)
     assert report.created == {}
-    assert len(report.skipped) == 5                       # E2 ×2, E3 ×2, E4; không có E5
+    assert len(report.skipped) == 6           # E2 ×2, E3 ×2, E4, E5
+    assert "tour_measurements.csv" in report.skipped["fig_e5_tour.png"]
     assert all(report.skipped.values())
 
 
@@ -347,3 +426,81 @@ def test_single_dir_still_accepts_str_and_writes_beside_csv(tmp_path):
     report = plot.plot_run(str(tmp_path))                     # một str vẫn chạy như cũ
     assert report.created
     assert all(path.parent == tmp_path for path in report.created.values())
+
+
+# --- E5 (tour) ---
+
+def test_read_tour_measurements_parses_and_tolerates_missing_file(tmp_path):
+    assert plot.read_tour_measurements(tmp_path) == []        # không có file → rỗng, không lỗi
+    write_tour_csv(tmp_path, [make_tour_row(method="nearest_neighbor", feasible="false",
+                                            cost_s="", order_ns="4000000")])
+    row = plot.read_tour_measurements(tmp_path)[0]
+    assert row.method == "nearest_neighbor" and row.feasible is False and row.cost_s is None
+    assert row.n_stops == 4 and row.order_ms == pytest.approx(4.0)   # ns → ms
+
+
+def test_read_tour_rejects_bad_cell_missing_column_and_bad_boolean(tmp_path):
+    write_tour_csv(tmp_path / "hong-so", [make_tour_row(cost_s="khong-phai-so")])
+    with pytest.raises(ValueError, match="cost_s.*không phải số"):
+        plot.read_tour_measurements(tmp_path / "hong-so")
+
+    columns = [c for c in TOUR_COLUMNS if c != "order_ns"]
+    write_tour_csv(tmp_path / "thieu-cot", [make_tour_row()], columns=columns)
+    with pytest.raises(ValueError, match="thiếu cột.*order_ns"):
+        plot.read_tour_measurements(tmp_path / "thieu-cot")
+
+    write_tour_csv(tmp_path / "hong-feasible", [make_tour_row(feasible="co-le")])
+    with pytest.raises(ValueError, match="feasible.*không phải true/false"):
+        plot.read_tour_measurements(tmp_path / "hong-feasible")
+
+
+def test_tour_stats_are_per_set_hand_computed(tmp_path):
+    write_tour_csv(tmp_path, tour_block())
+    stats = plot.tour_stats(plot.read_tour_measurements(tmp_path))
+    # Improvement tính từng bộ rồi mới gom: set0 20 %, set1 15 % → median của [20, 15]
+    assert stats.improvements[(4, "nearest_neighbor")] == pytest.approx([20.0, 15.0])
+    assert stats.improvements[(4, "nearest_neighbor_2opt")] == pytest.approx([40.0, 40.0])
+    assert stats.improvements[(8, "nearest_neighbor")] == pytest.approx([20.0])
+    assert stats.gaps[(4, "input")] == pytest.approx([100.0, 100.0])
+    assert stats.gaps[(4, "nearest_neighbor")] == pytest.approx([60.0, 70.0])
+    assert stats.gaps[(6, "input")] == pytest.approx([200.0 / 3.0])   # (150−90)/90
+    assert "input" not in {m for (_n, m) in stats.improvements}        # mốc không có Improvement
+    assert "held_karp" not in {m for (_n, m) in stats.gaps}           # mốc không có Gap
+    assert stats.n_total == {4: 2, 6: 2, 8: 1} and stats.n_feasible == {4: 2, 6: 1, 8: 1}
+    assert stats.missing_held_karp == 3        # bộ n=8 thiếu held_karp: input, NN, NN+2-opt
+    assert stats.missing_input == 0
+    assert stats.order_ms[(4, "nearest_neighbor")] == pytest.approx([4.0, 4.0])
+
+
+def test_tour_stats_counts_pairs_missing_a_method(tmp_path):
+    write_tour_csv(tmp_path, [make_tour_row(set_id=1, method="nearest_neighbor", cost_s=80.0),
+                              make_tour_row(set_id=1, method="held_karp", cost_s=50.0)])
+    stats = plot.tour_stats(plot.read_tour_measurements(tmp_path))
+    assert (4, "nearest_neighbor") not in stats.improvements        # thiếu `input` → loại
+    assert stats.gaps[(4, "nearest_neighbor")] == pytest.approx([60.0])
+    assert stats.missing_input == 1 and stats.missing_held_karp == 0
+
+
+@needs_matplotlib
+def test_tour_only_dir_creates_e5_and_skips_measurement_figures(tmp_path):
+    write_tour_csv(tmp_path, tour_block())
+    report = plot.plot_run(tmp_path)                          # thư mục chỉ có tour CSV vẫn chạy
+    assert set(report.created) == {"fig_e5_tour.png"}
+    path = report.created["fig_e5_tour.png"]
+    assert path.parent == tmp_path
+    assert_png(path)
+    caption = report.captions["fig_e5_tour.png"]
+    assert f"run_id: {TOUR_RUN_ID}" in caption
+    assert "số bộ khả thi: 4/5" in caption                    # set3 `feasible = false` chỉ đếm
+    assert "dataset_id: hcm-benthanh-r2000-20261024" in caption
+    assert "suite demo" in report.skipped["fig_e2_expanded_box.png"]
+
+
+@needs_matplotlib
+def test_mixed_dir_creates_e2_and_e5(tmp_path):
+    write_csv(tmp_path, demo_rows())
+    write_tour_csv(tmp_path, tour_block())
+    report = plot.plot_run(tmp_path)
+    assert {"fig_e2_expanded_box.png", "fig_e2_expanded_scatter.png",
+            "fig_e5_tour.png"} <= set(report.created)
+    assert_png(report.created["fig_e5_tour.png"])

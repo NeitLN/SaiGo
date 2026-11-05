@@ -5,8 +5,11 @@ Cách dùng::
     python scripts/summarize_results.py <run_dir> [<run_dir> ...]
 
 Đọc `measurements.csv` (27 cột mục 3.3), `env.json` và `config.json` của **mọi** thư mục rồi in ra
-ba bảng mẫu mục 9: E2 (thuật toán × tầng), E3 (theo `|V|`), E4 (theo `scenario_id`). Chỉ in ra
-stdout, **không** ghi vào `docs/EXPERIMENTS.md` (người dẫn số vào tài liệu ở T65).
+các bảng mẫu mục 9: E2 (thuật toán × tầng), E3 (theo `|V|`), E4 (theo `scenario_id`), E5 (tour —
+đọc thêm `tour_measurements.csv` cùng thư mục, định dạng E5_proposal.md). Thư mục chỉ có
+`measurements.csv` vẫn chạy như cũ, chỉ bảng E5 bị bỏ qua kèm lý do; thư mục nào cũng phải có ít
+nhất một trong hai file CSV. Chỉ in ra stdout, **không** ghi vào `docs/EXPERIMENTS.md` (người dẫn
+số vào tài liệu ở T65).
 
 `r = expanded_A* / expanded_D` và `s = t_D / t_A*` được tính **từng cặp** rồi mới lấy median và tứ
 phân vị (mục 3.2), không lấy tỉ số của hai trung bình; `ms = runtime_ns_median / 1e6`. Gộp nhiều lần
@@ -143,7 +146,7 @@ class Table:
 
 @dataclass(frozen=True)
 class Section:
-    """Một bảng E2/E3/E4: có bảng kèm dòng nguồn, hoặc lý do bỏ qua."""
+    """Một bảng E2/E3/E4/E5: có bảng kèm dòng nguồn, hoặc lý do bỏ qua."""
 
     title: str
     table: Table | None = None
@@ -472,11 +475,222 @@ def e4_section(rows: Sequence[Row], metas: Sequence[RunMeta]) -> Section:
     return Section(title, table, source_line(scenario, metas, len(pairs)))
 
 
+# --- Bảng E5 (tour): tour_measurements.csv theo định dạng E5_proposal.md mục 2 ---
+
+TOUR_COLUMNS = (
+    "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
+    "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
+)
+TOUR_METHOD_ORDER = ("input", "nearest_neighbor", "nearest_neighbor_2opt", "held_karp")
+TOUR_METHOD_LABEL = {"input": "thứ tự nhập", "nearest_neighbor": "NN",
+                     "nearest_neighbor_2opt": "NN + 2-opt", "held_karp": "Held–Karp"}
+
+
+@dataclass(frozen=True)
+class TourRow:
+    """Một dòng `tour_measurements.csv` đã đọc số (một bộ × một phương án)."""
+
+    run_id: str
+    dataset_id: str
+    set_id: int
+    n_stops: int
+    feasible: bool
+    method: str
+    cost_s: float | None
+    order_ms: float                  # order_ns / 1e6
+
+
+@dataclass(frozen=True)
+class TourStats:
+    """Chỉ số E5 tính **từng bộ** `(run_id, n_stops, set_id)` rồi gom theo `(n_stops, phương án)`.
+
+    `improvements` so với `input`, `gaps` so với `held_karp` (chi phí thô×100); `input` không có
+    Improvement (là mốc), `held_karp` không có Gap (là mốc tối ưu). Bộ `feasible = false` bị loại
+    khỏi mọi danh sách, chỉ đếm trong `n_total`, không vào `n_feasible` (mục 8: không gán gap 0).
+    """
+
+    improvements: dict[tuple[int, str], list[float]]
+    gaps: dict[tuple[int, str], list[float]]
+    order_ms: dict[tuple[int, str], list[float]]
+    n_feasible: dict[int, int]
+    n_total: dict[int, int]
+    missing_input: int               # số (bộ, phương án) bị bỏ khỏi Improvement vì thiếu `input`
+    missing_held_karp: int           # số (bộ, phương án) bị bỏ khỏi Gap vì thiếu `held_karp`
+
+
+def _boolean(path: Path, lineno: int, raw_value: str, name: str) -> bool:
+    """Đọc ô `true`/`false` (không phân biệt hoa thường); khác là lỗi dữ liệu."""
+    text = (raw_value or "").strip().lower()
+    if text in ("true", "1"):
+        return True
+    if text in ("false", "0"):
+        return False
+    raise ValueError(f"{path}:{lineno}: cột {name} = {raw_value!r} không phải true/false")
+
+
+def read_tour_rows(run_dir: Path | str) -> list[TourRow]:
+    """Đọc `tour_measurements.csv` (E5_proposal.md mục 2); file vắng mặt → rỗng, không lỗi."""
+    path = Path(run_dir) / "tour_measurements.csv"
+    if not path.is_file():
+        return []
+    rows: list[TourRow] = []
+    with path.open(encoding="utf-8", newline="") as fh:
+        reader = csv.DictReader(fh)
+        missing = [c for c in TOUR_COLUMNS if c not in (reader.fieldnames or [])]
+        if missing:
+            raise ValueError(f"{path}: thiếu cột {', '.join(missing)} (E5_proposal.md mục 2)")
+        for lineno, raw in enumerate(reader, start=2):
+            cost = (raw["cost_s"] or "").strip()
+            rows.append(TourRow(
+                run_id=(raw["run_id"] or "").strip(),
+                dataset_id=(raw["dataset_id"] or "").strip(),
+                set_id=int(_number(path, lineno, raw, "set_id")),
+                n_stops=int(_number(path, lineno, raw, "n_stops")),
+                feasible=_boolean(path, lineno, raw["feasible"], "feasible"),
+                method=(raw["method"] or "").strip().lower(),
+                cost_s=_number(path, lineno, raw, "cost_s") if cost else None,
+                order_ms=_number(path, lineno, raw, "order_ns") / 1e6,
+            ))
+    return rows
+
+
+def tour_stats(tour_rows: Sequence[TourRow]) -> TourStats:
+    """Tính chỉ số E5 **từng bộ** rồi gom theo `(n_stops, phương án)`.
+
+    Bộ `feasible = false` chỉ được đếm, không gán gap 0; bộ thiếu phương án cần đến bị bỏ khỏi
+    chỉ số đó, mỗi cặp (bộ, phương án) bị bỏ như vậy được đếm vào `missing_input` /
+    `missing_held_karp` để ghi chú thay vì im lặng.
+    """
+    costs: dict[tuple[str, int, int], dict[str, float]] = {}
+    timings: dict[tuple[str, int, int], dict[str, float]] = {}
+    feasible: dict[tuple[str, int, int], bool] = {}
+    seen: dict[tuple[str, int, int], None] = {}   # dict giữ thứ tự xuất hiện, set thì không
+    for row in tour_rows:
+        key = (row.run_id, row.n_stops, row.set_id)
+        seen[key] = None
+        feasible[key] = feasible.get(key, True) and row.feasible
+        if row.cost_s is not None:                     # bộ khả thi mới có chi phí/timing dùng được
+            costs.setdefault(key, {})[row.method] = row.cost_s
+            timings.setdefault(key, {})[row.method] = row.order_ms
+
+    improvements: dict[tuple[int, str], list[float]] = {}
+    gaps: dict[tuple[int, str], list[float]] = {}
+    order_ms: dict[tuple[int, str], list[float]] = {}
+    n_feasible: dict[int, int] = {}
+    n_total: dict[int, int] = {}
+    missing_input = 0
+    missing_held_karp = 0
+    for key in seen:
+        by_method = costs.get(key, {})
+        n_stops = key[1]
+        n_total[n_stops] = n_total.get(n_stops, 0) + 1
+        if not feasible[key] or not by_method:
+            # không khả thi (hoặc thiếu chi phí dùng được): chỉ đếm, không vào các chỉ số
+            continue
+        n_feasible[n_stops] = n_feasible.get(n_stops, 0) + 1
+        base, optimum = by_method.get("input"), by_method.get("held_karp")
+        for method, cost in by_method.items():
+            if method not in ("input", "held_karp"):    # Improvement so với thứ tự nhập
+                if base is not None and base > 0:
+                    improvements.setdefault((n_stops, method), []).append(
+                        (base - cost) / base * 100.0)
+                else:
+                    missing_input += 1
+            if method != "held_karp":                   # Gap so với Held–Karp (mốc tối ưu)
+                if optimum is not None and optimum > 0:
+                    gaps.setdefault((n_stops, method), []).append(
+                        (cost - optimum) / optimum * 100.0)
+                else:
+                    missing_held_karp += 1
+            order_ms.setdefault((n_stops, method), []).append(timings[key][method])
+    return TourStats(improvements=improvements, gaps=gaps, order_ms=order_ms,
+                     n_feasible=n_feasible, n_total=n_total,
+                     missing_input=missing_input, missing_held_karp=missing_held_karp)
+
+
+def _iqr(values: Sequence[float]) -> str:
+    """Khoảng tứ phân vị `[q1; q3]` của một chỉ số; ít hơn 2 giá trị thì không có."""
+    if len(values) < 2:
+        return MISSING
+    low, high = quartiles(values)
+    return f"[{fmt_number(low, 2)}; {fmt_number(high, 2)}]"
+
+
+def e5_section(tour_rows: Sequence[TourRow], metas: Sequence[RunMeta]) -> Section:
+    """Bảng E5: theo `n_stops` × phương án — Improvement%, Gap%, median order_ms, bộ khả thi."""
+    title = "E5 — Tour: Improvement và Gap theo số điểm giao"
+    if not tour_rows:
+        return Section(title, skipped="không có dòng nào thuộc tour_measurements.csv (E5)")
+    stats = tour_stats(tour_rows)
+    sizes = sorted({n for (n, _method) in {**stats.improvements, **stats.gaps,
+                                           **stats.order_ms}})
+    if not sizes:
+        return Section(title, skipped="không có cặp (bộ, phương án) nào đủ dữ liệu để tính "
+                                      "Improvement/Gap (E5)")
+    present = {m for (_n, m) in stats.improvements} | {m for (_n, m) in stats.gaps} \
+        | {m for (_n, m) in stats.order_ms}
+    methods = [m for m in TOUR_METHOD_ORDER if m in present]
+    methods += sorted(m for m in present if m not in TOUR_METHOD_ORDER)
+
+    table_rows: list[tuple[str, ...]] = []
+    for size in sizes:
+        for method in methods:
+            improvements = stats.improvements.get((size, method), [])
+            gaps = stats.gaps.get((size, method), [])
+            order_ms = stats.order_ms.get((size, method), [])
+            if not improvements and not gaps and not order_ms:
+                continue
+            table_rows.append((
+                str(size),
+                TOUR_METHOD_LABEL.get(method, method),
+                fmt_number(median(improvements), 2) if improvements else MISSING,
+                _iqr(improvements),
+                fmt_number(median(gaps), 2) if gaps else MISSING,
+                _iqr(gaps),
+                fmt_number(median(order_ms), 3) if order_ms else MISSING,
+                f"{stats.n_feasible[size]}/{stats.n_total[size]}",
+            ))
+    notes: list[str] = []
+    infeasible = sum(stats.n_total.values()) - sum(stats.n_feasible.values())
+    if infeasible:
+        notes.append(f"Bỏ {infeasible} bộ có `feasible = false` (không gán Improvement/Gap 0).")
+    if stats.missing_input:
+        notes.append(f"{stats.missing_input} bộ–phương án bị bỏ khỏi Improvement vì thiếu dòng "
+                     "`input`.")
+    if stats.missing_held_karp:
+        notes.append(f"{stats.missing_held_karp} bộ–phương án bị bỏ khỏi Gap vì thiếu dòng "
+                     "`held_karp`.")
+    table = Table(
+        headers=("Điểm giao", "Phương án", "Median Improvement %", "IQR Improvement %",
+                 "Median Gap %", "IQR Gap %", "Median order_ms", "Bộ khả thi"),
+        rows=tuple(table_rows),
+        formulas=("Improvement% = 100·(C_input − C_phương_án)/C_input; Gap% = "
+                  "100·(C_phương_án − C_held_karp)/C_held_karp — tính **từng bộ** rồi mới lấy "
+                  "median và tứ phân vị theo n_stops (mục 8); thứ tự nhập là mốc của Improvement "
+                  "còn Held–Karp là mốc của Gap. order_ms = order_ns / 1e6; IQR = [q1; q3], chỉ "
+                  "tính khi nhóm đủ 2 bộ khả thi."),
+        notes=tuple(notes),
+    )
+    run_ids = first_seen(r.run_id for r in tour_rows if r.run_id)
+    datasets = first_seen(r.dataset_id for r in tour_rows if r.dataset_id) or [MISSING]
+    pythons = first_seen(m.python for m in metas) or [MISSING]
+    commits = first_seen(m.git_commit for m in metas) or [MISSING]
+    dirty = any(m.git_dirty for m in metas)
+    n_sets = len({(r.run_id, r.n_stops, r.set_id) for r in tour_rows})
+    source = ("Nguồn: run_id " + ", ".join(f"`{x}`" for x in (run_ids or ["?"]))
+              + " · dataset_id " + ", ".join(datasets)
+              + f" · {n_sets} bộ · Python " + ", ".join(pythons)
+              + " · git " + ", ".join(commits) + f" (dirty: {'true' if dirty else 'false'})")
+    return Section(title, table, source)
+
+
 # --- In ra ---
 
-def render(rows: Sequence[Row], metas: Sequence[RunMeta]) -> str:
-    """Toàn bộ báo cáo Markdown của ba bảng E2, E3, E4."""
-    sections = (e2_section(rows, metas), e3_section(rows, metas), e4_section(rows, metas))
+def render(rows: Sequence[Row], metas: Sequence[RunMeta],
+           tour_rows: Sequence[TourRow] = ()) -> str:
+    """Toàn bộ báo cáo Markdown của các bảng E2, E3, E4, E5."""
+    sections = (e2_section(rows, metas), e3_section(rows, metas), e4_section(rows, metas),
+                e5_section(tour_rows, metas))
     blocks = ["# Tổng hợp kết quả benchmark", ""]
     for section in sections:
         blocks += [f"## {section.title}", ""]
@@ -523,6 +737,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(USAGE, file=sys.stderr)
         return 2
     rows: list[Row] = []
+    tour_rows: list[TourRow] = []
     metas: list[RunMeta] = []
     seen: set[Path] = set()
     for text in args:
@@ -531,7 +746,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             continue
         seen.add(path.resolve())
         try:
-            rows.extend(read_rows(path))
+            measure_path = path / "measurements.csv"
+            tour_path = path / "tour_measurements.csv"
+            if not measure_path.is_file() and not tour_path.is_file():
+                raise FileNotFoundError(f"không thấy {measure_path}")   # báo lỗi như trước
+            if measure_path.is_file():
+                rows.extend(read_rows(path))
+            if tour_path.is_file():
+                tour_rows.extend(read_tour_rows(path))
             metas.append(read_meta(path))
         except (OSError, ValueError) as exc:
             print(f"lỗi: {exc}", file=sys.stderr)
@@ -541,7 +763,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("cảnh báo: run_id " + ", ".join(f"`{x}`" for x in repeated)
               + " có ở nhiều thư mục; cặp trùng query_id sẽ bị gộp. "
               "Mỗi lần chạy nên có run_id riêng (--run-id).", file=sys.stderr)
-    print(render(rows, metas), end="")
+    print(render(rows, metas, tour_rows), end="")
     return 0
 
 
