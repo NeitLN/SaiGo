@@ -28,6 +28,7 @@ PROCESSED = ROOT / "data" / "processed"
 CONFIG = ROOT / "data" / "config"
 VN = timezone(timedelta(hours=7))
 ATTRIBUTION = "© OpenStreetMap contributors, dữ liệu theo giấy phép ODbL (https://www.openstreetmap.org/copyright)"
+RELEASE = "data-raw-20261024"  # GitHub Release chứa outer.graphml đã đóng băng (T34)
 
 BEN_THANH = (10.7725, 106.6980)  # (lat, lon) chợ Bến Thành
 SMOKE_HALF_SIDE_M = 250          # bbox 500 m × 500 m
@@ -141,41 +142,49 @@ def main_highway(value, speeds: dict) -> str | None:
                                       -table.index(h) if h in table else -len(table)))
 
 
-def build(area: str) -> None:
-    """Cắt vùng, chuẩn hóa thuộc tính, gán tốc độ, đánh dấu SCC, đánh lại ID, xuất JSON + manifest."""
-    ox = import_osmnx()
-    import networkx as nx
-    from pyproj import Transformer
-    from shapely.geometry import Point
+def load_frozen_raw():
+    """Đọc outer.graphml đã đóng băng; dừng nếu thiếu file hoặc sha256 không khớp raw_manifest.json.
 
+    Kiểm file thô trước khi nạp OSMnx, để máy thiếu cả hai thấy đúng việc cần làm trước.
+    """
     raw_manifest = json.loads((PROCESSED / "raw_manifest.json").read_text(encoding="utf-8"))
     raw = ROOT / raw_manifest["file"]
     if not raw.exists():
-        sys.exit(f"thiếu {raw_manifest['file']}; tải từ GitHub Release (xem docs/tracking hoặc PR T30), không tải lại từ OSM")
+        sys.exit(f"thiếu {raw_manifest['file']}; tải đúng bản đã đóng băng từ Release {RELEASE}: "
+                 f"gh release download {RELEASE} -p {raw.name} -D {raw.parent.relative_to(ROOT).as_posix()} "
+                 "(xem docs/team/ONBOARDING.md mục 3, \"Tải dữ liệu\"). Không tải lại từ OSM.")
     if sha256(raw) != raw_manifest["sha256"]:
-        sys.exit(f"{raw_manifest['file']} không khớp sha256 trong raw_manifest.json; dùng đúng bản đã đóng băng")
+        sys.exit(f"{raw_manifest['file']} không khớp sha256 trong raw_manifest.json; "
+                 f"tải lại đúng bản đã đóng băng từ Release {RELEASE} (thêm --clobber để ghi đè)")
+    ox = import_osmnx()
+    return raw_manifest, ox.load_graphml(raw)
 
-    areas = json.loads((CONFIG / "areas.json").read_text(encoding="utf-8"))
-    speeds = json.loads((CONFIG / "speeds.json").read_text(encoding="utf-8"))
-    if area in ("center", "download") or not isinstance(areas.get(area), dict) or "half_side_m" not in areas[area]:
-        sys.exit(f"không có vùng {area!r} trong data/config/areas.json")
-    half = areas[area]["half_side_m"]
-    lat0, lon0 = areas["center"]["lat"], areas["center"]["lon"]
 
-    G = ox.load_graphml(raw)
+def crop_nodes(G, center: dict, half_m: float) -> tuple[list, str]:
+    """Bước 4: node nằm trong hình vuông nửa cạnh half_m quanh center, đo bằng mét trên hệ chiếu UTM."""
+    ox = import_osmnx()
+    from pyproj import Transformer
+    from shapely.geometry import Point
 
-    # Bước 4: giữ node trong hình vuông (mét, hệ chiếu UTM) và cạnh có cả hai đầu bên trong.
-    _, utm = ox.projection.project_geometry(Point(lon0, lat0))
+    _, utm = ox.projection.project_geometry(Point(center["lon"], center["lat"]))
     to_utm = Transformer.from_crs("EPSG:4326", utm, always_xy=True)
-    cx, cy = to_utm.transform(lon0, lat0)
-    keep = [n for n, d in G.nodes(data=True)
-            if (lambda x, y: abs(x - cx) <= half and abs(y - cy) <= half)(*to_utm.transform(d["x"], d["y"]))]
-    H = G.subgraph(keep).copy()
+    cx, cy = to_utm.transform(center["lon"], center["lat"])
 
-    # Bước 5: SCC lớn nhất. Node ngoài SCC vẫn giữ để vẽ nhưng không dùng làm điểm snap/benchmark (mục 8.4).
-    scc = max(nx.strongly_connected_components(H), key=len)
+    def inside(d: dict) -> bool:
+        x, y = to_utm.transform(d["x"], d["y"])
+        return abs(x - cx) <= half_m and abs(y - cy) <= half_m
 
-    # Bước 6: đánh lại ID. Node theo osmid; cạnh theo (u, v, key) gốc, nên ID ổn định với cùng dữ liệu.
+    return [n for n, d in G.nodes(data=True) if inside(d)], str(utm)
+
+
+def export_graph(H, scc: set, dataset_id: str, speeds: dict) -> dict:
+    """Bước 6–7: chuẩn hóa thuộc tính, đánh lại ID, xuất saigo-graph/1 và trả về báo cáo kiểm tra.
+
+    H là đồ thị đã cắt (giữ cạnh có cả hai đầu bên trong); node ngoài `scc` vẫn giữ để vẽ (mục 8.4).
+    """
+    import networkx as nx
+
+    # Node theo osmid; cạnh theo (u, v, key) gốc, nên ID ổn định với cùng dữ liệu.
     node_ids = {n: i for i, n in enumerate(sorted(H.nodes))}
     nodes = [{"id": node_ids[n], "osmid": n, "lat": round(H.nodes[n]["y"], 7), "lon": round(H.nodes[n]["x"], 7),
               "in_scc": n in scc} for n in sorted(H.nodes)]
@@ -206,7 +215,7 @@ def build(area: str) -> None:
             "geometry": coords,
         })
 
-    # Bước 7: báo cáo kiểm tra, tính trên đúng các giá trị được xuất ra file.
+    # Báo cáo tính trên đúng các giá trị được xuất ra file.
     # Cạnh thẳng có length == haversine nên chênh lệch kiểu 1e-9 m chỉ là sai số dấu phẩy động;
     # chỉ đếm là vi phạm khi length ngắn hơn haversine quá 1 mm.
     ratios, below = [], 0
@@ -216,17 +225,18 @@ def build(area: str) -> None:
         if hav > 0:
             ratios.append(e["length_m"] / hav)
             below += e["length_m"] < hav - 1e-3
-    c = min(1.0, min(ratios)) if ratios else 1.0
     pairs = Counter((e["u"], e["v"]) for e in edges)
 
-    dataset_id = f"hcm-benthanh-r{half}-{raw_manifest['downloaded_at'][:10].replace('-', '')}"
     graph = {"format": "saigo-graph/1", "dataset_id": dataset_id, "crs": "EPSG:4326", "nodes": nodes, "edges": edges}
     PROCESSED.mkdir(parents=True, exist_ok=True)
     out = PROCESSED / f"{dataset_id}.json"
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(graph, f, ensure_ascii=False, separators=(",", ":"))
 
-    report = {
+    return {
+        "file": out.relative_to(ROOT).as_posix(),
+        "file_bytes": out.stat().st_size,
+        "sha256": sha256(out),
         "node_count": len(nodes),
         "edge_count": len(edges),
         "oneway_edge_count": sum(1 for e in edges if e["oneway"]),
@@ -236,19 +246,40 @@ def build(area: str) -> None:
         "nodes_outside_scc": len(nodes) - len(scc),
         "weak_components": nx.number_weakly_connected_components(H),
         "geometry_reversed": reversed_geom,
-        "heuristic_c": c,
+        "heuristic_c": min(1.0, min(ratios)) if ratios else 1.0,
         "edges_length_below_haversine_1mm": below,
         "v_max_kmh": max(e["speed_kmh"] for e in edges),
         "highway": dict(Counter(e["highway"] for e in edges).most_common()),
     }
+
+
+def build(area: str) -> None:
+    """Cắt vùng, chuẩn hóa thuộc tính, gán tốc độ, đánh dấu SCC, đánh lại ID, xuất JSON + manifest."""
+    # load_frozen_raw kiểm file thô trước khi nạp OSMnx; import_osmnx ở đây chỉ lấy lại module đã nạp.
+    raw_manifest, G = load_frozen_raw()
+    ox = import_osmnx()
+    import networkx as nx
+
+    areas = json.loads((CONFIG / "areas.json").read_text(encoding="utf-8"))
+    speeds = json.loads((CONFIG / "speeds.json").read_text(encoding="utf-8"))
+    if area in ("center", "download") or not isinstance(areas.get(area), dict) or "half_side_m" not in areas[area]:
+        sys.exit(f"không có vùng {area!r} trong data/config/areas.json")
+    half = areas[area]["half_side_m"]
+
+    keep, utm = crop_nodes(G, areas["center"], half)
+    H = G.subgraph(keep).copy()
+    # Bước 5: SCC lớn nhất. Node ngoài SCC vẫn giữ để vẽ nhưng không dùng làm điểm snap/benchmark (mục 8.4).
+    scc = max(nx.strongly_connected_components(H), key=len)
+
+    dataset_id = f"hcm-benthanh-r{half}-{raw_manifest['downloaded_at'][:10].replace('-', '')}"
+    report = export_graph(H, scc, dataset_id, speeds)
+    file_info = {k: report.pop(k) for k in ("file", "file_bytes", "sha256")}
     manifest = {
         "format": "saigo-graph/1",
         "dataset_id": dataset_id,
-        "file": out.relative_to(ROOT).as_posix(),
-        "file_bytes": out.stat().st_size,
-        "sha256": sha256(out),
+        **file_info,
         "raw": {k: raw_manifest[k] for k in ("dataset_id", "downloaded_at", "bbox", "network_type", "sha256")},
-        "crop": {"area": area, "center": areas["center"], "half_side_m": half, "projected_crs": str(utm),
+        "crop": {"area": area, "center": areas["center"], "half_side_m": half, "projected_crs": utm,
                  "rule": "giữ node trong hình vuông; giữ cạnh có cả hai đầu bên trong"},
         "simplification": {"simplify": raw_manifest["simplify"], "retain_all": raw_manifest["retain_all"]},
         **report,
@@ -264,8 +295,9 @@ def build(area: str) -> None:
     print(f"parallel_edges={report['parallel_edge_count']} self_loops={report['self_loop_count']} "
           f"weak_components={report['weak_components']}")
     print(f"SCC lớn nhất={report['scc_node_count']} node, ngoài SCC={report['nodes_outside_scc']} node")
-    print(f"c={c!r} (cạnh có length < haversine quá 1 mm: {below}), "
-          f"v_max={report['v_max_kmh']} km/h, hình học bị đảo={reversed_geom}")
+    print(f"c={report['heuristic_c']!r} (cạnh có length < haversine quá 1 mm: "
+          f"{report['edges_length_below_haversine_1mm']}), "
+          f"v_max={report['v_max_kmh']} km/h, hình học bị đảo={report['geometry_reversed']}")
     print(f"đã lưu {manifest['file']} ({manifest['file_bytes'] / 1e6:.1f} MB) + data/processed/manifest.json")
 
 

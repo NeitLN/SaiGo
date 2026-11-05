@@ -71,6 +71,31 @@ Lỗi thường gặp:
 | `python` mở Microsoft Store | Cài Python từ python.org, tắt "App execution aliases" cho python trong Settings |
 | `ModuleNotFoundError: app` khi chạy CLI | Chạy từ thư mục gốc với `$env:PYTHONPATH="backend"` |
 
+### Tải dữ liệu
+
+Cả nhóm dùng **đúng một** bản dữ liệu OSM thô: `outer.graphml` tải lúc 03:13 ngày 24/10/2026, lưu ở Release [`data-raw-20261024`](https://github.com/NeitLN/SaiGo/releases/tag/data-raw-20261024). **Không** chạy `prepare_data.py download` để tải lại: OSM thay đổi hằng ngày, bản tải ngày 25/10 đã ra 12.130 node thay vì 12.131.
+
+Cần `gh` đã đăng nhập (một lần): cài từ https://cli.github.com, rồi chạy `gh auth login` và chọn GitHub.com, HTTPS, đăng nhập bằng trình duyệt.
+
+```powershell
+# 1. Cài OSMnx nếu chưa cài (build cần thư viện này)
+powershell -ExecutionPolicy Bypass -File scripts\setup_dev.ps1 -Data
+
+# 2. Tải file thô và kiểm sha256
+gh release download data-raw-20261024 -p outer.graphml -D data\raw
+(Get-FileHash data\raw\outer.graphml -Algorithm SHA256).Hash.ToLower()
+# phải ra 24a283275b0f65836bd51d7efc7110a566b658ff3a6a5bccef1a0db576ed5398
+
+# 3. Dựng đồ thị vùng demo và chạy test dữ liệu thật
+.venv\Scripts\python.exe scripts\prepare_data.py build --area demo
+.venv\Scripts\python.exe -m pytest -m realdata -q
+```
+
+- Không có `gh`: mở link Release, tải `outer.graphml` ở mục *Assets*, đặt vào `data\raw\`.
+- Tải lại khi đã có file (ví dụ hash không khớp): thêm `--clobber` vào lệnh `gh release download` để ghi đè.
+- `build` tự kiểm sha256 của file thô và dừng nếu không khớp; kết quả là `data\processed\hcm-benthanh-r2000-20261024.json`.
+- Hash của file thô khác `24a28327…` nghĩa là file đã bị đổi hoặc tải lỗi: tải lại từ Release. Hash của file JSON sau `build` khác với `data\processed\manifest.json` thì ghi lại trên issue kèm phiên bản Python/thư viện; chưa kết luận nguyên nhân.
+
 ## 4. Đọc trước (khoảng 20 phút)
 
 1. [PROJECT_BRIEF.md](../PROJECT_BRIEF.md) mục 1–3: dự án làm gì, phạm vi.
