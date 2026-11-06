@@ -1,12 +1,12 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 05:41 06/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 05:09 07/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=42123630864)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=42302513723)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
 - **Đã đóng:** 83 giờ — có bằng chứng (PR/commit) 83 giờ · **Còn lại:** 53 giờ, 17 task mở
-- **Đường lý tưởng hôm nay:** 37.2 giờ → **chậm** hơn kế hoạch 15.8 giờ
+- **Đường lý tưởng hôm nay:** 31 giờ → **chậm** hơn kế hoạch 22.0 giờ
 - Mốc: cổng G1 05/11 · final ready 12/11 · thuyết trình 19/11 · nộp 22/11
 
 ### Theo tuần
@@ -31,10 +31,6 @@ _Tự động cập nhật 05:41 06/11/2026 (giờ VN) bởi workflow `tracking.
 
 - 05/11 · #51 T15 · Chạy skeleton trên máy thứ hai (2 h, qua PR)
 - 05/11 · #22 T53 · UI: kịch bản và vùng ùn tắc (2 h, qua PR)
-- 31/10 · #25 T60 · Bộ chạy benchmark và 1.000 truy vấn vùng demo (4 h, qua PR)
-- 31/10 · #24 T55 · Case demo và kiểm thử thủ công (3 h, qua PR)
-- 31/10 · #18 T42 · Kịch bản ùn tắc cho demo (2 h, qua commit)
-- 31/10 · #13 T31 · Chuyển GraphML thành `saigo-graph/1` và báo cáo kiểm tra (4 h, qua commit)
 
 ### Ghi chú
 
