@@ -1,12 +1,12 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 07:43 10/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 05:25 11/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=42730471884)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=42914314832)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
 - **Đã đóng:** 83 giờ — có bằng chứng (PR/commit) 83 giờ · **Còn lại:** 53 giờ, 17 task mở
-- **Đường lý tưởng hôm nay:** 12.4 giờ → **chậm** hơn kế hoạch 40.6 giờ
+- **Đường lý tưởng hôm nay:** 6.2 giờ → **chậm** hơn kế hoạch 46.8 giờ
 - Mốc: cổng G1 05/11 · final ready 12/11 · thuyết trình 19/11 · nộp 22/11
 
 ### Theo tuần
