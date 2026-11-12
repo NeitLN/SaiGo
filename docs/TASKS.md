@@ -383,6 +383,7 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 
 ### T54 — UI: đóng đoạn đường và báo không có đường
 - 👤 Minh + Tiến · ⏱ 3 h · ⛓ T52, T41
+- **13/11: gộp vào T56** (giao diện React + Astryx), làm trên giao diện mới, không làm trên bản TS thuần.
 - **Việc cần làm (một chế độ, 26/10):** bấm vào một đoạn **trên tuyến** → đóng đoạn đó (cả cạnh đối nếu có); tô đỏ; tự tìm lại; khi `no_path` thì hiện thông báo, không vẽ đường; nút "Mở lại tất cả".
 - 📁 `frontend/src/*.ts`
 - 📦 Đóng đường trên web.
@@ -398,6 +399,15 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - ✅ Mọi case chạy được và cho kết quả như mô tả; lỗi (nếu có) được ghi rõ.
 - ▶ Thủ công theo checklist.
 - 🧠 Mỗi case minh họa điều gì (RQ nào).
+
+### T56 — Giao diện React + Astryx (gộp T54, T73)
+- 👤 Tiến (Minh review) · ⏱ 8 h · ⛓ T51, T72
+- **Việc cần làm:** đặc tả đã duyệt ở [tasks/T56-ui-react-astryx.md](tasks/T56-ui-react-astryx.md): viết lại giao diện bằng React 19 + Astryx, giữ đủ hành vi của T52, T53; thêm đóng đoạn đường (T54), chế độ tour (T73), dropdown case demo (T55). Quyết định D14 ở PROJECT_BRIEF.
+- 📁 `frontend/*`
+- 📦 Giao diện mới chạy được toàn bộ kịch bản demo.
+- ✅ Mọi ví dụ chấp nhận trong phiếu T56 đạt; Bảo chạy lại được trên máy mình **trước 17/11** (không kịp thì demo bằng giao diện cũ).
+- ▶ `npm run build`; trình duyệt tự động theo bảng ví dụ chấp nhận.
+- 🧠 Tách logic vẽ bản đồ (Leaflet) khỏi khung giao diện; bỏ response cũ khi người dùng bấm liên tục.
 
 ---
 
@@ -491,6 +501,7 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 
 ### T73 — UI tour tối giản
 - 👤 Minh · ⏱ 3 h · ⛓ T72
+- **13/11: gộp vào T56** (giao diện React + Astryx).
 - **Việc cần làm:** preset kho + 5 điểm từ `cases.json`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt; marker đánh số theo thẻ được chọn.
 - 📁 `frontend/src/*.ts` · 📦 Demo tour · ✅ Bước 9 của kịch bản demo chạy được · ▶ Thủ công
 - 🧠 Hai tầng của bài toán giao hàng.

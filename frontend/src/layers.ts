@@ -1,18 +1,29 @@
-// Các lớp vẽ trên bản đồ: điểm đi/đến, tuyến Dijkstra và A* (docs/DEMO.md mục 1.2).
+// Các lớp vẽ trên bản đồ Leaflet (docs/DEMO.md mục 1.2): vùng ùn tắc, điểm đi/đến, tuyến Dijkstra và A*,
+// đoạn bị đóng (T54), kho và điểm giao của tour (T73).
 import L from 'leaflet'
 import type { AlgorithmResult, LatLon, RouteResponse, Scenario } from './api'
 
-export const COLORS = { dijkstra: '#1c7ed6', astar: '#f08c00', source: '#2f9e44', target: '#e03131' }
+// Màu lấy từ token của theme Astryx (đọc trên phần tử bản đồ, nằm trong <Theme>), không viết mã màu cứng.
+type Palette = { dijkstra: string; astar: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string }
+
+function readPalette(el: HTMLElement): Palette {
+  const css = getComputedStyle(el)
+  const v = (name: string) => css.getPropertyValue(name).trim()
+  return {
+    dijkstra: v('--color-data-categorical-blue'),
+    astar: v('--color-data-categorical-orange'),
+    source: v('--color-data-categorical-green'),
+    target: v('--color-data-categorical-red'),
+    closed: v('--color-error'),
+    zone: v('--color-data-categorical-orange'),
+    tour: v('--color-data-categorical-purple'),
+    surface: v('--color-background-card'),
+  }
+}
 
 // GeoJSON là [lon, lat]; Leaflet cần [lat, lon].
 export function toLatLngs(coords: [number, number][]): L.LatLng[] {
   return coords.map(([lon, lat]) => L.latLng(lat, lon))
-}
-
-// Một đoạn người dùng đã đóng: id cạnh (kèm cạnh đối nếu là đường hai chiều) và hình học để vẽ lại.
-export interface ClosedSegment {
-  ids: number[]
-  coords: [number, number][]
 }
 
 function sameRoute(a?: AlgorithmResult, b?: AlgorithmResult): boolean {
@@ -21,18 +32,38 @@ function sameRoute(a?: AlgorithmResult, b?: AlgorithmResult): boolean {
   return JSON.stringify(a.geometry.coordinates) === JSON.stringify(b.geometry.coordinates)
 }
 
+/** Một đoạn của tuyến (một cạnh có hướng) mà người dùng bấm để đóng (T54). */
+export interface RouteSegment {
+  edgeId: number
+  twinId: number | null
+  latlngs: L.LatLng[]
+}
+
+/** Tách tuyến thành từng cạnh theo `edge_geometries` (T54, #100): phần tử i là hình học của `edge_ids[i]`. */
+export function routeSegments(r: AlgorithmResult): RouteSegment[] {
+  const ids = r.edge_ids ?? []
+  const geoms = r.edge_geometries ?? []
+  if (r.status !== 'ok' || geoms.length !== ids.length) return []
+  return ids.map((edgeId, i) => ({ edgeId, twinId: r.edge_twin_ids?.[i] ?? null, latlngs: toLatLngs(geoms[i]) }))
+}
+
+export interface TourPoint extends LatLon {
+  id: string
+  label: string
+}
+
 export class MapLayers {
   private zones = L.layerGroup()
-  private points = L.layerGroup()
   private routes = L.layerGroup()
-  private closures = L.layerGroup()
-  private hits = L.layerGroup() // vùng bấm vô hình trên từng cạnh của tuyến (T54)
+  private closed = L.layerGroup()
+  private points = L.layerGroup()
+  private palette: Palette
 
   constructor(map: L.Map) {
+    this.palette = readPalette(map.getContainer())
     this.zones.addTo(map)
     this.routes.addTo(map)
-    this.closures.addTo(map)
-    this.hits.addTo(map)
+    this.closed.addTo(map)
     this.points.addTo(map)
   }
 
@@ -46,7 +77,7 @@ export class MapLayers {
       const kinds = [...new Set((rule.highway ?? []).map((h) => h.replace(/_link$/, '')))]
       const roads = kinds.length ? ` · ${kinds.join(', ')}` : ''
       L.circle([z.lat, z.lon], {
-        radius: z.radius_m, color: '#e8590c', weight: 1, fillColor: '#ff922b', fillOpacity: 0.18, interactive: false,
+        radius: z.radius_m, color: this.palette.zone, weight: 1, fillColor: this.palette.zone, fillOpacity: 0.15, interactive: false,
       }).addTo(this.zones)
       L.tooltip({ permanent: true, direction: 'center', className: 'zone-label', interactive: false })
         .setLatLng([z.lat, z.lon])
@@ -56,7 +87,7 @@ export class MapLayers {
   }
 
   private marker(p: LatLon, label: string, color: string, tooltip?: string) {
-    return L.circleMarker([p.lat, p.lon], { radius: 7, color, weight: 3, fillColor: '#fff', fillOpacity: 1 })
+    return L.circleMarker([p.lat, p.lon], { radius: 7, color, weight: 3, fillColor: this.palette.surface, fillOpacity: 1 })
       .bindTooltip(tooltip ? `${label} · ${tooltip}` : label, { permanent: true, direction: 'top', offset: [0, -6] })
       .addTo(this.points)
   }
@@ -64,79 +95,92 @@ export class MapLayers {
   // Điểm người dùng bấm, trước khi có kết quả.
   setPoints(source: LatLon | null, target: LatLon | null) {
     this.points.clearLayers()
-    if (source) this.marker(source, 'Đi', COLORS.source)
-    if (target) this.marker(target, 'Đến', COLORS.target)
+    if (source) this.marker(source, 'Đi', this.palette.source)
+    if (target) this.marker(target, 'Đến', this.palette.target)
   }
 
   // Sau khi có kết quả: marker đặt tại node đã snap, tooltip ghi khoảng cách snap.
   setSnapped(res: RouteResponse) {
     this.points.clearLayers()
     const { source: s, target: t } = res.snapped
-    this.marker(s, 'Đi', COLORS.source, `cách ${s.snap_distance_m.toFixed(0)} m`)
-    this.marker(t, 'Đến', COLORS.target, `cách ${t.snap_distance_m.toFixed(0)} m`)
+    this.marker(s, 'Đi', this.palette.source, `cách ${s.snap_distance_m.toFixed(0)} m`)
+    this.marker(t, 'Đến', this.palette.target, `cách ${t.snap_distance_m.toFixed(0)} m`)
   }
 
-  // Trả về các polyline đã vẽ theo thuật toán, để lớp khác (đóng đường) gắn sự kiện.
-  drawRoutes(res: RouteResponse): L.Polyline[] {
+  /**
+   * Vẽ tuyến Dijkstra và A* (trùng nhau thì một nét có viền, ARCHITECTURE mục 6). Khi có `onSegmentClick`,
+   * mỗi cạnh của tuyến Dijkstra có một nét trong suốt rộng để bấm đóng đoạn (T54).
+   */
+  drawRoutes(res: RouteResponse, onSegmentClick?: (seg: RouteSegment) => void) {
     this.routes.clearLayers()
     const d = res.results.dijkstra
     const a = res.results.astar
-    const drawn: L.Polyline[] = []
     if (sameRoute(d, a)) {
-      // Hai tuyến trùng nhau: một nét có viền (ARCHITECTURE mục 6).
       const latlngs = toLatLngs(d!.geometry.coordinates)
-      L.polyline(latlngs, { color: COLORS.astar, weight: 10, opacity: 0.9 }).addTo(this.routes)
-      drawn.push(L.polyline(latlngs, { color: COLORS.dijkstra, weight: 5 }).bindTooltip('Dijkstra = A*').addTo(this.routes))
-      return drawn
+      L.polyline(latlngs, { color: this.palette.astar, weight: 10, opacity: 0.9, interactive: false }).addTo(this.routes)
+      L.polyline(latlngs, { color: this.palette.dijkstra, weight: 5, interactive: false }).addTo(this.routes)
+    } else {
+      if (d?.status === 'ok') {
+        L.polyline(toLatLngs(d.geometry.coordinates), { color: this.palette.dijkstra, weight: 6, opacity: 0.8, interactive: false })
+          .addTo(this.routes)
+      }
+      if (a?.status === 'ok') {
+        L.polyline(toLatLngs(a.geometry.coordinates), { color: this.palette.astar, weight: 4, dashArray: '8 6', interactive: false })
+          .addTo(this.routes)
+      }
     }
-    if (d?.status === 'ok') {
-      drawn.push(L.polyline(toLatLngs(d.geometry.coordinates), { color: COLORS.dijkstra, weight: 6, opacity: 0.8 })
-        .bindTooltip('Dijkstra').addTo(this.routes))
+    if (onSegmentClick && d) {
+      for (const seg of routeSegments(d)) {
+        L.polyline(seg.latlngs, { weight: 18, opacity: 0, className: 'route-hit' })
+          .bindTooltip('Bấm để đóng đoạn này', { sticky: true })
+          .on('click', (e) => {
+            L.DomEvent.stop(e) // không để cú bấm lọt xuống bản đồ (chọn lại điểm)
+            onSegmentClick(seg)
+          })
+          .addTo(this.routes)
+      }
     }
-    if (a?.status === 'ok') {
-      drawn.push(L.polyline(toLatLngs(a.geometry.coordinates), { color: COLORS.astar, weight: 4, dashArray: '8 6' })
-        .bindTooltip('A*').addTo(this.routes))
-    }
-    return drawn
   }
 
-  // Mỗi cạnh của tuyến Dijkstra có một vùng bấm vô hình (nét rộng, trong suốt); bấm thì gọi onClose.
-  setClickableSegments(res: RouteResponse, onClose: (seg: ClosedSegment) => void) {
-    this.hits.clearLayers()
-    const r = res.results.dijkstra
-    if (!r || r.status !== 'ok' || !r.edge_ids || !r.edge_geometries) return
-    r.edge_ids.forEach((id, i) => {
-      const twin = r.edge_twin_ids?.[i] ?? null
-      const coords = r.edge_geometries![i]
-      const seg: ClosedSegment = { ids: twin === null ? [id] : [id, twin], coords }
-      L.polyline(toLatLngs(coords), { weight: 18, opacity: 0, className: 'segment-hit' })
-        .bindTooltip(twin === null ? 'Bấm để đóng đoạn này (đường một chiều)' : 'Bấm để đóng đoạn này (cả hai chiều)',
-          { sticky: true })
-        .on('click', (e) => {
-          L.DomEvent.stopPropagation(e) // không để bản đồ hiểu là chọn điểm mới
-          onClose(seg)
-        })
-        .addTo(this.hits)
+  // Đoạn đang bị đóng: đỏ, nét đứt (DEMO mục 1.2).
+  setClosed(segments: RouteSegment[]) {
+    this.closed.clearLayers()
+    for (const seg of segments) {
+      L.polyline(seg.latlngs, { color: this.palette.closed, weight: 6, dashArray: '6 6', interactive: false })
+        .bindTooltip('Đoạn đường bị đóng do người dùng đánh dấu')
+        .addTo(this.closed)
+    }
+  }
+
+  /** Kho và điểm giao; `order` là thứ tự id điểm giao của phương án đang chọn (đánh số 1, 2, …). */
+  setTourPoints(depot: TourPoint | null, stops: TourPoint[], order?: string[]) {
+    this.points.clearLayers()
+    if (depot) this.marker(depot, 'Kho', this.palette.source, depot.label !== 'Kho' ? depot.label : undefined)
+    stops.forEach((s, i) => {
+      const n = order ? order.indexOf(s.id) + 1 : i + 1
+      L.marker([s.lat, s.lon], {
+        icon: L.divIcon({ className: 'tour-stop', html: String(n), iconSize: [24, 24] }),
+        title: s.label,
+      })
+        .bindTooltip(s.label, { direction: 'top', offset: [0, -12] })
+        .addTo(this.points)
     })
   }
 
-  // Đoạn bị đóng: đỏ, nét đứt (DEMO mục 1.2).
-  setClosures(segments: ClosedSegment[]) {
-    this.closures.clearLayers()
-    for (const seg of segments) {
-      L.polyline(toLatLngs(seg.coords), { color: '#c92a2a', weight: 6, dashArray: '6 6' })
-        .bindTooltip('Đoạn đường bị đóng do người dùng đánh dấu')
-        .addTo(this.closures)
+  drawTour(coords: [number, number][]) {
+    this.routes.clearLayers()
+    if (coords.length) {
+      L.polyline(toLatLngs(coords), { color: this.palette.tour, weight: 5, opacity: 0.85, interactive: false }).addTo(this.routes)
     }
   }
 
   clearRoutes() {
     this.routes.clearLayers()
-    this.hits.clearLayers()
   }
 
   clear() {
     this.points.clearLayers()
-    this.clearRoutes()
+    this.routes.clearLayers()
+    this.closed.clearLayers()
   }
 }

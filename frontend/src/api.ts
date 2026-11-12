@@ -37,9 +37,9 @@ export interface AlgorithmResult {
   status: 'ok' | 'no_path'
   cost_s: number | null
   distance_m: number | null
-  edge_ids?: number[] // thêm ngoài v1 (ARCHITECTURE mục 4); T54 dùng để đóng đoạn trên tuyến
-  edge_twin_ids?: (number | null)[] // cạnh đối (v → u) của từng cạnh, null nếu một chiều (T51)
-  edge_geometries?: [number, number][][] // hình học [lon, lat] của từng cạnh (T54)
+  edge_ids?: number[] // thêm ngoài v1 (ARCHITECTURE mục 4)
+  edge_twin_ids?: (number | null)[] // T51: cạnh đối của từng cạnh, cho "đóng đoạn" hai chiều (T54)
+  edge_geometries?: [number, number][][] // T54 (#100): hình học [lon, lat] của từng cạnh, để biết người dùng bấm đoạn nào
   geometry: LineString
   expanded: number
   runtime_ms: number
@@ -79,15 +79,59 @@ export interface Scenario {
 
 export interface DatasetResponse {
   dataset_id: string
+  node_count?: number
+  edge_count?: number
   scenarios: Scenario[]
 }
 
 // Cùng nhãn với data/config/scenarios.json; chỉ dùng khi API chưa có /api/dataset.
 export const BASELINE: Scenario = { id: 'baseline', label: 'Cơ sở — không ùn tắc, không đóng đường', rules: [] }
 
-export function escapeHtml(text: string): string {
-  return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+// POST /api/tour (T72; ARCHITECTURE mục 4).
+export interface TourStop extends LatLon {
+  id: string
 }
+
+export interface TourRequest {
+  depot: LatLon
+  stops: TourStop[]
+  scenario_id?: string
+  blocked_edge_ids?: number[]
+  include_optimal?: boolean
+}
+
+export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt'
+
+export const TOUR_METHOD_LABEL: Record<TourMethod, string> = {
+  input: 'Thứ tự nhập',
+  nearest_neighbor: 'Nearest Neighbor',
+  nearest_neighbor_2opt: 'NN + 2-opt',
+}
+
+export interface TourCandidate {
+  stop_order: string[]
+  cost_s: number
+  distance_m: number
+  improvement_pct: number
+  edge_ids: number[]
+  geometry: LineString
+}
+
+export interface TourResponse {
+  dataset_id: string
+  snapshot_id: string
+  status: 'ok' | 'infeasible_under_model'
+  snapped: Record<string, SnappedPoint & { id: string }>
+  candidates: Partial<Record<TourMethod, TourCandidate>>
+  chosen: TourMethod | null
+  optimal?: { stop_order: string[]; cost_s: number; gap_pct: number } | null
+  unreachable: { from_id: string; to_id: string }[]
+  matrix_runtime_ms: number
+  order_runtime_ms?: number | null
+  warnings?: string[]
+}
+
+export const MAX_TOUR_STOPS = 14 // khớp schemas.MAX_TOUR_STOPS của backend
 
 export async function getHealth(): Promise<HealthResponse> {
   const res = await fetch('/api/health')
@@ -103,7 +147,8 @@ export async function getDataset(): Promise<DatasetResponse | null> {
   return res.json()
 }
 
-// Lỗi từ API: FastAPI trả `detail` là chuỗi (503) hoặc danh sách lỗi kiểm tra dữ liệu (422).
+// Lỗi từ API: FastAPI trả `detail` là chuỗi tiếng Việt (dữ liệu sai với đồ thị, 503) hoặc danh sách
+// lỗi kiểm tra kiểu của Pydantic (422, tiếng Anh) — ARCHITECTURE mục 4.
 function errorMessage(status: number, body: unknown): string {
   const detail = (body as { detail?: unknown } | null)?.detail
   if (typeof detail === 'string') return detail
@@ -113,14 +158,28 @@ function errorMessage(status: number, body: unknown): string {
   return `HTTP ${status}`
 }
 
-export async function postRoute(req: RouteRequest, signal?: AbortSignal): Promise<RouteResponse> {
-  const res = await fetch('/api/route', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
-    signal,
-  })
+const SERVER_DOWN = 'Không kết nối được server. Kiểm tra backend (uvicorn) đã chạy chưa.'
+
+async function postJson<T>(path: string, req: unknown, signal?: AbortSignal): Promise<T> {
+  let res: Response
+  try {
+    res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+      signal,
+    })
+  } catch (e) {
+    if (signal?.aborted) throw e
+    throw new Error(SERVER_DOWN)   // lỗi mạng: không tới được server
+  }
   const body = await res.json().catch(() => null)
+  // Backend tắt khi chạy qua proxy của Vite: proxy trả 502–504 không kèm JSON của FastAPI.
+  if (body === null && res.status >= 502 && res.status <= 504) throw new Error(`${SERVER_DOWN} (HTTP ${res.status})`)
   if (!res.ok) throw new Error(errorMessage(res.status, body))
-  return body as RouteResponse
+  return body as T
 }
+
+export const postRoute = (req: RouteRequest, signal?: AbortSignal) => postJson<RouteResponse>('/api/route', req, signal)
+
+export const postTour = (req: TourRequest, signal?: AbortSignal) => postJson<TourResponse>('/api/tour', req, signal)
