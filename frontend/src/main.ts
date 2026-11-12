@@ -2,7 +2,7 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import './style.css'
 import { BASELINE, getDataset, getHealth, postRoute, type LatLon, type RouteResponse, type Scenario } from './api'
-import { MapLayers } from './layers'
+import { MapLayers, type ClosedSegment } from './layers'
 import { renderEmpty, renderResults } from './panel'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -28,6 +28,10 @@ app.innerHTML = `
         <button id="btn-route" class="primary" disabled>Tìm đường</button>
         <button id="btn-swap" disabled>Đảo chiều</button>
         <button id="btn-clear">Xóa</button>
+      </div>
+      <div class="buttons closures">
+        <button id="btn-reopen" disabled>Mở lại tất cả</button>
+        <span id="closed-text" class="muted small">Chưa đóng đoạn nào</span>
       </div>
       <p id="busy" class="busy" hidden>Đang tính…</p>
       <p id="message" class="message" hidden></p>
@@ -63,6 +67,19 @@ let pending: AbortController | null = null
 let requestId = 0
 let scenarios: Scenario[] = [BASELINE]
 let scenario: Scenario = BASELINE
+let closed: ClosedSegment[] = []
+
+function blockedIds(): number[] {
+  return [...new Set(closed.flatMap((c) => c.ids))].sort((a, b) => a - b)
+}
+
+function refreshClosures() {
+  layers.setClosures(closed)
+  $<HTMLButtonElement>('btn-reopen').disabled = closed.length === 0
+  $('closed-text').textContent = closed.length
+    ? `Đã đóng ${closed.length} đoạn (${blockedIds().length} cạnh có hướng)`
+    : 'Chưa đóng đoạn nào'
+}
 
 function fmt(p: LatLon | null): string {
   return p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—'
@@ -89,7 +106,9 @@ function refresh() {
     ? 'Bấm lên bản đồ để chọn <strong>điểm đi</strong>.'
     : !target
       ? 'Bấm để chọn <strong>điểm đến</strong>.'
-      : 'Bấm <strong>Tìm đường</strong>. Bấm lên bản đồ lần nữa để chọn lại từ đầu.'
+      : shown?.results.dijkstra?.status === 'ok'
+        ? 'Bấm vào một đoạn <strong>trên tuyến</strong> để đóng đoạn đó. Bấm chỗ khác để chọn lại từ đầu.'
+        : 'Bấm <strong>Tìm đường</strong>. Bấm lên bản đồ lần nữa để chọn lại từ đầu.'
 }
 
 function clearResult() {
@@ -110,17 +129,21 @@ async function findRoute() {
   try {
     const used = scenario
     const res = await postRoute(
-      { source, target, algorithms: ['dijkstra', 'astar'], scenario_id: used.id },
+      { source, target, algorithms: ['dijkstra', 'astar'], scenario_id: used.id, blocked_edge_ids: blockedIds() },
       pending.signal,
     )
     if (id !== requestId) return // đã có request mới hơn
     shown = res
     layers.setSnapped(res)
     layers.drawRoutes(res)
+    layers.setClickableSegments(res, closeSegment)
     renderResults($('results'), res, used.label)
+    refresh()
     // Không vẽ đường thẳng nối hai điểm khi không có đường.
     if (Object.values(res.results).some((r) => r?.status === 'no_path')) {
-      show($('message'), 'Không có đường đi giữa hai điểm này trong kịch bản hiện tại.')
+      show($('message'), closed.length
+        ? 'Không còn đường đi: các đoạn đã đóng chặn hết lối giữa hai điểm. Bấm "Mở lại tất cả" để thử lại.'
+        : 'Không có đường đi giữa hai điểm này trong kịch bản hiện tại.')
     }
   } catch (err) {
     if (id !== requestId || (err as Error).name === 'AbortError') return
@@ -150,6 +173,20 @@ map.on('click', (e: L.LeafletMouseEvent) => {
 
 btnRoute.addEventListener('click', () => void findRoute())
 
+// Đóng một đoạn trên tuyến (cả cạnh đối nếu là đường hai chiều) rồi tìm lại.
+function closeSegment(seg: ClosedSegment) {
+  if (seg.ids.every((id) => blockedIds().includes(id))) return
+  closed = [...closed, seg]
+  refreshClosures()
+  void findRoute()
+}
+
+$('btn-reopen').addEventListener('click', () => {
+  closed = []
+  refreshClosures()
+  if (source && target && (shown || pending)) void findRoute()
+})
+
 btnSwap.addEventListener('click', () => {
   ;[source, target] = [target, source]
   layers.setPoints(source, target)
@@ -161,6 +198,8 @@ btnSwap.addEventListener('click', () => {
 $('btn-clear').addEventListener('click', () => {
   clearResult()
   source = target = null
+  closed = []
+  refreshClosures()
   layers.clear()
   refresh()
 })
