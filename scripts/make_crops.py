@@ -153,12 +153,12 @@ def main() -> None:
         "attribution": ATTRIBUTION,
     }
     out = PROCESSED / "crop_manifest.json"
-    out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     if pilot_result:
         timing = {"half_side_m": largest["half_side_m"], "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
                   "python": platform.python_version(), "machine": platform.node(), **pilot_result}
         (PROCESSED / "crop_pilot.json").write_text(json.dumps(timing, ensure_ascii=False, indent=2) + "\n",
-                                                   encoding="utf-8")
+                                                   encoding="utf-8", newline="\n")
 
     print("\n| Nửa cạnh | `dataset_id` | \\|V\\| | \\|E\\| | SCC (node) | Cạnh một chiều | sha256 |")
     print("|---:|---|---:|---:|---:|---:|---|")
