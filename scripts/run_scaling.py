@@ -42,6 +42,14 @@ SUITE = "scaling"
 WORKLOAD = "fixed_trips"
 
 
+def _rel(path: Path) -> Path:
+    """Đường dẫn tương đối với gốc repo nếu nằm trong repo (giống run E2): file kết quả không mang đường dẫn máy."""
+    try:
+        return Path(path).resolve().relative_to(ROOT.resolve())
+    except ValueError:
+        return Path(path)
+
+
 def _resolve(path_str: str, base: Path) -> Path:
     p = Path(path_str)
     if p.is_absolute():
@@ -177,8 +185,8 @@ def main(argv: list[str] | None = None) -> int:
         queries = [{k: v for k, v in q.items() if k in QUERY_COLUMNS} for q in map_queries(base_queries, m0, graph, meta)]
         sub = run_dir / "sizes" / size["label"]
         run_benchmark(graph, meta, baseline_snapshot(graph), queries, run_id, SUITE, size["label"], sub,
-                      repeats=args.repeats, warmup=args.warmup, dataset_path=size["path"],
-                      cli_config={**vars(args), "manifest": str(args.manifest), "out": str(args.out)},
+                      repeats=args.repeats, warmup=args.warmup, dataset_path=_rel(size["path"]),
+                      cli_config={**vars(args), "manifest": str(_rel(args.manifest)), "out": str(_rel(args.out))},
                       sampling_info=sampling)
         with (sub / "measurements.csv").open(encoding="utf-8") as f:
             rows.extend(csv.DictReader(f))
@@ -191,11 +199,11 @@ def main(argv: list[str] | None = None) -> int:
     _write_csv(run_dir / "measurements.csv", MEASUREMENT_COLUMNS, rows)
     _write_csv(run_dir / "load.csv", ["size_label", "dataset_id", "n_nodes", "n_edges", "load_ms", "peak_mb"],
                load_rows)
-    (run_dir / "env.json").write_text(json.dumps(collect_env(smallest["path"]), indent=2, ensure_ascii=False),
+    (run_dir / "env.json").write_text(json.dumps(collect_env(_rel(smallest["path"])), indent=2, ensure_ascii=False),
                                       encoding="utf-8", newline="\n")
     config = {"run_id": run_id, "suite": SUITE, "workload": WORKLOAD, "pairs": args.pairs, "seed": args.seed,
               "repeats": args.repeats, "warmup": args.warmup, "n_queries": len(base_queries),
-              "sizes": [{k: (str(v) if isinstance(v, Path) else v) for k, v in s.items()} for s in sizes],
+              "sizes": [{k: (str(_rel(v)) if isinstance(v, Path) else v) for k, v in s.items()} for s in sizes],
               "sampling": sampling}
     (run_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8",
                                          newline="\n")
