@@ -52,6 +52,15 @@ def request_snapshot(graph: Graph, meta: GraphMeta, scenario_id: str | None, blo
     return build_snapshot(graph, meta, scenarios[scenario_id], blocked)
 
 
+def edge_coords(graph: Graph, meta: GraphMeta, e: int) -> list[list[float]]:
+    """Hình học [lon, lat] của một cạnh; thiếu thì dùng đoạn thẳng nối hai đầu."""
+    geom = meta.edge_geometry[e]
+    if geom:
+        return geom
+    u, v = graph.edge_u[e], graph.edge_v[e]
+    return [[graph.node_lon[u], graph.node_lat[u]], [graph.node_lon[v], graph.node_lat[v]]]
+
+
 def build_geometry(
     graph: Graph,
     meta: GraphMeta,
@@ -72,13 +81,7 @@ def build_geometry(
 
     coords: list[list[float]] = []
     for idx, e in enumerate(edge_ids):
-        geom = meta.edge_geometry[e]
-        if not geom:
-            u, v = graph.edge_u[e], graph.edge_v[e]
-            geom = [
-                [graph.node_lon[u], graph.node_lat[u]],
-                [graph.node_lon[v], graph.node_lat[v]],
-            ]
+        geom = edge_coords(graph, meta, e)
         if idx == 0:
             coords.extend(geom)
         else:
@@ -158,6 +161,7 @@ def route(
             distance_m=res.distance_m,
             edge_ids=res.edge_ids,
             edge_twin_ids=[twins[e] for e in res.edge_ids],
+            edge_geometries=[edge_coords(graph, meta, e) for e in res.edge_ids],
             geometry=geom,
             expanded=res.expanded,
             runtime_ms=runtime_ms,

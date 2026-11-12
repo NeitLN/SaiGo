@@ -96,6 +96,8 @@ class AlgorithmRouteResult(BaseModel):
     # edge_twin_ids[i] = cạnh đối của edge_ids[i] (v → u, cùng đoạn đường) hoặc None nếu một chiều.
     # UI "đóng đoạn" gửi cả hai id trong blocked_edge_ids (DATA_MODEL 4.2). Thêm ở T51.
     edge_twin_ids: list[int | None] = Field(default_factory=list)
+    # edge_geometries[i] = hình học [lon, lat] của edge_ids[i], để UI biết người dùng bấm vào cạnh nào (T54).
+    edge_geometries: list[list[list[float]]] = Field(default_factory=list)
     geometry: GeometryLineString
     expanded: int
     runtime_ms: float
