@@ -134,8 +134,8 @@ def test_startup_precomputes_geo_scale_and_twins(client):
     assert len(client.app.state.twins) == len(graph.edge_u)
 
 
-def test_heuristic_setup_is_outside_timing(client, monkeypatch):
-    # Nếu dựng heuristic nằm trong đoạn đo giờ thì độ trễ giả này sẽ lọt vào runtime_ms.
+def test_heuristic_setup_counts_toward_astar_time(client, monkeypatch):
+    # EXPERIMENT_PLAN 3.1 bước 5: thời gian tính heuristic được tính vào A* (cùng định nghĩa với benchmark).
     import time
     real = heuristics.make_geo_heuristic
 
@@ -145,7 +145,21 @@ def test_heuristic_setup_is_outside_timing(client, monkeypatch):
 
     monkeypatch.setattr("app.services.routing.make_geo_heuristic", slow)
     r = post(client, algorithms=["astar"]).json()
-    assert r["results"]["astar"]["runtime_ms"] < 50
+    assert r["results"]["astar"]["runtime_ms"] >= 50
+
+
+def test_geo_scale_cached_before_first_request(client, monkeypatch):
+    # geo_scale duyệt mọi cạnh; phải được tính lúc khởi động, không rơi vào request (review #67, #73).
+    seen = []
+    real = heuristics.geo_scale
+
+    def spy(graph):
+        seen.append(id(graph) in heuristics._scale_cache)
+        return real(graph)
+
+    monkeypatch.setattr(heuristics, "geo_scale", spy)
+    post(client, algorithms=["astar"])
+    assert seen == [True]
 
 
 def test_empty_scenario_id_rejected(client):

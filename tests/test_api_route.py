@@ -117,11 +117,11 @@ def test_route_both_algorithms_costs_match(client: TestClient):
 
 
 def test_route_unknown_scenario_returns_422(client: TestClient):
-    """Kịch bản không có trong file kịch bản đang nạp → 422 (T51; file mặc định chỉ có baseline)."""
+    """Kịch bản không có trong file kịch bản đang nạp → 422 (T51)."""
     req_data = {
         "source": NEAR_S,
         "target": NEAR_T,
-        "scenario_id": "peak-center",
+        "scenario_id": "khong-co-kich-ban-nay",
     }
     res = client.post("/api/route", json=req_data)
     assert res.status_code == 422

@@ -90,8 +90,10 @@ def _run_algorithm(
         res = dijkstra(graph, snap, s_node, t_node, trace_limit=trace_limit)
         t1 = time.perf_counter_ns()
     else:  # astar (RouteRequest schema đã đảm bảo chỉ có "dijkstra" hoặc "astar")
-        h = make_geo_heuristic(graph, t_node)   # dựng ngoài đoạn đo: chỉ đo thời gian tìm kiếm
         t0 = time.perf_counter_ns()
+        # Dựng heuristic tính vào thời gian A*, cùng định nghĩa với benchmark (EXPERIMENT_PLAN 3.1 bước 5).
+        # Chỉ tốn O(1) vì geo_scale đã tính sẵn lúc khởi động (main.py).
+        h = make_geo_heuristic(graph, t_node)
         res = astar(graph, snap, s_node, t_node, h, trace_limit=trace_limit)
         t1 = time.perf_counter_ns()
 
