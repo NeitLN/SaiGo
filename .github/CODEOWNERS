@@ -1,17 +1,5 @@
-# Người được GitHub tự động yêu cầu review theo khu vực code.
-# Dòng khớp sau cùng được ưu tiên. Tác giả PR không tự review được PR của mình,
-# nên mỗi khu vực có ít nhất hai người.
+# Người được GitHub tự động yêu cầu review.
+# Từ 13/11 (PROJECT_BRIEF D14): Minh review chính mọi PR; Tiến review PR của Minh
+# (tác giả PR không tự review được PR của mình, nên GitHub chỉ yêu cầu người còn lại).
 
-*                         @NeitLN @anh7032
-/backend/app/algorithms/  @anh7032 @NeitLN
-/backend/app/graph/       @anh7032 @NeitLN
-/backend/app/api/         @NeitLN @anh7032
-/backend/app/services/    @NeitLN @anh7032
-/scripts/prepare_data.py  @Jayson135724 @NeitLN
-/scripts/make_crops.py    @Jayson135724 @NeitLN
-/scripts/plot_results.py  @dobaovlu @NeitLN
-/data/                    @Jayson135724 @NeitLN
-/data/demo/               @dobaovlu @Jayson135724 @NeitLN
-/frontend/                @Jayson135724 @NeitLN
-/tests/fixtures/          @dobaovlu @anh7032
-/docs/                    @NeitLN @anh7032 @Jayson135724 @dobaovlu
+*  @Jayson135724 @NeitLN

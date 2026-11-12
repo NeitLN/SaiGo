@@ -111,6 +111,7 @@ ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window,
 | D11 | RQ1b: **chỉ workload "fixed trips"** *(26/10)*; số kích thước: 26/10 chốt 3, **28/10 giữ đủ 4 (1 / 2 / 3 / 4,5 km)** *(Tiến chốt)* | Bỏ growing trips để bớt giờ làm. Pilot T61: vùng lớn nhất chỉ ~14 ms/truy vấn và script đã cắt sẵn cả 4, nên kích thước thứ 4 gần như không tốn thêm |
 | D12 | Bản đồ rút gọn: không vẽ toàn mạng đường (T32), không có lớp chấm node mở rộng; đóng đường một chế độ *(26/10)* | Giữ đủ các bước demo cho RQ1, RQ3; `expanded` vẫn có trong bảng và benchmark |
 | D13 | Mốc: **điểm kiểm bằng chứng 05/11**, **MVP tích hợp 08/11**, 09–12/11 không thêm tính năng; essay bắt đầu từ tuần 3 *(26/10)* | Thay cổng G1 "có tích hợp tour không", vì tour đã nằm trong phạm vi |
+| D14 | Phân công từ 13/11: Tiến làm toàn bộ việc còn lại, Minh review chính, Duy Anh và Bảo làm khi được Tiến gán *(Tiến chốt)* | 07–13/11 main không có commit mới vì việc kẹt ở chờ approve/merge giữa bốn người; còn 6 ngày tới demo 19/11 |
 
 Không gửi thư riêng cho giảng viên (giảng viên xem repo khi nộp cuối kỳ). Các thay đổi so với proposal (D1, D11–D13) được giải thích ở mục này và ở phần giới hạn của essay.
 
@@ -126,7 +127,9 @@ Không gửi thư riêng cho giảng viên (giảng viên xem repo khi nộp cu�
 | A6 | **[Đề xuất]** Điểm người dùng chọn được ánh xạ về node gần nhất trong thành phần liên thông mạnh, tối đa 150 m | Điểm xa hơn bị từ chối, có thông báo |
 | A7 | **[Giả định]** Dữ liệu OSM tải một lần rồi đóng băng; mọi thực nghiệm dùng cùng bản có hash | Tải lại có thể ra số node/cạnh khác |
 
-## 6. Phân công (cập nhật 26/10)
+## 6. Phân công (cập nhật 13/11)
+
+Từ 13/11: **Tiến làm toàn bộ việc còn lại; Minh review chính mọi PR** (kể cả chạy lại trên máy thứ hai); Duy Anh và Bảo làm khi được Tiến gán việc. Bảng dưới là phần mỗi người đã làm tới 13/11 (D14).
 
 | Người | Vai trò chính | Ghi chú |
 |---|---|---|
