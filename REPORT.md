@@ -1,12 +1,12 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 03:00 13/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 03:01 13/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=43295943735)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=43296034994)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
-- **Đã đóng:** 90 giờ — có bằng chứng (PR/commit) 90 giờ · **Còn lại:** 46 giờ, 14 task mở
-- **Đường lý tưởng hôm nay:** 0 giờ → **chậm** hơn kế hoạch 46.0 giờ
+- **Đã đóng:** 93 giờ — có bằng chứng (PR/commit) 93 giờ · **Còn lại:** 43 giờ, 13 task mở
+- **Đường lý tưởng hôm nay:** 0 giờ → **chậm** hơn kế hoạch 43.0 giờ
 - Mốc: cổng G1 05/11 · final ready 12/11 · thuyết trình 19/11 · nộp 22/11
 
 ### Theo tuần
@@ -16,7 +16,7 @@ _Tự động cập nhật 03:00 13/11/2026 (giờ VN) bởi workflow `tracking.
 | Tuần 1 · 19–25/10 | 27 | 10 | 3 | 129 | 2 | 3 |
 | Tuần 2 · 26/10–01/11 | 30 | 69 | 24 | 57 | 36 | 57 |
 | Tuần 3 · 02–08/11 | 62 | 4 | 2 | 53 | 4 | 3 |
-| Tuần 4 · 09–15/11 | 17 | 7 | 3 | 46 | 3 | 2 |
+| Tuần 4 · 09–15/11 | 17 | 10 | 4 | 43 | 4 | 3 |
 
 ### Theo thành viên
 
@@ -25,12 +25,13 @@ _Tự động cập nhật 03:00 13/11/2026 (giờ VN) bởi workflow `tracking.
 | Bảo (@dobaovlu) | 18.2 | 11.0 | 5 | 0 | 4 | 5 | 15 |
 | Duy Anh (@anh7032) | 34.8 | 30.0 | 10 | 0 | 3 | 19 | 15 |
 | Minh (@Jayson135724) | 28.8 | 20.0 | 8 | 0 | 5 | 8 | 30 |
-| Tiến (@NeitLN) | 54.2 | 29.0 | 10 | 0 | 11 | 13 | 5 |
+| Tiến (@NeitLN) | 54.2 | 32.0 | 11 | 0 | 10 | 14 | 6 |
 
 ### Đóng trong 7 ngày qua
 
 - 13/11 · #78 T34 · Đưa dữ liệu thô lên Release và kiểm hash trên 2 máy (2 h, qua commit)
 - 13/11 · #26 T61 · Cắt lồng nhau cho thí nghiệm tăng quy mô (3 h, qua commit)
+- 13/11 · #20 T51 · API `/api/route` và `/api/dataset` (3 h, qua PR)
 - 13/11 · #8 T12 · CLI tìm đường (2 h, qua PR)
 
 ### Ghi chú
