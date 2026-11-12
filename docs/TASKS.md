@@ -402,10 +402,10 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 
 ### T56 — Giao diện React + Astryx (gộp T54, T73)
 - 👤 Tiến (Minh review) · ⏱ 8 h · ⛓ T51, T72
-- **Việc cần làm:** đặc tả đã duyệt ở [tasks/T56-ui-react-astryx.md](tasks/T56-ui-react-astryx.md): viết lại giao diện bằng React 19 + Astryx, giữ đủ hành vi của T52, T53; thêm đóng đoạn đường (T54), chế độ tour (T73), dropdown case demo (T55). Quyết định D14 ở PROJECT_BRIEF.
+- **Việc cần làm:** đặc tả đã duyệt ở [tasks/T56-ui-react-astryx.md](tasks/T56-ui-react-astryx.md): viết lại giao diện bằng React 19 + Astryx, giữ đủ hành vi của T52, T53; thêm đóng đoạn đường (T54), chế độ tour (T73), dropdown case demo (T55). Quyết định D15 ở PROJECT_BRIEF.
 - 📁 `frontend/*`
 - 📦 Giao diện mới chạy được toàn bộ kịch bản demo.
-- ✅ Mọi ví dụ chấp nhận trong phiếu T56 đạt; Bảo chạy lại được trên máy mình **trước 17/11** (không kịp thì demo bằng giao diện cũ).
+- ✅ Mọi ví dụ chấp nhận trong phiếu T56 đạt; Minh chạy lại được trên máy mình khi review, **trước 17/11** (không kịp thì demo bằng giao diện cũ).
 - ▶ `npm run build`; trình duyệt tự động theo bảng ví dụ chấp nhận.
 - 🧠 Tách logic vẽ bản đồ (Leaflet) khỏi khung giao diện; bỏ response cũ khi người dùng bấm liên tục.
 

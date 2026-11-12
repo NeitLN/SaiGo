@@ -20,7 +20,7 @@ Phụ thuộc: T51 (#86, **tích hợp**: kịch bản, cạnh đóng, `edge_twi
 | R3 | Giữ đủ mọi hành vi ở mục "Hiện tại" |
 | R4 | T54: bấm một đoạn **trên tuyến** → đóng đoạn đó và cạnh đối (`edge_twin_ids`) → tìm lại; đoạn đóng tô đỏ nét đứt; nút "Mở lại tất cả"; `no_path` thì báo, không vẽ đường thẳng |
 | R5 | T73: chế độ **Tour**: bấm đặt kho rồi các điểm giao (tối đa 14); gọi `/api/tour`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt, chọn thẻ thì vẽ tuyến và đánh số điểm theo thẻ; `infeasible_under_model` thì báo các cặp lỗi |
-| R6 | Ghi quyết định **D14** (đảo D6, dùng React) vào PROJECT_BRIEF |
+| R6 | Ghi quyết định **D15** (đảo D6, dùng React) vào PROJECT_BRIEF |
 | R7 | Dropdown **Case demo** nạp điểm, kịch bản và cạnh đóng sẵn từ `data/demo/cases.json` (DEMO mục 1.1) rồi chạy luôn; số hiển thị vẫn lấy từ API |
 
 **Contract:** R4 cần biết đoạn nào của tuyến thuộc cạnh nào. T56 dùng trường `edge_geometries` mà T54 (#100, Minh) đã thêm vào `/api/route` (hình học từng cạnh, có test ở `tests/test_api_edge_geometries.py`); T56 không thêm trường backend nào.
@@ -59,7 +59,7 @@ Backend T51 + T72 với `SAIGO_GRAPH` = `hcm-benthanh-r2000-20261024`, Vite dev,
 | Tắt backend (cả khi mở trang lúc backend tắt) | "Không kết nối được server. Kiểm tra backend (uvicorn)…"; badge đỏ; không vẽ tuyến. Bật lại rồi bấm → 186,1 s, badge xanh, đủ 3 kịch bản, không cần tải lại trang | Đạt |
 | UI-4 (điểm ngoài vùng) | "Điểm đi cách mạng đường 7674 m, quá ngưỡng 150 m…"; không vẽ tuyến | Đạt |
 | `npm run build`; `tsc --noEmit`; `pytest` | Build OK; tsc sạch; 327 passed | Đạt |
-| UI-1 (nền OSM) | **Chưa kiểm được trên máy này**: mạng chặn `tile.openstreetmap.org` (curl cũng lỗi). URL tile và dòng ghi nguồn giữ nguyên bản Minh đã đạt 29/10; Bảo kiểm khi chạy lại | Chờ |
+| UI-1 (nền OSM) | **Chưa kiểm được trên máy này**: mạng chặn `tile.openstreetmap.org` (curl cũng lỗi). URL tile và dòng ghi nguồn giữ nguyên bản Minh đã đạt 29/10; Minh kiểm khi review (chạy trên máy mình) | Chờ |
 
 Phát hiện khi kiểm, đã sửa: dòng kịch bản ghi "không đóng đường" dù đang đóng cạnh; lỗi backend tắt chỉ hiện "HTTP 502"; badge vẫn báo "sẵn sàng" khi backend đã tắt và không tự hồi phục.
 
@@ -70,7 +70,7 @@ Phát hiện khi kiểm, đã sửa: dòng kịch bản ghi "không đóng đư�
 
 ## Quy tắc merge
 
-Chỉ merge vào `main` nếu **mọi** ví dụ chấp nhận đạt và Bảo chạy lại được trên máy mình **trước 17/11**. Không kịp thì demo 19/11 bằng giao diện cũ, bản này để trên nhánh.
+Chỉ merge vào `main` nếu **mọi** ví dụ chấp nhận đạt và Minh (reviewer) chạy lại được trên máy mình **trước 17/11** (phân công D14). Không kịp thì demo 19/11 bằng giao diện cũ, bản này để trên nhánh.
 
 ## Sở hữu
 
