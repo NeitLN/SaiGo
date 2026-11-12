@@ -61,7 +61,7 @@ uvicorn app.main:app --reload --app-dir backend
 cd frontend; npm run dev
 ```
 
-Mở http://localhost:5173. Thấy chữ "Server chạy, chưa nạp dataset" là đúng ở thời điểm hiện tại.
+Mở http://localhost:5173. Góc phải trên phải hiện "Server sẵn sàng · dataset mini" (backend mặc định nạp `tests/fixtures/mini.json`). Kiểm tra nhanh: bấm gần node S (khoảng 200 m bên trái tâm bản đồ lúc mới mở) rồi gần node T (khoảng 580 m bên phải tâm, gần mép phải bản đồ, cùng hàng ngang), bấm **Tìm đường** → bảng kết quả ghi "Thời gian di chuyển ước tính (theo kịch bản)" 80,0 s cho cả Dijkstra và A*, "Chi phí trùng khớp: có" (hai tuyến trùng nhau nên vẽ thành một nét); bấm **Đảo chiều** → 100,0 s. Nền bản đồ lấy tile từ `tile.openstreetmap.org`, mạng chặn trang này thì nền xám nhưng tuyến vẫn vẽ đúng.
 
 Lỗi thường gặp:
 

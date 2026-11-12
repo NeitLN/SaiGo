@@ -69,7 +69,7 @@ Giữ đúng số bước của [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 7; bư�
 | 5 | Chọn kịch bản "Cao điểm mô phỏng — trung tâm" | Vùng ùn tắc; tuyến đổi sang đường vòng; chi phí tăng | Ùn tắc theo vùng làm đổi lựa chọn (RQ3) |
 | 6 | Bấm vào một đoạn trên tuyến → **Đóng đoạn đường** | Đoạn đỏ; tuyến mới; dòng nhật ký mới | Lập lại tuyến, không dùng cạnh bị đóng (RQ3) |
 | 7 | Chọn case "Không còn đường" | Thông báo không có đường; không vẽ đường thẳng | Hệ thống báo đúng giới hạn (RQ3) |
-| 8 | Chuyển sang slide biểu đồ tăng quy mô | `expanded` và thời gian theo `|V|` (3 kích thước, fixed trips) | Số đo thật (RQ1b) |
+| 8 | Chuyển sang slide biểu đồ tăng quy mô | `expanded` và thời gian theo `|V|` (4 kích thước, fixed trips) | Số đo thật (RQ1b) |
 | 9 | Chuyển sang chế độ tour, case "Kho + 5 điểm giao"; chọn lần lượt 3 thẻ | Thứ tự giao đổi; chi phí trước/sau | Tầng thứ hai của bài toán (RQ2) |
 
 Nếu khoản cắt 4 của đề xuất phạm vi được nhóm đồng ý (đóng đường qua API/CLI thay vì bản đồ), bước 6 đổi theo; hiện **chưa** kích hoạt.

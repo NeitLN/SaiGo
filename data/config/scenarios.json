@@ -1,11 +1,38 @@
 {
   "format": "saigo-scenarios/1",
-  "_comment": "Kịch bản ùn tắc mô phỏng (docs/DATA_MODEL.md mục 4.1). Hiện chỉ có baseline; kịch bản demo trên dữ liệu thật (peak-center, ...) là việc của T42. Kịch bản thử trên fixture nằm ở tests/fixtures/scenarios_mini.json.",
+  "_comment": "Kịch bản ùn tắc mô phỏng (docs/DATA_MODEL.md mục 4.1), dùng cho demo trên đồ thị hcm-benthanh-r2000-20261024 (T42). Hệ số alpha là giả định, không phải số đo giao thông. Kịch bản thử trên fixture nằm ở tests/fixtures/scenarios_mini.json.",
   "scenarios": [
     {
       "id": "baseline",
       "label": "Cơ sở — không ùn tắc, không đóng đường",
       "rules": []
+    },
+    {
+      "id": "peak-center",
+      "label": "Cao điểm mô phỏng — trung tâm",
+      "_comment": "Trục chính quanh Nguyễn Huệ – Lê Lợi – Đồng Khởi (r = 600 m, chỉ primary/secondary, x2) và quanh chợ Bến Thành (r = 400 m, mọi loại đường, x1,5). Theo ví dụ ở DATA_MODEL mục 4.1; cố ý thêm primary_link/secondary_link (so với ví dụ) để nhánh rẽ nối vào trục chính cũng bị nhân, không thành lối tắt.",
+      "rules": [
+        {
+          "zone": {"type": "circle", "lat": 10.7769, "lon": 106.7009, "radius_m": 600},
+          "highway": ["primary", "primary_link", "secondary", "secondary_link"],
+          "alpha": 2.0
+        },
+        {
+          "zone": {"type": "circle", "lat": 10.7725, "lon": 106.6980, "radius_m": 400},
+          "alpha": 1.5
+        }
+      ]
+    },
+    {
+      "id": "peak-ben-thanh",
+      "label": "Cao điểm mô phỏng — vòng xoay Bến Thành",
+      "_comment": "Một vùng nhỏ quanh vòng xoay Quách Thị Trang (r = 350 m, mọi loại đường, x2,5).",
+      "rules": [
+        {
+          "zone": {"type": "circle", "lat": 10.7721, "lon": 106.6983, "radius_m": 350},
+          "alpha": 2.5
+        }
+      ]
     }
   ]
 }

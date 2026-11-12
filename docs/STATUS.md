@@ -34,7 +34,7 @@ Bộ nhớ dự án: mục tiêu/phạm vi/deadline ở [PROJECT_BRIEF.md](PROJE
 | Contract `/api/route` v1 ([ARCHITECTURE](ARCHITECTURE.md) mục 4.1) | **Đã chốt** | 25/10 |
 | Khóa phiên bản (`requirements-lock.txt`, Python 3.11), job `audit` | **Đã duyệt** | 25/10 |
 | Kế hoạch tuần 2 ([ROADMAP](ROADMAP.md) mục 6): T13 → Minh, T12 → Bảo | **Đã duyệt** (#56, ghi nhận ở #63) | Nhóm, sáng 26/10 |
-| Đổi phạm vi ([đề xuất](proposals/2026-10-26-pham-vi.md)): bỏ T32, RQ1b 3 kích thước fixed trips, bản đồ rút gọn, điểm kiểm 05/11 + MVP 08/11 | **Đã duyệt** | Nhóm, sáng 26/10 |
+| Đổi phạm vi ([đề xuất](proposals/2026-10-26-pham-vi.md)): bỏ T32, RQ1b chỉ fixed trips (4 kích thước, chốt 28/10), bản đồ rút gọn, điểm kiểm 05/11 + MVP 08/11 | **Đã duyệt** | Nhóm, sáng 26/10 |
 | Tour (D10): sáng cắt, **chiều giữ lại**; T72–T74 trước 08/11 | **Đã chốt** | Tiến, chiều 26/10 |
 | Không gửi thư riêng cho giảng viên; lý do đổi phạm vi ghi trong PROJECT_BRIEF mục 4 và essay | **Đã chốt** | Tiến, chiều 26/10 |
 | Q1–Q5, Q7 ([ROADMAP](ROADMAP.md) mục 5) | **Đã duyệt**; Q2 còn chờ Release (T34) | Nhóm, 26/10 |

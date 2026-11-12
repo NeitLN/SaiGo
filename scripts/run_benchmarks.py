@@ -131,8 +131,10 @@ def _get_git_info() -> tuple[str, str, bool]:
             text=True,
             stderr=subprocess.DEVNULL,
         ).strip()
+        # Bỏ qua results/: chính lần chạy này đã tạo results/<run_id>/ trước khi ghi env.json,
+        # nên nếu tính thư mục đó thì mọi lần đo trên code sạch đều bị ghi là dirty.
         status_out = subprocess.check_output(
-            ["git", "status", "--porcelain"],
+            ["git", "status", "--porcelain", "--", ".", ":(exclude)results"],
             cwd=str(REPO_ROOT),
             text=True,
             stderr=subprocess.DEVNULL,

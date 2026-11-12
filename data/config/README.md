@@ -1,11 +1,9 @@
 # data/config
 
-Cấu hình tái lập dataset và kịch bản. Các quyết định dưới đây **chưa chốt** (docs/TOPIC.md mục 25):
+Cấu hình tái lập dataset và kịch bản (docs/DATA_MODEL.md mục 3 và 8).
 
-- [ ] `study_area.geojson` — polygon nghiên cứu (phạm vi chọn điểm giao)
-- [ ] `download_area.geojson` — polygon tải dữ liệu, có vùng đệm
-- [ ] Network filter và giả định phương tiện
-- [ ] `speeds` — tốc độ theo nhóm đường và cách xử lý giá trị thiếu
-- [ ] `scenarios` — hệ số mô phỏng (`alpha >= 1`), seed
+- [x] `areas.json`: tâm Bến Thành, vùng tải nửa cạnh 4,5 km + đệm 0,5 km, vùng demo nửa cạnh 2 km, `network_type="drive"`. **[Đề xuất]**, nhóm xác nhận ở buổi họp.
+- [x] `speeds.json`: tốc độ theo loại đường, mặc định 20 km/h, bỏ qua `maxspeed`. **[Giả định]**, số mô phỏng, không phải đo thực tế.
+- [ ] `scenarios.json`: hệ số ùn tắc (`alpha >= 1`), seed (T40).
 
-Không điền số liệu trước khi nhóm thống nhất và kiểm tra.
+Đổi `areas.json` thì phải chạy lại `python scripts/prepare_data.py download --force`. Đổi `speeds.json` thì phải tính lại `v_max` và mọi kết quả benchmark.

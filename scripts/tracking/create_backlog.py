@@ -65,7 +65,7 @@ MILESTONES = {
            "bấm đoạn trên tuyến để đóng, mở lại; báo no_path. Không có lớp chấm node mở rộng. "
            "Chứng minh: checklist UI trong docs/PROGRESS.md"),
     "M7": ("M7 — Benchmark và tăng quy mô", "2026-11-08",
-           "CSV đo thật + biểu đồ: 1.000 cặp, 3 kích thước (chỉ fixed trips), ùn tắc/đóng đường; "
+           "CSV đo thật + biểu đồ: 1.000 cặp, 4 kích thước (chỉ fixed trips), ùn tắc/đóng đường; "
            "điểm kiểm bằng chứng 05/11 (G1); MVP tích hợp 08/11. Chứng minh: python scripts/run_benchmarks.py --suite all"),
     "M8": ("M8 — Tour (mở rộng E1)", "2026-11-08",
            "NN, 2-opt có hướng, Held–Karp (T70, T71 xong 26/10); ma trận chi phí từ đồ thị + /api/tour, UI tour, benchmark tour "

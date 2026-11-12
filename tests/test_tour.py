@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 import math
 import random
+import time
 
 import pytest
 
@@ -271,9 +272,9 @@ def test_held_karp_all_legs_infinite_still_returns_a_tour():
     assert math.isinf(tour_cost(D, order))
 
 
-def test_held_karp_rejects_more_than_ten_points():
-    with pytest.raises(ValueError, match="tối đa 10 điểm"):
-        held_karp(seed_matrix(1, n=11))
+def test_held_karp_rejects_more_than_eleven_points():
+    with pytest.raises(ValueError, match="tối đa 11 điểm"):
+        held_karp(seed_matrix(1, n=12))
 
 
 def test_held_karp_accepts_ten_points():
@@ -281,3 +282,28 @@ def test_held_karp_accepts_ten_points():
     order = held_karp(D)
     assert is_tour(order, 10)
     assert tour_cost(D, order) <= tour_cost(D, nearest_neighbor(D)) + 1e-9
+
+
+def test_held_karp_accepts_eleven_points():
+    D = seed_matrix(2, n=11)
+    order = held_karp(D)
+    assert is_tour(order, 11)
+    assert tour_cost(D, order) <= tour_cost(D, nearest_neighbor(D)) + 1e-9
+
+
+def test_held_karp_eleven_points_known_optimum_and_runtime():
+    # Ma trận 11 điểm (kho + 10 điểm giao) với chu trình có hướng 0→1→...→10→0 có chi phí 1.0 mỗi chặng.
+    # Mọi chặng khác có chi phí 100.0, do đó tour tối ưu duy nhất là [0, 1, 2, ..., 10] với chi phí 11.0.
+    n = 11
+    D = [[100.0 if i != j else 0.0 for j in range(n)] for i in range(n)]
+    for i in range(n):
+        D[i][(i + 1) % n] = 1.0
+
+    t0 = time.perf_counter()
+    order = held_karp(D)
+    elapsed = time.perf_counter() - t0
+
+    assert elapsed < 2.0, f"Thời gian chạy n=11 ({elapsed:.3f}s) vượt quá ngưỡng 2s"
+    assert is_tour(order, n)
+    assert order == list(range(n))
+    assert tour_cost(D, order) == pytest.approx(float(n))

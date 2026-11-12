@@ -372,3 +372,27 @@ def test_cost_mismatch_raises_runtime_error(tmp_path: Path, monkeypatch: pytest.
             "--run-id", "run_fail",
             "--out", str(tmp_path),
         ])
+
+
+def test_git_dirty_ignores_results_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Thư mục results/ do chính lần chạy tạo ra không làm git_dirty = True; file khác thì có."""
+    import subprocess
+
+    import run_benchmarks
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "a.txt").write_text("a", encoding="utf-8")
+    subprocess.run([*git, "-C", str(repo), "add", "a.txt"], check=True)
+    subprocess.run([*git, "-C", str(repo), "commit", "-q", "-m", "init"], check=True)
+    monkeypatch.setattr(run_benchmarks, "REPO_ROOT", repo)
+
+    (repo / "results" / "20261029-0000-demo-abc1234").mkdir(parents=True)
+    (repo / "results" / "20261029-0000-demo-abc1234" / "measurements.csv").write_text("x", encoding="utf-8")
+    assert run_benchmarks._get_git_info()[2] is False
+
+    (repo / "b.txt").write_text("b", encoding="utf-8")
+    assert run_benchmarks._get_git_info()[2] is True
+

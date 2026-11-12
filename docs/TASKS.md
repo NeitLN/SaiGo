@@ -415,18 +415,18 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 
 ### T61 — Cắt lồng nhau cho thí nghiệm tăng quy mô
 - 👤 Minh (Tiến hỗ trợ) · ⏱ 3 h · ⛓ T31
-- **Việc cần làm:** `scripts/make_crops.py`: từ `outer.graphml` cắt **3** hình vuông lồng nhau, chọn trong các nửa cạnh ứng viên 1 / 2 / 3 / 4,5 km (chốt sau pilot); chọn SCC lồng nhau (DATA_MODEL mục 8.4); xuất JSON + manifest từng kích thước. Chạy pilot 20 truy vấn dài ở kích thước lớn nhất: nếu median Dijkstra > ~1 s thì bỏ hoặc giảm kích thước đó.
+- **Việc cần làm:** `scripts/make_crops.py`: từ `outer.graphml` cắt **4** hình vuông lồng nhau, nửa cạnh 1 / 2 / 3 / 4,5 km (chốt 28/10 sau pilot); chọn SCC lồng nhau (DATA_MODEL mục 8.4); xuất JSON + manifest từng kích thước. Chạy pilot 20 truy vấn dài ở kích thước lớn nhất: nếu median Dijkstra > ~1 s thì bỏ hoặc giảm kích thước đó.
 - 📁 `scripts/make_crops.py`, `data/processed/crop_*.json`
-- 📦 3 đồ thị lồng nhau + bảng `|V|`, `|E|` đo được.
+- 📦 4 đồ thị lồng nhau + bảng `|V|`, `|E|` đo được.
 - ✅ Bảng kích thước dán vào EXPERIMENTS.md; xác nhận SCC nhỏ nằm trong SCC lớn.
 - ▶ `python scripts/make_crops.py` · kiểm tra bảng in ra
 - 🧠 Vì sao cắt từ một lần tải thay vì tải nhiều lần; vì sao vẽ biểu đồ theo `|V|` đo được chứ không theo bán kính.
 
 ### T62 — Chạy thí nghiệm tăng quy mô
 - 👤 Tiến · ⏱ 3 h · ⛓ T60, T61
-- **Việc cần làm:** workload fixed trips (250 cặp dùng chung cho cả 3 kích thước) theo EXPERIMENT_PLAN mục 6. Growing trips đã cắt 26/10 (D11).
+- **Việc cần làm:** workload fixed trips (250 cặp dùng chung cho cả 4 kích thước) theo EXPERIMENT_PLAN mục 6. Growing trips đã cắt 26/10 (D11).
 - 📁 `scripts/run_benchmarks.py`, `results/<run_id>/`
-- 📦 CSV E3 · ✅ Đủ 3 kích thước (giảm xuống 2 chỉ khi nhóm đồng ý riêng, ghi rõ lý do) · ▶ `python scripts/run_benchmarks.py --suite scaling --seed 42`
+- 📦 CSV E3 · ✅ Đủ 4 kích thước (bỏ bớt chỉ khi nhóm đồng ý riêng, ghi rõ lý do) · ▶ `python scripts/run_benchmarks.py --suite scaling --seed 42`
 - 🧠 Fixed trips đo ảnh hưởng của bản đồ lớn hơn khi chuyến đi giữ nguyên; không suy ra cho chuyến đi dài hơn.
 
 ### T63 — Thí nghiệm ùn tắc và đóng đường

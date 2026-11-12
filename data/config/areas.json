@@ -1,0 +1,7 @@
+{
+  "_comment": "Vùng dữ liệu (DATA_MODEL mục 8.2). Các kích thước là [Đề xuất], nhóm xác nhận ở buổi họp. Đổi vùng tải thì phải chạy lại prepare_data.py download --force.",
+  "center": {"name": "Chợ Bến Thành", "lat": 10.7725, "lon": 106.698},
+  "download": {"half_side_m": 4500, "buffer_m": 500},
+  "demo": {"half_side_m": 2000},
+  "network_type": "drive"
+}

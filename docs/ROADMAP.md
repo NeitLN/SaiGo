@@ -2,7 +2,7 @@
 
 Lập ngày 23/10/2026. Mốc của giảng viên (tentative, theo Project_Intructions_261.pdf): **12/11 final ready · 19/11 thuyết trình 15 phút · 22/11 nộp ETC**.
 
-> **26/10: đổi phạm vi đã duyệt** ([đề xuất](proposals/2026-10-26-pham-vi.md); D10–D13 ở [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 4): bỏ vẽ toàn mạng đường (T32), RQ1b 3 kích thước chỉ fixed trips, **điểm kiểm bằng chứng 05/11** thay cổng G1, **MVP tích hợp 08/11**. Tour bị cắt sáng 26/10 rồi **giữ lại chiều 26/10** khi Duy Anh quay lại (D10). Mục 1–5 dưới đây đã sửa theo; bản trước nằm trong lịch sử git.
+> **26/10: đổi phạm vi đã duyệt** ([đề xuất](proposals/2026-10-26-pham-vi.md); D10–D13 ở [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 4): bỏ vẽ toàn mạng đường (T32), RQ1b chỉ fixed trips (4 kích thước, chốt 28/10), **điểm kiểm bằng chứng 05/11** thay cổng G1, **MVP tích hợp 08/11**. Tour bị cắt sáng 26/10 rồi **giữ lại chiều 26/10** khi Duy Anh quay lại (D10). Mục 1–5 dưới đây đã sửa theo; bản trước nằm trong lịch sử git.
 
 Nguyên tắc:
 
@@ -44,7 +44,7 @@ Tour (M8): thuật toán trên ma trận đã xong 26/10; T72–T74 (ma trận t
 | **M4** Tìm đường trên dữ liệu thật | 02–03/11 | Dijkstra/A* trên đồ thị thật; 200 cặp khớp NetworkX; `c`, `v_max` ghi vào manifest | `pytest -m realdata`; CLI `--from-latlon ... --to-latlon ...` | T33 |
 | **M5** Ùn tắc & đóng đường | 02–04/11 | Snapshot với vùng ùn tắc và cạnh đóng; tuyến đổi, `no_path` khi cần | `pytest tests/test_scenario.py tests/test_closures.py -q`; CLI `--scenario peak-center --block 123` | T40–T42 |
 | **M6** Bản đồ tương tác (rút gọn) | 02–07/11 | Bấm 2 điểm → tuyến + bảng Dijkstra/A*; chọn kịch bản, vẽ vùng ùn tắc; bấm đoạn trên tuyến để đóng, mở lại; báo không có đường | Checklist UI trong [PROGRESS.md](PROGRESS.md); `pytest tests/test_api_route.py` | T50–T55 |
-| **M7** Benchmark & tăng quy mô | 02–08/11 | CSV đo thật + biểu đồ: 1.000 cặp vùng demo, 3 kích thước đồ thị (fixed trips), thí nghiệm ùn tắc/đóng đường | `python scripts/run_benchmarks.py --suite all`; `python scripts/plot_results.py results/<run_id>` | T60–T65 |
+| **M7** Benchmark & tăng quy mô | 02–08/11 | CSV đo thật + biểu đồ: 1.000 cặp vùng demo, 4 kích thước đồ thị (fixed trips), thí nghiệm ùn tắc/đóng đường | `python scripts/run_benchmarks.py --suite all`; `python scripts/plot_results.py results/<run_id>` | T60–T65 |
 | **G1** Điểm kiểm bằng chứng | **05/11** | Biết chắc MVP có kịp 08/11 không; nếu không thì cắt theo thứ tự đã duyệt | Điều kiện ở mục 3 | G1 |
 | **MVP** tích hợp | **08/11** | Demo rút gọn chạy trọn ([DEMO.md](DEMO.md)) + bằng chứng thực nghiệm đã chốt | Chạy kịch bản demo; mọi số trong EXPERIMENTS.md có `run_id` | — |
 | **M8** Tour (E1) | 26/10 · 05–08/11 | NN, 2-opt có hướng, Held–Karp trên ma trận (xong 26/10); ma trận chi phí từ đồ thị, `/api/tour`, UI kho + 5 điểm, benchmark tour | `pytest tests/test_tour.py`; `python scripts/run_benchmarks.py --suite tour`; bước 9 của demo | T70–T74 |
@@ -83,7 +83,7 @@ Không đạt thì kích hoạt cắt theo [đề xuất phạm vi](proposals/20
 |---|---|---|---|---|---|
 | Q1 | Định dạng `saigo-graph/1` và cách đánh ID cạnh `(u, v, key)` ([DATA_MODEL](DATA_MODEL.md) mục 2) | T11 (bắt đầu), T31 (bắt đầu), T41, T51 | 24/10 | `mini.json` nạp được bằng `load_graph` (T01) | **Đã chốt**: T01 merge (#57); kiểm thứ tự `(u, v, key)` khi nạp ở #61 |
 | Q2 | Bản dữ liệu thô dùng chung (sha256 `24a28327…`) và nơi lưu cho cả nhóm | T31, T61, mọi benchmark | 26/10 | Hai máy tải từ Release ra cùng sha256 | **Đã duyệt 26/10** (Release `data-raw-20261024`); chờ T34 tạo Release |
-| Q3 | Vùng demo (nửa cạnh 2 km) và các kích thước của thí nghiệm tăng quy mô | T31, T61, T62 | 27/10 (T61 chốt sau pilot) | Pilot T61: đo median Dijkstra ở kích thước lớn nhất | Vùng demo **đã duyệt 26/10**; 3 kích thước chốt sau pilot T61 |
+| Q3 | Vùng demo (nửa cạnh 2 km) và các kích thước của thí nghiệm tăng quy mô | T31, T61, T62 | 27/10 (T61 chốt sau pilot) | Pilot T61: đo median Dijkstra ở kích thước lớn nhất | Vùng demo **đã duyệt 26/10**; **4 kích thước 1 / 2 / 3 / 4,5 km, chốt 28/10** sau pilot T61 (#82) |
 | Q4 | Bảng tốc độ `speeds.json` (cũng quyết định `v_max`) | T22, T33, T60 | 28/10 | `check-heuristic` trên đồ thị thật (T22) | **Đã duyệt 26/10**, đóng băng (`v_max` 40 km/h); tốc độ vẫn là giả định mô phỏng. Đổi sau 02/11 thì chạy lại toàn bộ benchmark |
 | Q5 | Mô hình ùn tắc (`max α`, trung điểm cạnh) và cách đóng đoạn (cạnh đối) ([DATA_MODEL](DATA_MODEL.md) mục 4) | T40, T41, T63 | 29/10 | Test trên `mini.json`: vùng ùn tắc đổi tuyến, nhân đều không đổi | **Đã duyệt 26/10**; chưa có code |
 | Q6 | Contract `/api/route` (request/response, [ARCHITECTURE](ARCHITECTURE.md) mục 4) | T13, T51 và T52 (T52 code trước được với contract này) | 30/10 | Test API với fixture (T13, T51) | **Đã chốt 25/10** (v1, chỉ được thêm trường); T13 hiện thực |

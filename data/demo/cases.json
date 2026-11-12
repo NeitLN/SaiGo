@@ -1,0 +1,55 @@
+{
+  "format": "saigo-demo-cases/1",
+  "_comment": "Case minh họa cho kịch bản demo (docs/PROJECT_BRIEF.md mục 7, docs/DEMO.md mục 2), T55. Tọa độ là tọa độ node đã snap trên đúng dataset dưới đây; edge id chỉ có nghĩa với dataset này. 'expected' là kết quả đã chạy thử qua POST /api/route (T51) ngày 29/10, dùng để đối chiếu khi demo, không phải để UI hiển thị thay số của backend.",
+  "_format": "Mỗi case: mode = route (hai điểm, POST /api/route) hoặc tour (kho + điểm giao, chờ T73); demo_steps = số bước trong docs/DEMO.md mục 2 mà case phục vụ; source/target/depot/stops = {name, lat, lon}; scenario_id, blocked_edge_ids = tham số gửi lên API; expected = kết quả đã chạy để đối chiếu, mỗi khóa con là một biến thể (đảo chiều, kịch bản, đóng cạnh).",
+  "dataset_id": "hcm-benthanh-r2000-20261024",
+  "dataset_sha256": "928c1f8bb372d7ee59fe1f427d18d9befdfa7a2b8e36aef6e5b7df177d3e479c",
+  "scenarios_file": "data/config/scenarios.json",
+  "cases": [
+    {
+      "id": "hai-diem-qua-trung-tam",
+      "label": "Hai điểm qua trung tâm",
+      "mode": "route",
+      "demo_steps": [1, 2, 4, 5, 6],
+      "source": {"name": "Dinh Độc Lập", "lat": 10.77871, "lon": 106.69593},
+      "target": {"name": "Bitexco", "lat": 10.77186, "lon": 106.70391},
+      "scenario_id": "baseline",
+      "blocked_edge_ids": [],
+      "expected": {
+        "baseline": {"status": "ok", "cost_s": 186.1, "distance_m": 1565, "expanded_dijkstra": 404, "expanded_astar": 106, "costs_match": true},
+        "reversed": {"status": "ok", "cost_s": 193.0, "distance_m": 1417, "expanded_dijkstra": 477, "expanded_astar": 108, "costs_match": true, "note": "bước 4: đảo chiều, chi phí khác vì đường một chiều"},
+        "peak-center": {"status": "ok", "cost_s": 246.1, "distance_m": 1748, "route_changed": true, "note": "bước 5"},
+        "close_middle_edge": {"blocked_edge_ids": [1613], "status": "ok", "cost_s": 204.7, "distance_m": 1573,
+                              "note": "bước 6: cạnh giữa tuyến cơ sở, một chiều nên không có cạnh đối; tuyến mới không đi qua cạnh đóng"}
+      }
+    },
+    {
+      "id": "khong-con-duong",
+      "label": "Không còn đường",
+      "mode": "route",
+      "demo_steps": [7],
+      "source": {"name": "Dinh Độc Lập", "lat": 10.77871, "lon": 106.69593},
+      "target": {"name": "Nguyễn Du – Công trường Công xã Paris (node 351)", "lat": 10.7791894, "lon": 106.7001527},
+      "scenario_id": "baseline",
+      "blocked_edge_ids": [1029, 3123],
+      "_comment": "Đóng cả 2 cạnh đi vào node đích nên không còn đường có hướng tới đích.",
+      "expected": {"status": "no_path", "costs_match": true}
+    },
+    {
+      "id": "kho-5-diem",
+      "label": "Kho + 5 điểm giao",
+      "mode": "tour",
+      "demo_steps": [9],
+      "_comment": "Chờ T73 (/api/tour và UI tour) để kiểm UI-9. Đã kiểm: mọi điểm snap ≤ 60 m và mọi cặp có đường (30 cặp có hướng).",
+      "depot": {"name": "Chợ Bến Thành", "lat": 10.772193, "lon": 106.697556},
+      "stops": [
+        {"name": "Nhà thờ Đức Bà", "lat": 10.779612, "lon": 106.698826},
+        {"name": "Nhà hát Thành phố", "lat": 10.776389, "lon": 106.702729},
+        {"name": "Bảo tàng Mỹ thuật", "lat": 10.76942, "lon": 106.699924},
+        {"name": "Bến Bạch Đằng", "lat": 10.774716, "lon": 106.706182},
+        {"name": "Công viên Tao Đàn", "lat": 10.777484, "lon": 106.693042}
+      ],
+      "scenario_id": "baseline"
+    }
+  ]
+}

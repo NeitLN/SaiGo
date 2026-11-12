@@ -1,0 +1,33 @@
+{
+  "dataset_id": "hcmc-benthanh-20261024",
+  "downloaded_at": "2026-10-24T03:13:27+07:00",
+  "center": {
+    "name": "Chợ Bến Thành",
+    "lat": 10.7725,
+    "lon": 106.698
+  },
+  "half_side_m": 4500,
+  "buffer_m": 500,
+  "bbox": {
+    "west": 106.6522273349434,
+    "south": 10.727533983225356,
+    "east": 106.74377266505658,
+    "north": 10.817466016774645
+  },
+  "network_type": "drive",
+  "simplify": true,
+  "retain_all": true,
+  "node_count": 12131,
+  "edge_count": 27693,
+  "oneway_edge_count": 4983,
+  "weak_components": 255,
+  "file": "data/raw/outer.graphml",
+  "file_bytes": 13404639,
+  "sha256": "24a283275b0f65836bd51d7efc7110a566b658ff3a6a5bccef1a0db576ed5398",
+  "dependencies": {
+    "python": "3.14.4",
+    "osmnx": "2.1.1",
+    "networkx": "3.7"
+  },
+  "attribution": "© OpenStreetMap contributors, dữ liệu theo giấy phép ODbL (https://www.openstreetmap.org/copyright)"
+}

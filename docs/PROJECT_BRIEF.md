@@ -59,7 +59,7 @@ Hệ quả cần hiểu: heuristic của A* phải đổi mét sang giây bằng
 | Mã | Câu hỏi | Trạng thái |
 |---|---|---|
 | RQ1 | A* có giảm số node mở rộng và thời gian truy vấn so với Dijkstra trong khi vẫn cho cùng chi phí tối ưu không? | Từ proposal |
-| RQ1b | Mức chênh lệch đó thay đổi thế nào khi đồ thị lớn dần (số node tăng)? | **Mới** — theo yêu cầu thử nghiệm tăng quy mô; 3 kích thước lồng nhau, chỉ workload "fixed trips" (D11) |
+| RQ1b | Mức chênh lệch đó thay đổi thế nào khi đồ thị lớn dần (số node tăng)? | **Mới** — theo yêu cầu thử nghiệm tăng quy mô; 4 kích thước lồng nhau, chỉ workload "fixed trips" (D11) |
 | RQ2 | NN + 2-opt có hướng cải thiện tour bao nhiêu so với thứ tự nhập và NN đơn lẻ; cách tối ưu Held–Karp bao xa trên case nhỏ? | Từ proposal. Giữ trong phạm vi (D10): thuật toán đã có (T70, T71); ma trận từ đồ thị, API, UI, benchmark (T72–T74) trước 08/11 |
 | RQ3 | Ùn tắc và đóng đường ảnh hưởng thế nào tới tính khả thi, chi phí tuyến, số node A* mở rộng và thời gian lập lại kế hoạch? | Từ proposal, thêm chỉ số A* |
 
@@ -77,7 +77,7 @@ Không đặt trước kết luận "A* luôn nhanh hơn". Nếu kết quả kh�
 | 4 | Snapshot: kịch bản ùn tắc theo vùng + danh sách cạnh bị đóng | Đồ thị gốc không bị sửa |
 | 5 | API `/api/route`, `/api/dataset` | FastAPI. Không có `/api/network` (không vẽ toàn mạng đường, D12) |
 | 6 | Bản đồ: chọn 2 điểm, xem tuyến Dijkstra và A*, bảng so sánh, chọn kịch bản và vẽ vùng ùn tắc, bấm vào một đoạn trên tuyến để đóng (đóng cả cạnh đối nếu có) rồi tìm lại, nút mở lại, báo "không có đường" | Leaflet, TypeScript thuần; nền tile OSM, chỉ vẽ tuyến và các cạnh của tuyến (D12) |
-| 7 | Benchmark offline: 1.000 truy vấn trên vùng demo + thí nghiệm tăng quy mô 3 kích thước, chỉ "fixed trips" | CSV/JSON + biểu đồ |
+| 7 | Benchmark offline: 1.000 truy vấn trên vùng demo + thí nghiệm tăng quy mô 4 kích thước, chỉ "fixed trips" | CSV/JSON + biểu đồ |
 | 8 | Tour nhiều điểm: NN, 2-opt có hướng, Held–Karp (n ≤ 10) trên ma trận chi phí tính từ đồ thị; `/api/tour`; UI kho + 5 điểm với 3 thẻ so sánh; benchmark tour | T70–T74; trở lại phạm vi chiều 26/10 (D10) |
 
 ### 3.2. Mở rộng — chỉ làm nếu sau 08/11 còn thời gian
@@ -108,7 +108,7 @@ ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window,
 | D8 | Không cam kết `.exe`; app chạy local bằng lệnh trong README | PDF không yêu cầu; đóng gói geospatial tốn thời gian |
 | D9 | Cài OSMnx bằng `pip install -e ".[data]"` trong cùng venv; nếu lỗi trên Windows thì dùng môi trường conda-forge riêng cho bước chuẩn bị dữ liệu | Ứng dụng demo chỉ đọc JSON, không cần OSMnx |
 | D10 | Tour (RQ2, T70–T74): sáng 26/10 cắt khỏi phạm vi; **chiều 26/10 giữ lại** *(Tiến chốt)* | Sáng: Duy Anh vắng, tuần 3–4 thiếu 20–23 giờ. Chiều: Duy Anh quay lại và đã xong T70, T71 cùng nhiều task tuần 3, nên đủ giờ cho T72–T74 |
-| D11 | RQ1b: **3 kích thước lồng nhau, chỉ "fixed trips"** *(26/10)* | Giữ được xu hướng theo kích thước với ít giờ chạy và giờ làm hơn |
+| D11 | RQ1b: **chỉ workload "fixed trips"** *(26/10)*; số kích thước: 26/10 chốt 3, **28/10 giữ đủ 4 (1 / 2 / 3 / 4,5 km)** *(Tiến chốt)* | Bỏ growing trips để bớt giờ làm. Pilot T61: vùng lớn nhất chỉ ~14 ms/truy vấn và script đã cắt sẵn cả 4, nên kích thước thứ 4 gần như không tốn thêm |
 | D12 | Bản đồ rút gọn: không vẽ toàn mạng đường (T32), không có lớp chấm node mở rộng; đóng đường một chế độ *(26/10)* | Giữ đủ các bước demo cho RQ1, RQ3; `expanded` vẫn có trong bảng và benchmark |
 | D13 | Mốc: **điểm kiểm bằng chứng 05/11**, **MVP tích hợp 08/11**, 09–12/11 không thêm tính năng; essay bắt đầu từ tuần 3 *(26/10)* | Thay cổng G1 "có tích hợp tour không", vì tour đã nằm trong phạm vi |
 
