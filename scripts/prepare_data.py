@@ -28,6 +28,7 @@ PROCESSED = ROOT / "data" / "processed"
 CONFIG = ROOT / "data" / "config"
 VN = timezone(timedelta(hours=7))
 ATTRIBUTION = "© OpenStreetMap contributors, dữ liệu theo giấy phép ODbL (https://www.openstreetmap.org/copyright)"
+RELEASE = "data-raw-20261024"  # GitHub Release chứa outer.graphml đã đóng băng (T34)
 
 BEN_THANH = (10.7725, 106.6980)  # (lat, lon) chợ Bến Thành
 SMOKE_HALF_SIDE_M = 250          # bbox 500 m × 500 m
@@ -143,17 +144,21 @@ def main_highway(value, speeds: dict) -> str | None:
 
 def build(area: str) -> None:
     """Cắt vùng, chuẩn hóa thuộc tính, gán tốc độ, đánh dấu SCC, đánh lại ID, xuất JSON + manifest."""
+    # Kiểm file thô trước khi nạp OSMnx, để máy thiếu cả hai thấy đúng việc cần làm trước.
+    raw_manifest = json.loads((PROCESSED / "raw_manifest.json").read_text(encoding="utf-8"))
+    raw = ROOT / raw_manifest["file"]
+    if not raw.exists():
+        sys.exit(f"thiếu {raw_manifest['file']}; tải đúng bản đã đóng băng từ Release {RELEASE}: "
+                 f"gh release download {RELEASE} -p {raw.name} -D {raw.parent.relative_to(ROOT).as_posix()} "
+                 "(xem docs/team/ONBOARDING.md mục 3, \"Tải dữ liệu\"). Không tải lại từ OSM.")
+    if sha256(raw) != raw_manifest["sha256"]:
+        sys.exit(f"{raw_manifest['file']} không khớp sha256 trong raw_manifest.json; "
+                 f"tải lại đúng bản đã đóng băng từ Release {RELEASE} (thêm --clobber để ghi đè)")
+
     ox = import_osmnx()
     import networkx as nx
     from pyproj import Transformer
     from shapely.geometry import Point
-
-    raw_manifest = json.loads((PROCESSED / "raw_manifest.json").read_text(encoding="utf-8"))
-    raw = ROOT / raw_manifest["file"]
-    if not raw.exists():
-        sys.exit(f"thiếu {raw_manifest['file']}; tải từ GitHub Release (xem docs/tracking hoặc PR T30), không tải lại từ OSM")
-    if sha256(raw) != raw_manifest["sha256"]:
-        sys.exit(f"{raw_manifest['file']} không khớp sha256 trong raw_manifest.json; dùng đúng bản đã đóng băng")
 
     areas = json.loads((CONFIG / "areas.json").read_text(encoding="utf-8"))
     speeds = json.loads((CONFIG / "speeds.json").read_text(encoding="utf-8"))
