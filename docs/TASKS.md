@@ -4,6 +4,8 @@ Mỗi task vừa sức một buổi (khoảng 2–4 giờ). Nếu một task ké
 
 > **26/10: nhóm đã duyệt kế hoạch tuần 2** ([ROADMAP](ROADMAP.md) mục 6): T12 → Bảo, T13 → Minh, T21 → Bảo (dự phòng). Toàn bộ file đã đồng bộ với [đề xuất phạm vi đã duyệt](proposals/2026-10-26-pham-vi.md): cắt T32, RQ1b 3 kích thước chỉ fixed trips, T53/T54 rút gọn, G1 thành điểm kiểm bằng chứng 05/11, thêm T34. **Chiều 26/10:** Duy Anh quay lại và làm T13, T21, T22, T40, T41, T60 (khung), T64, T70, T71; tour (T72–T74) trở lại phạm vi cam kết (D10 ở PROJECT_BRIEF mục 4).
 
+> **13/11 (D14):** Từ 13/11: **Tiến làm toàn bộ việc còn lại; Minh review chính mọi PR** (kể cả chạy lại trên máy thứ hai); Duy Anh và Bảo làm khi được Tiến gán việc. Các task chưa xong bên dưới đã đổi người phụ trách theo quy tắc này.
+
 Ký hiệu: 👤 phụ trách · ⏱ ước lượng · ⛓ phụ thuộc · 📁 file · 📦 đầu ra · ✅ hoàn thành khi · ▶ kiểm tra · 🧠 kiến thức cần hiểu để giải thích.
 
 Thứ tự gợi ý trong tuần đầu: **T00 → T01 → T03 → T10 → T11 → T12 → T20 → T21 → T22**, song song **T02 → T30 → T31 → T32**.
@@ -382,7 +384,8 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - 🧠 Kịch bản là mô phỏng; vì sao ùn tắc theo vùng làm đổi tuyến còn nhân đều thì không.
 
 ### T54 — UI: đóng đoạn đường và báo không có đường
-- 👤 Minh + Tiến · ⏱ 3 h · ⛓ T52, T41
+- 👤 Minh (Tiến review) · ⏱ 3 h · ⛓ T52, T41
+- **13/11:** đã merge (#100) trên giao diện cũ; giao diện React (T56) dùng chung `edge_geometries`.
 - **Việc cần làm (một chế độ, 26/10):** bấm vào một đoạn **trên tuyến** → đóng đoạn đó (cả cạnh đối nếu có); tô đỏ; tự tìm lại; khi `no_path` thì hiện thông báo, không vẽ đường; nút "Mở lại tất cả".
 - 📁 `frontend/src/*.ts`
 - 📦 Đóng đường trên web.
@@ -430,7 +433,7 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - 🧠 Fixed trips đo ảnh hưởng của bản đồ lớn hơn khi chuyến đi giữ nguyên; không suy ra cho chuyến đi dài hơn.
 
 ### T63 — Thí nghiệm ùn tắc và đóng đường
-- 👤 Tiến (Bảo chạy lại để kiểm tra) · ⏱ 3 h · ⛓ T60, T41, T42
+- 👤 Tiến (Minh review) · ⏱ 3 h · ⛓ T60, T41, T42
 - **Việc cần làm:** theo EXPERIMENT_PLAN mục 7: cùng tập cặp, chạy dưới từng kịch bản; đóng cạnh theo quy tắc cố định; ghi tính khả thi, chi phí, node mở rộng, thời gian.
 - 📁 `scripts/run_benchmarks.py`, `results/<run_id>/`
 - 📦 CSV E4 · ✅ Có cả case còn đường và case không còn đường · ▶ `python scripts/run_benchmarks.py --suite scenario --seed 42`
@@ -456,7 +459,8 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - 🧠 Quản lý phạm vi: vì sao cắt bớt tốt hơn trễ hạn.
 
 ### T65 — Ghi kết quả vào EXPERIMENTS.md
-- 👤 Tiến + cả nhóm · ⏱ 3 h · ⛓ T62, T63, T64
+- 👤 Tiến (Minh review) · ⏱ 3 h · ⛓ T62, T63, T64
+- **13/11:** phần E2 Minh đã làm ở #97; còn E3, E4, E5 sau khi chạy T62, T63, T74.
 - **Việc cần làm:** điền bảng ở EXPERIMENT_PLAN mục 9 bằng số đo thật; mỗi bảng ghi `run_id`, `dataset_id`, máy đo; viết phần diễn giải và các trường hợp A* không có lợi.
 - 📁 `docs/EXPERIMENTS.md`
 - 📦 Kết quả cho essay · ✅ Mọi số có `run_id` truy ngược được · ▶ Review chéo: một người khác chạy lại một bảng và ra số cùng bậc
@@ -490,13 +494,14 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 - 🧠 Vì sao không dùng khoảng cách thẳng cho ma trận.
 
 ### T73 — UI tour tối giản
-- 👤 Minh · ⏱ 3 h · ⛓ T72
+- 👤 Minh (Tiến review) · ⏱ 3 h · ⛓ T72
+- **13/11:** UI tour đã viết xong, chỉ còn chờ `/api/tour` (T72, #102). Tour cũng có trong giao diện React (T56).
 - **Việc cần làm:** preset kho + 5 điểm từ `cases.json`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt; marker đánh số theo thẻ được chọn.
 - 📁 `frontend/src/*.ts` · 📦 Demo tour · ✅ Bước 9 của kịch bản demo chạy được · ▶ Thủ công
 - 🧠 Hai tầng của bài toán giao hàng.
 
 ### T74 — Benchmark tour
-- 👤 Tiến (Bảo chạy) · ⏱ 2–3 h · ⛓ T71, T72
+- 👤 Tiến (Minh review) · ⏱ 2–3 h · ⛓ T71, T72
 - **Việc cần làm:** EXPERIMENT_PLAN mục 8; thêm biểu đồ E5 (mục 10, hình 6) vào `plot_results.py`.
 - 📁 `scripts/run_benchmarks.py` · 📦 CSV E5 · ✅ Bảng improvement và gap có số đo · ▶ `python scripts/run_benchmarks.py --suite tour --seed 42`
 - 🧠 Improvement % và gap %.
@@ -506,7 +511,8 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 ## M9 — Hoàn thiện
 
 ### T80 — Đóng băng tính năng và chạy trên máy thứ hai
-- 👤 Bảo · ⏱ 2–3 h · ⛓ T54, T55, T73, G1
+- 👤 Tiến (Minh review) · ⏱ 2–3 h · ⛓ T54, T55, T73, G1
+- **13/11:** phần "chạy trên máy thứ hai" do Minh làm khi review.
 - **Việc cần làm:** từ 09/11 không thêm tính năng (D13); clone repo sạch trên máy khác, làm đúng theo README (tải dataset từ Release, kiểm tra hash), chạy demo; ghi mọi bước bị vướng.
 - 📦 Biên bản chạy máy thứ hai · ✅ Chạy được mà không cần ai sửa tay; hoặc README đã được sửa · ▶ Thủ công
 - 🧠 Tái lập là gì.
@@ -518,13 +524,14 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 - 🧠 —
 
 ### T82 — Tập demo và quay video dự phòng
-- 👤 Minh + Bảo · ⏱ 2 h · ⛓ T55, T80
+- 👤 Tiến (Minh review) · ⏱ 2 h · ⛓ T55, T80
 - **Việc cần làm:** chạy kịch bản demo 3 lần với đồng hồ; quay màn hình bản tốt nhất; kiểm tra checklist DEMO.md mục 3.
 - 📦 Video + checklist · ✅ Demo ≤ 4 phút · ▶ Thủ công
 - 🧠 Mỗi bước demo trả lời câu hỏi nghiên cứu nào.
 
 ### T83 — Essay: phương pháp, kết quả, giới hạn
-- 👤 Cả nhóm (Tiến điều phối) · ⏱ nhiều buổi · ⛓ T65
+- 👤 Tiến (Minh review) · ⏱ nhiều buổi · ⛓ T65
+- **13/11:** Tiến viết; phần nào cần thì Tiến gán cho Duy Anh hoặc Bảo.
 - **Bắt đầu từ tuần 3** (D13): phần dữ liệu và phương pháp (Bảo + Tiến) từ 02/11; phần kết quả viết sau khi có số đo đã kiểm (T65).
 - **Việc cần làm:** theo khung TOPIC.md mục 21.1; mỗi người viết phần mình làm; mọi số liệu lấy từ EXPERIMENTS.md kèm `run_id`; chứng minh heuristic ở dạng phác thảo có trích dẫn.
 - 📦 Bản nháp essay · ✅ 10 trang double spaced, có bìa đủ tên/MSSV · ▶ Review chéo
