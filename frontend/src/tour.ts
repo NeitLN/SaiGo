@@ -4,7 +4,8 @@ import { escapeHtml, postTour, TOUR_LABEL, type LatLon, type TourMethod, type To
 import { toLatLngs } from './layers'
 
 const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt']
-const MAX_STOPS = 9 // backend dùng Held–Karp làm đối chứng tới 10 điểm (kể cả kho)
+const MAX_STOPS = 14 // giới hạn của POST /api/tour
+const MAX_OPTIMAL_POINTS = 11 // Held–Karp đối chứng khi tổng số điểm (kể cả kho) ≤ 11 (HELD_KARP_MAX_POINTS)
 
 interface NamedPoint extends LatLon {
   name?: string
@@ -99,15 +100,18 @@ export class TourMode {
     this.el.busy.hidden = false
     try {
       const [depot, ...stops] = this.points
+      // id điểm giao = số thứ tự nhập, để danh sách, thẻ và marker dùng cùng một cách đánh số.
       const res = await postTour(
-        { depot: { lat: depot.lat, lon: depot.lon }, stops: stops.map(({ lat, lon }) => ({ lat, lon })),
-          scenario_id: this.scenarioId() },
+        { depot: { lat: depot.lat, lon: depot.lon },
+          stops: stops.map(({ lat, lon }, k) => ({ id: String(k + 1), lat, lon })),
+          scenario_id: this.scenarioId(),
+          include_optimal: this.points.length <= MAX_OPTIMAL_POINTS },
         this.pending.signal)
       if (id !== this.requestId) return
       this.res = res
       if (res.status !== 'ok') {
         // Không vẽ tour khi có cặp điểm không tới được.
-        const pairs = res.unreachable.map(([i, j]) => `${this.name(i)} → ${this.name(j)}`).join(', ')
+        const pairs = res.unreachable.map((u) => `${this.nameOf(u.from_id)} → ${this.nameOf(u.to_id)}`).join(', ')
         this.show(`Không lập được tour theo mô hình: không có đường ${pairs}.`)
       } else {
         this.selected = res.chosen ?? 'nearest_neighbor_2opt'
@@ -122,7 +126,7 @@ export class TourMode {
   }
 
   select(method: TourMethod) {
-    if (!this.res?.plans[method]) return
+    if (!this.res?.candidates[method]) return
     this.selected = method
     this.render()
   }
@@ -131,6 +135,11 @@ export class TourMode {
     const p = this.points[i]
     const base = i === 0 ? 'Kho' : `Điểm ${i}`
     return p?.name ? `${base} (${p.name})` : base
+  }
+
+  // id trong response: "depot" hoặc số thứ tự nhập của điểm giao.
+  private nameOf(id: string): string {
+    return this.name(id === 'depot' ? 0 : Number(id))
   }
 
   private show(text: string | null) {
@@ -157,14 +166,14 @@ export class TourMode {
   // Marker: trước khi lập tour đánh số theo thứ tự nhập; sau đó theo thứ tự ghé của thẻ đang chọn.
   private renderMap() {
     this.layer.clearLayers()
-    const plan = this.selected ? this.res?.plans[this.selected] : undefined
+    const plan = this.selected ? this.res?.candidates[this.selected] : undefined
     if (plan) {
       L.polyline(toLatLngs(plan.geometry.coordinates), { color: '#7048e8', weight: 5, opacity: 0.85 }).addTo(this.layer)
     }
     const visit = new Map<number, number>()
-    plan?.order.forEach((p, k) => visit.set(p, k))
+    plan?.stop_order.forEach((id, k) => visit.set(Number(id), k + 1))
     this.points.forEach((p, i) => {
-      const at = this.res?.snapped[i] ?? p
+      const at = this.res?.snapped[i === 0 ? 'depot' : String(i)] ?? p
       const label = i === 0 ? 'K' : String(plan ? visit.get(i) : i)
       const tip = plan && i !== 0 ? `Ghé thứ ${visit.get(i)} · ${this.name(i)}` : this.name(i)
       L.marker([at.lat, at.lon], {
@@ -179,11 +188,10 @@ export class TourMode {
       this.el.results.innerHTML = '<p class="muted">Chưa có tour.</p>'
       return
     }
-    const base = res.plans.input?.cost_s
-    this.el.results.innerHTML = METHODS.filter((m) => res.plans[m]).map((m) => {
-      const p = res.plans[m]!
-      const gain = base && m !== 'input' ? ` · ${num((100 * (base - p.cost_s)) / base)}% so với thứ tự nhập` : ''
-      const order = p.order.map((i) => (i === 0 ? 'K' : String(i))).concat('K').join(' → ')
+    this.el.results.innerHTML = METHODS.filter((m) => res.candidates[m]).map((m) => {
+      const p = res.candidates[m]!
+      const gain = m !== 'input' ? ` · ${num(p.improvement_pct)}% so với thứ tự nhập` : ''
+      const order = ['K', ...p.stop_order, 'K'].join(' → ')
       return `
         <button class="tour-card${m === this.selected ? ' selected' : ''}" data-method="${m}">
           <span class="tour-card-title">${TOUR_LABEL[m]}${m === res.chosen ? ' <em>rẻ nhất</em>' : ''}</span>
@@ -191,7 +199,11 @@ export class TourMode {
           <span>Quãng đường: ${num(p.distance_m, 0)} m</span>
           <span class="muted small">${order}</span>
         </button>`
-    }).join('') + '<p class="muted small">Số trên bản đồ là thứ tự ghé của thẻ đang chọn. '
+    }).join('') + (res.optimal
+      ? `<p class="optimal">Tối ưu (Held–Karp, chỉ để đối chứng): <strong>${num(res.optimal.cost_s)} s</strong> `
+        + `(${['K', ...res.optimal.stop_order, 'K'].join(' → ')}); phương án được chọn kém tối ưu `
+        + `<strong>${num(res.optimal.gap_pct)}%</strong>.</p>`
+      : '') + '<p class="muted small">Số trên bản đồ là thứ tự ghé của thẻ đang chọn. '
       + 'Số trong danh sách và trong dòng thứ tự của thẻ là số điểm theo thứ tự nhập.</p>'
     this.el.results.querySelectorAll<HTMLButtonElement>('.tour-card').forEach((b) =>
       b.addEventListener('click', () => this.select(b.dataset.method as TourMethod)))

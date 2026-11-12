@@ -125,8 +125,8 @@ export async function postRoute(req: RouteRequest, signal?: AbortSignal): Promis
   return body as RouteResponse
 }
 
-// POST /api/tour (T72). Chỉ số theo quy ước của backend/app/algorithms/tour.py: điểm 0 là kho,
-// `order` khép kín bắt đầu bằng 0, tên phương án giống `TourPlan.method`.
+// POST /api/tour (T72, docs/ARCHITECTURE.md). Tour khép kín kho → các điểm giao → kho; mỗi điểm giao có `id`
+// do UI đặt, response trả thứ tự theo `id` (`stop_order`, không gồm kho).
 export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt'
 
 export const TOUR_LABEL: Record<TourMethod, string> = {
@@ -135,25 +135,39 @@ export const TOUR_LABEL: Record<TourMethod, string> = {
   nearest_neighbor_2opt: 'NN + 2-opt',
 }
 
-export interface TourRequest {
-  depot: LatLon
-  stops: LatLon[]
-  scenario_id?: string
+export interface TourStop extends LatLon {
+  id: string
 }
 
-export interface TourPlanOut {
-  order: number[]
+export interface TourRequest {
+  depot: LatLon
+  stops: TourStop[]
+  scenario_id?: string
+  blocked_edge_ids?: number[]
+  include_optimal?: boolean // Held–Karp làm đối chứng, backend chỉ chạy khi tổng số điểm ≤ 11
+}
+
+export interface TourCandidate {
+  stop_order: string[]
   cost_s: number
   distance_m: number
+  improvement_pct: number // so với thứ tự nhập
+  edge_ids: number[]
   geometry: LineString
 }
 
 export interface TourResponse {
+  dataset_id: string
+  snapshot_id: string
   status: 'ok' | 'infeasible_under_model'
-  snapped: SnappedPoint[] // snapped[i] ứng với điểm i (0 = kho)
-  plans: Partial<Record<TourMethod, TourPlanOut>>
+  snapped: Record<string, SnappedPoint> // "depot" và id của từng điểm giao
+  candidates: Partial<Record<TourMethod, TourCandidate>>
   chosen: TourMethod | null
-  unreachable: [number, number][]
+  optimal: { stop_order: string[]; cost_s: number; gap_pct: number } | null
+  unreachable: { from_id: string; to_id: string }[]
+  matrix_runtime_ms: number
+  order_runtime_ms: number | null
+  warnings: string[]
 }
 
 export async function postTour(req: TourRequest, signal?: AbortSignal): Promise<TourResponse> {

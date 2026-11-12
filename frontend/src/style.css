@@ -234,6 +234,14 @@ button:disabled {
   font-style: normal;
 }
 
+.optimal {
+  margin: 4px 0 10px;
+  padding: 8px 10px;
+  border-left: 3px solid #868e96;
+  background: #f8f9fa;
+  font-size: 0.9em;
+}
+
 .busy {
   color: #52606d;
 }
