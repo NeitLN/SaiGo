@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 
 class HealthResponse(BaseModel):
@@ -48,7 +48,7 @@ class RouteRequest(BaseModel):
     target: LatLon
     algorithms: list[str] = Field(default_factory=lambda: ["dijkstra"])
     scenario_id: str | None = "baseline"
-    blocked_edge_ids: list[int] = Field(default_factory=list)
+    blocked_edge_ids: list[StrictInt] = Field(default_factory=list)   # StrictInt: không nhận true/false là id 1/0
     trace_limit: int = Field(0, ge=0, le=5000)
 
     @field_validator("algorithms")
@@ -61,14 +61,6 @@ class RouteRequest(BaseModel):
             if algo not in allowed:
                 raise ValueError(f"thuật toán không hỗ trợ: {algo!r}, chỉ hỗ trợ 'dijkstra', 'astar'")
         return v
-
-    @model_validator(mode="after")
-    def validate_skeleton_constraints(self) -> RouteRequest:
-        if self.scenario_id not in (None, "baseline"):
-            raise ValueError(f"kịch bản {self.scenario_id!r} chưa hỗ trợ ở skeleton (T51)")
-        if self.blocked_edge_ids:
-            raise ValueError("đóng đường (blocked_edge_ids) chưa hỗ trợ ở skeleton (T51)")
-        return self
 
 
 class SnappedPoint(BaseModel):
@@ -101,6 +93,9 @@ class AlgorithmRouteResult(BaseModel):
     cost_s: float | None = None         # Giây (None nếu no_path)
     distance_m: float | None = None     # Mét (None nếu no_path)
     edge_ids: list[int] = Field(default_factory=list)
+    # edge_twin_ids[i] = cạnh đối của edge_ids[i] (v → u, cùng đoạn đường) hoặc None nếu một chiều.
+    # UI "đóng đoạn" gửi cả hai id trong blocked_edge_ids (DATA_MODEL 4.2). Thêm ở T51.
+    edge_twin_ids: list[int | None] = Field(default_factory=list)
     geometry: GeometryLineString
     expanded: int
     runtime_ms: float
@@ -117,3 +112,31 @@ class RouteResponse(BaseModel):
     results: dict[str, AlgorithmRouteResult]
     costs_match: bool | None = None
     warnings: list[str] = Field(default_factory=list)
+
+
+class ZoneOut(BaseModel):
+    type: str = "circle"
+    lat: float
+    lon: float
+    radius_m: float
+
+
+class RuleOut(BaseModel):
+    zone: ZoneOut
+    alpha: float
+    highway: list[str] | None = None
+
+
+class ScenarioOut(BaseModel):
+    id: str
+    label: str
+    rules: list[RuleOut]
+
+
+class DatasetResponse(BaseModel):
+    """Đồ thị đang nạp và các kịch bản dùng được (cùng cấu trúc `saigo-scenarios/1`)."""
+
+    dataset_id: str
+    node_count: int
+    edge_count: int
+    scenarios: list[ScenarioOut]
