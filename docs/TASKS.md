@@ -384,7 +384,8 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - 🧠 Kịch bản là mô phỏng; vì sao ùn tắc theo vùng làm đổi tuyến còn nhân đều thì không.
 
 ### T54 — UI: đóng đoạn đường và báo không có đường
-- 👤 Minh + Tiến · ⏱ 3 h · ⛓ T52, T41
+- 👤 Minh (Tiến review) · ⏱ 3 h · ⛓ T52, T41
+- **13/11:** đã merge (#100) trên giao diện cũ; giao diện React (T56) dùng chung `edge_geometries`.
 - **Việc cần làm (một chế độ, 26/10):** bấm vào một đoạn **trên tuyến** → đóng đoạn đó (cả cạnh đối nếu có); tô đỏ; tự tìm lại; khi `no_path` thì hiện thông báo, không vẽ đường; nút "Mở lại tất cả".
 - 📁 `frontend/src/*.ts`
 - 📦 Đóng đường trên web.
@@ -458,7 +459,8 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - 🧠 Quản lý phạm vi: vì sao cắt bớt tốt hơn trễ hạn.
 
 ### T65 — Ghi kết quả vào EXPERIMENTS.md
-- 👤 Tiến + cả nhóm · ⏱ 3 h · ⛓ T62, T63, T64
+- 👤 Tiến (Minh review) · ⏱ 3 h · ⛓ T62, T63, T64
+- **13/11:** phần E2 Minh đã làm ở #97; còn E3, E4, E5 sau khi chạy T62, T63, T74.
 - **Việc cần làm:** điền bảng ở EXPERIMENT_PLAN mục 9 bằng số đo thật; mỗi bảng ghi `run_id`, `dataset_id`, máy đo; viết phần diễn giải và các trường hợp A* không có lợi.
 - 📁 `docs/EXPERIMENTS.md`
 - 📦 Kết quả cho essay · ✅ Mọi số có `run_id` truy ngược được · ▶ Review chéo: một người khác chạy lại một bảng và ra số cùng bậc
@@ -492,7 +494,8 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 - 🧠 Vì sao không dùng khoảng cách thẳng cho ma trận.
 
 ### T73 — UI tour tối giản
-- 👤 Minh · ⏱ 3 h · ⛓ T72
+- 👤 Minh (Tiến review) · ⏱ 3 h · ⛓ T72
+- **13/11:** UI tour đã viết xong, chỉ còn chờ `/api/tour` (T72, #102). Tour cũng có trong giao diện React (T56).
 - **Việc cần làm:** preset kho + 5 điểm từ `cases.json`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt; marker đánh số theo thẻ được chọn.
 - 📁 `frontend/src/*.ts` · 📦 Demo tour · ✅ Bước 9 của kịch bản demo chạy được · ▶ Thủ công
 - 🧠 Hai tầng của bài toán giao hàng.
