@@ -53,6 +53,7 @@ Backend T51 + T72 với `SAIGO_GRAPH` = `hcm-benthanh-r2000-20261024`, Vite dev,
 | `peak-center` | 2 vùng có nhãn; 246,1 s; 1.748 m | Đạt |
 | Bấm cạnh 1613 (chuột thật lên nét bấm của cạnh đó) | Đoạn đỏ nét đứt; 204,7 s; API xác nhận tuyến mới không có 1613; dòng kịch bản ghi "đóng thêm 1 cạnh" | Đạt |
 | Mở lại tất cả | 186,1 s; hết đoạn đỏ | Đạt |
+| Bấm vào điểm giữa từng cạnh của tuyến (review của Minh: đoạn ngắn hay bị đóng nhầm đoạn kế bên) | Trước khi sửa: 9/21 cạnh đóng nhầm ở zoom 16, 11/21 ở zoom 15 (các cạnh 2–6 px, vùng bấm 18 px của cạnh kề đè lên). Sau khi sửa (chọn cạnh gần con trỏ nhất theo pixel, tô đỏ xem trước đoạn sẽ đóng kèm chấm ở giữa cạnh): 0/21 ở cả hai mức zoom | Đạt |
 | "Không còn đường" | Cả hai "Không có đường"; banner; không có nét tuyến nào | Đạt |
 | Tour `kho-5-diem` | 1.066,0 / 1.003,3 / 898,1 s, tối ưu 627,8 s: khớp API đến 0,1 s; thẻ NN + 2-opt số 1,2,4,3,5 → thẻ NN số 4,3,1,2,5 | Đạt |
 | Request đầu bị làm chậm 1,5 s, bấm Đảo chiều ngay | Chỉ hiện 193,0 s (cả lúc 0,4 s và sau 2,9 s) | Đạt |

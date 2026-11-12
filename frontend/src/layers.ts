@@ -58,8 +58,10 @@ export class MapLayers {
   private closed = L.layerGroup()
   private points = L.layerGroup()
   private palette: Palette
+  private map: L.Map
 
   constructor(map: L.Map) {
+    this.map = map
     this.palette = readPalette(map.getContainer())
     this.zones.addTo(map)
     this.routes.addTo(map)
@@ -130,16 +132,53 @@ export class MapLayers {
       }
     }
     if (onSegmentClick && d) {
-      for (const seg of routeSegments(d)) {
+      // Cạnh ngắn chỉ dài vài pixel nên vùng bấm 18 px của các cạnh kề nhau chồng lên nhau, và nét vẽ sau
+      // sẽ "ăn" cú bấm. Vì vậy không tin nét nào nằm trên: khi rê chuột hoặc bấm, chọn cạnh có hình học
+      // gần con trỏ nhất (tính bằng pixel) và tô sáng trước đúng cạnh đó, để người dùng thấy sẽ đóng gì.
+      const segs = routeSegments(d)
+      const preview = L.layerGroup().addTo(this.routes)
+      const showPreview = (seg: RouteSegment | null) => {
+        preview.clearLayers()
+        if (seg) {
+          L.polyline(seg.latlngs, { color: this.palette.closed, weight: 9, opacity: 0.55, interactive: false }).addTo(preview)
+          // Cạnh chỉ dài vài pixel thì nét tô gần như không thấy: thêm chấm ở giữa cạnh để vẫn nhận ra.
+          const mid = seg.latlngs[Math.floor(seg.latlngs.length / 2)]
+          const first = seg.latlngs[0]
+          const at = seg.latlngs.length === 2 ? L.latLng((first.lat + mid.lat) / 2, (first.lng + mid.lng) / 2) : mid
+          L.circleMarker(at, { radius: 7, color: this.palette.closed, weight: 3, fillColor: this.palette.surface, fillOpacity: 1, interactive: false })
+            .addTo(preview)
+        }
+      }
+      for (const seg of segs) {
         L.polyline(seg.latlngs, { weight: 18, opacity: 0, className: 'route-hit' })
-          .bindTooltip('Bấm để đóng đoạn này', { sticky: true })
-          .on('click', (e) => {
+          .bindTooltip('Bấm để đóng đoạn đang tô đỏ', { sticky: true })
+          .on('mousemove', (e: L.LeafletMouseEvent) => showPreview(this.nearestSegment(segs, e.containerPoint)))
+          .on('mouseout', () => showPreview(null))
+          .on('click', (e: L.LeafletMouseEvent) => {
             L.DomEvent.stop(e) // không để cú bấm lọt xuống bản đồ (chọn lại điểm)
-            onSegmentClick(seg)
+            showPreview(null)
+            onSegmentClick(this.nearestSegment(segs, e.containerPoint) ?? seg)
           })
           .addTo(this.routes)
       }
     }
+  }
+
+  /** Cạnh có hình học gần điểm `p` (toạ độ màn hình) nhất. */
+  private nearestSegment(segs: RouteSegment[], p: L.Point): RouteSegment | null {
+    let best: RouteSegment | null = null
+    let bestDist = Infinity
+    for (const seg of segs) {
+      const pts = seg.latlngs.map((ll) => this.map.latLngToContainerPoint(ll))
+      for (let i = 1; i < pts.length; i++) {
+        const dist = L.LineUtil.pointToSegmentDistance(p, pts[i - 1], pts[i])
+        if (dist < bestDist) {
+          bestDist = dist
+          best = seg
+        }
+      }
+    }
+    return best
   }
 
   // Đoạn đang bị đóng: đỏ, nét đứt (DEMO mục 1.2).
