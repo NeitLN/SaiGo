@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from app.services.routing import nearest_node_naive, route
+from app.services.routing import RouteInputError, route
 
-__all__ = ["nearest_node_naive", "route"]
+__all__ = ["RouteInputError", "route"]
