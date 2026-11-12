@@ -113,7 +113,7 @@ results/             <run_id>/queries.csv, measurements.csv, env.json
 | Method | Path | Vai trò | Task |
 |---|---|---|---|
 | GET | `/api/health` | Server sống, đã nạp dataset chưa | Có sẵn; cập nhật ở T51 |
-| GET | `/api/dataset` | `dataset_id`, vùng, số node/cạnh, danh sách kịch bản | T51 |
+| GET | `/api/dataset` | `dataset_id`, số node/cạnh, danh sách kịch bản | T51 |
 | POST | `/api/route` | Tìm đường giữa hai điểm | T13 (skeleton), T51 |
 | POST | `/api/tour` | Tour nhiều điểm | T72 |
 
@@ -153,7 +153,14 @@ Ví dụ request/response của `/api/route`:
 
 Các số trong ví dụ chỉ để minh họa cấu trúc, **không phải kết quả**. `costs_match` là `|cost_dijkstra − cost_astar| ≤ 1e-6 · max(1, cost_dijkstra)`.
 
-Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo tiếng Việt; `blocked_edge_ids` không tồn tại → 422.
+Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo tiếng Việt; `blocked_edge_ids` không tồn tại → 422. 422 có hai dạng `detail`: **chuỗi** tiếng Việt khi dữ liệu sai với đồ thị đang nạp (điểm quá xa, kịch bản/cạnh không có), và **danh sách** lỗi của Pydantic khi sai kiểu (thiếu trường, `"abc"` thay vì số, `true` trong `blocked_edge_ids`); thông báo của Pydantic là tiếng Anh. UI phải xử lý cả hai.
+
+**Bổ sung ở T51 (chỉ thêm, không đổi trường v1):**
+
+- `results.<thuật toán>.edge_twin_ids`: cùng độ dài với `edge_ids`; phần tử thứ i là id cạnh đối (`v → u`, cùng đoạn đường) của `edge_ids[i]`, hoặc `null` nếu đường một chiều. UI "đóng đoạn" gửi cả hai id trong `blocked_edge_ids`; API không tự thêm cạnh đối (DATA_MODEL mục 4.2).
+- `GET /api/dataset` trả `{"dataset_id", "node_count", "edge_count", "scenarios": [{"id", "label", "rules": [{"zone": {"type", "lat", "lon", "radius_m"}, "alpha", "highway"}]}]}`, cùng cấu trúc file `saigo-scenarios/1`.
+- Kịch bản nạp lúc khởi động từ `SAIGO_SCENARIOS` (mặc định `data/config/scenarios.json`); `scenario_id` không có trong file → 422. `scenario_id: null` nghĩa là `baseline`.
+- `runtime_ms` đo theo đúng định nghĩa của benchmark (EXPERIMENT_PLAN mục 3.1 bước 5): với A*, thời gian dựng heuristic **được** tính vào. `geo_scale` (duyệt mọi cạnh) và bảng cạnh đối tính một lần lúc khởi động, nên request đầu tiên không bị đội giờ.
 
 ### 4.1. Contract v1 cho walking skeleton [Đã chốt 25/10 — Q6]
 

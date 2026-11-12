@@ -16,32 +16,26 @@ from app.api.schemas import (
     SnappedPoint,
     SnappedResponse,
 )
-from app.graph.geo import haversine_m
+from app.graph.closures import validate_blocked
 from app.graph.model import Graph, GraphMeta
-from app.graph.scenario import Snapshot, baseline_snapshot
+from app.graph.scenario import Scenario, Snapshot, build_snapshot
+from app.graph.snap import SnapError, nearest_node
+
+SNAP_MAX_M = 150.0   # PROJECT_BRIEF A6, DATA_MODEL 8.5
 
 
-def nearest_node_naive(graph: Graph, meta: GraphMeta, lat: float, lon: float) -> tuple[int, float]:
-    """Tìm node gần nhất duyệt tuyến tính, chỉ xét node thuộc SCC lớn nhất (T13 skeleton)."""
-    n = len(graph.node_lat)
-    if n == 0:
-        raise ValueError("đồ thị không có node nào")
+class RouteInputError(ValueError):
+    """Request hợp lệ về kiểu nhưng sai với dữ liệu đang nạp (điểm quá xa, kịch bản/cạnh không có) → 422."""
 
-    # Chỉ xét các node thuộc SCC lớn nhất theo quy định
-    candidates = [i for i in range(n) if meta.node_in_scc[i]]
-    if not candidates:
-        candidates = list(range(n))
 
-    best_node = candidates[0]
-    best_dist = haversine_m(lat, lon, graph.node_lat[best_node], graph.node_lon[best_node])
-
-    for i in candidates[1:]:
-        dist = haversine_m(lat, lon, graph.node_lat[i], graph.node_lon[i])
-        if dist < best_dist:
-            best_dist = dist
-            best_node = i
-
-    return best_node, round(best_dist, 2)
+def _snap(graph: Graph, meta: GraphMeta, lat: float, lon: float, which: str) -> tuple[int, float]:
+    try:
+        s = nearest_node(graph, meta, lat, lon, max_m=SNAP_MAX_M)
+    except SnapError as err:
+        raise RouteInputError(
+            f"{which} cách mạng đường {err.distance_m:.0f} m, quá ngưỡng {SNAP_MAX_M:.0f} m. "
+            "Hãy chọn điểm gần đường hơn.") from None
+    return s.node_id, s.snap_distance_m
 
 
 def build_geometry(
@@ -97,6 +91,8 @@ def _run_algorithm(
         t1 = time.perf_counter_ns()
     else:  # astar (RouteRequest schema đã đảm bảo chỉ có "dijkstra" hoặc "astar")
         t0 = time.perf_counter_ns()
+        # Dựng heuristic tính vào thời gian A*, cùng định nghĩa với benchmark (EXPERIMENT_PLAN 3.1 bước 5).
+        # Chỉ tốn O(1) vì geo_scale đã tính sẵn lúc khởi động (main.py).
         h = make_geo_heuristic(graph, t_node)
         res = astar(graph, snap, s_node, t_node, h, trace_limit=trace_limit)
         t1 = time.perf_counter_ns()
@@ -109,11 +105,21 @@ def route(
     graph: Graph,
     meta: GraphMeta,
     req: RouteRequest,
+    scenarios: dict[str, Scenario],
+    twins: list[int | None],
 ) -> RouteResponse:
-    """Xử lý yêu cầu tìm đường theo contract v1."""
-    # 1. Snap điểm đầu và điểm cuối về node gần nhất trong SCC
-    s_node, s_dist = nearest_node_naive(graph, meta, req.source.lat, req.source.lon)
-    t_node, t_dist = nearest_node_naive(graph, meta, req.target.lat, req.target.lon)
+    """Xử lý yêu cầu tìm đường theo contract v1 (ARCHITECTURE mục 4). Sai dữ liệu → RouteInputError."""
+    scenario_id = "baseline" if req.scenario_id is None else req.scenario_id   # chuỗi rỗng là id không có → 422
+    if scenario_id not in scenarios:
+        raise RouteInputError(f"Không có kịch bản {scenario_id!r}; các kịch bản đang có: {', '.join(scenarios)}")
+    try:
+        blocked = validate_blocked(graph, req.blocked_edge_ids)
+    except ValueError as err:
+        raise RouteInputError(f"Cạnh đóng không hợp lệ: {err}") from None
+
+    # 1. Snap điểm đầu và điểm cuối về node gần nhất trong SCC, tối đa 150 m
+    s_node, s_dist = _snap(graph, meta, req.source.lat, req.source.lon, "Điểm đi")
+    t_node, t_dist = _snap(graph, meta, req.target.lat, req.target.lon, "Điểm đến")
 
     snapped = SnappedResponse(
         source=SnappedPoint(
@@ -130,8 +136,8 @@ def route(
         ),
     )
 
-    # 2. Xây snapshot cơ sở (skeleton chỉ chạy baseline)
-    snap = baseline_snapshot(graph)
+    # 2. Snapshot cho riêng request này: hệ số ùn tắc của kịch bản + cạnh đóng (D4: không cache)
+    snap = build_snapshot(graph, meta, scenarios[scenario_id], blocked)
 
     # 3. Đo lường và chạy các thuật toán được yêu cầu
     results: dict[str, AlgorithmRouteResult] = {}
@@ -146,6 +152,7 @@ def route(
             cost_s=res.cost_s,
             distance_m=res.distance_m,
             edge_ids=res.edge_ids,
+            edge_twin_ids=[twins[e] for e in res.edge_ids],
             geometry=geom,
             expanded=res.expanded,
             runtime_ms=runtime_ms,
