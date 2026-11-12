@@ -585,7 +585,7 @@ def run_benchmark(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Chạy bộ benchmark đo hiệu năng Dijkstra và A*")
-    parser.add_argument("--suite", default="demo", choices=["demo", "scaling", "scenario", "test"],
+    parser.add_argument("--suite", default="demo", choices=["demo", "scaling", "scenario", "test", "tour"],
                         help="Tên bộ benchmark (mặc định: demo)")
     parser.add_argument("--graph", type=Path, default=Path("tests/fixtures/mini.json"),
                         help="Đường dẫn file đồ thị json (mặc định: tests/fixtures/mini.json)")
@@ -615,6 +615,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="File scenarios.json kịch bản ùn tắc (mặc định: data/config/scenarios.json)")
     parser.add_argument("--blocked", type=int, nargs="*", default=[],
                         help="Danh sách id cạnh bị đóng")
+    parser.add_argument("--tour-sizes", type=int, nargs="+", default=[4, 6, 8, 10],
+                        help="--suite tour: số điểm giao mỗi bộ (EXPERIMENT_PLAN mục 8)")
+    parser.add_argument("--tour-sets", type=int, default=20, help="--suite tour: số bộ mỗi n")
     return parser.parse_args(argv)
 
 
@@ -631,6 +634,17 @@ def main(argv: list[str] | None = None) -> int:
             pass
 
     args = parse_args(argv)
+
+    if args.suite == "tour":
+        # E5 có định dạng riêng (tour_measurements.csv), làm ở scripts/run_tour.py (docs/tasks/T74-tour-benchmark.md).
+        from run_tour import main as run_tour_main
+        tour_argv = ["--graph", str(args.graph), "--seed", str(args.seed), "--sets", str(args.tour_sets),
+                     "--sizes", *map(str, args.tour_sizes)]
+        if args.out is not None:
+            tour_argv += ["--out", str(args.out)]
+        if args.run_id:
+            tour_argv += ["--run-id", args.run_id]
+        return run_tour_main(tour_argv)
 
     # 1. Nạp đồ thị
     graph_path = args.graph
