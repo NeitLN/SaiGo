@@ -21,6 +21,7 @@ Phụ thuộc: T51 (#86, **tích hợp**: kịch bản, cạnh đóng, `edge_twi
 | R4 | T54: bấm một đoạn **trên tuyến** → đóng đoạn đó và cạnh đối (`edge_twin_ids`) → tìm lại; đoạn đóng tô đỏ nét đứt; nút "Mở lại tất cả"; `no_path` thì báo, không vẽ đường thẳng |
 | R5 | T73: chế độ **Tour**: bấm đặt kho rồi các điểm giao (tối đa 14); gọi `/api/tour`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt, chọn thẻ thì vẽ tuyến và đánh số điểm theo thẻ; `infeasible_under_model` thì báo các cặp lỗi |
 | R6 | Ghi quyết định **D15** (đảo D6, dùng React) vào PROJECT_BRIEF |
+| R8 | *(thêm 13/11, Tiến duyệt; từ review của Minh)* **Nền dự phòng khi không tải được tile OSM** (DNS mạng chặn `tile.openstreetmap.org`, gặp trên máy Minh và máy Tiến). WHEN tile lỗi liên tiếp mà chưa tile nào tải được THE SYSTEM SHALL vẽ mạng đường của vùng demo từ chính dữ liệu đồ thị (nét xám mảnh, không bấm được, nằm dưới tuyến và vùng ùn tắc), giữ dòng ghi nguồn OSM và hiện một dòng báo. Lấy qua `GET /api/network` (chỉ đọc, mỗi đoạn đường hai chiều trả một lần). Không tải sẵn tile OSM (chính sách OSM, ARCHITECTURE mục 6) |
 | R7 | Dropdown **Case demo** nạp điểm, kịch bản và cạnh đóng sẵn từ `data/demo/cases.json` (DEMO mục 1.1) rồi chạy luôn; số hiển thị vẫn lấy từ API |
 
 **Contract:** R4 cần biết đoạn nào của tuyến thuộc cạnh nào. T56 dùng trường `edge_geometries` mà T54 (#100, Minh) đã thêm vào `/api/route` (hình học từng cạnh, có test ở `tests/test_api_edge_geometries.py`); T56 không thêm trường backend nào.
@@ -53,6 +54,9 @@ Backend T51 + T72 với `SAIGO_GRAPH` = `hcm-benthanh-r2000-20261024`, Vite dev,
 | `peak-center` | 2 vùng có nhãn; 246,1 s; 1.748 m | Đạt |
 | Bấm cạnh 1613 (chuột thật lên nét bấm của cạnh đó) | Đoạn đỏ nét đứt; 204,7 s; API xác nhận tuyến mới không có 1613; dòng kịch bản ghi "đóng thêm 1 cạnh" | Đạt |
 | Mở lại tất cả | 186,1 s; hết đoạn đỏ | Đạt |
+| R8: mở app khi mạng chặn tile OSM (DNS thật của máy kiểm) | Tự gọi `/api/network` một lần, vẽ mạng đường xám dưới tuyến; dòng ghi nguồn OSM giữ nguyên, thêm "Không tải được nền OSM: đang vẽ mạng đường từ dữ liệu"; tìm đường vẫn 186,1 s, đủ 21 vùng bấm; bấm chỗ trống vẫn chọn lại điểm | Đạt |
+| R8: tile tải được (giả lập trả ảnh PNG) | Không gọi `/api/network`, không có lớp nền dự phòng, dòng ghi nguồn như cũ | Đạt |
+| R8: test backend `tests/test_api_network.py` | Mỗi đoạn đường một lần (bỏ cạnh đối), toạ độ `[lon, lat]`, khớp `edge_coords`; pytest 346 passed | Đạt |
 | Bấm vào điểm giữa từng cạnh của tuyến (review của Minh: đoạn ngắn hay bị đóng nhầm đoạn kế bên) | Trước khi sửa: 9/21 cạnh đóng nhầm ở zoom 16, 11/21 ở zoom 15 (các cạnh 2–6 px, vùng bấm 18 px của cạnh kề đè lên). Sau khi sửa (chọn cạnh gần con trỏ nhất theo pixel, tô đỏ xem trước đoạn sẽ đóng kèm chấm ở giữa cạnh): 0/21 ở cả hai mức zoom | Đạt |
 | "Không còn đường" | Cả hai "Không có đường"; banner; không có nét tuyến nào | Đạt |
 | Tour `kho-5-diem` | 1.066,0 / 1.003,3 / 898,1 s, tối ưu 627,8 s: khớp API đến 0,1 s; thẻ NN + 2-opt số 1,2,4,3,5 → thẻ NN số 4,3,1,2,5 | Đạt |
@@ -60,7 +64,7 @@ Backend T51 + T72 với `SAIGO_GRAPH` = `hcm-benthanh-r2000-20261024`, Vite dev,
 | Tắt backend (cả khi mở trang lúc backend tắt) | "Không kết nối được server. Kiểm tra backend (uvicorn)…"; badge đỏ; không vẽ tuyến. Bật lại rồi bấm → 186,1 s, badge xanh, đủ 3 kịch bản, không cần tải lại trang | Đạt |
 | UI-4 (điểm ngoài vùng) | "Điểm đi cách mạng đường 7674 m, quá ngưỡng 150 m…"; không vẽ tuyến | Đạt |
 | `npm run build`; `tsc --noEmit`; `pytest` | Build OK; tsc sạch; 327 passed | Đạt |
-| UI-1 (nền OSM) | **Chưa kiểm được trên máy này**: mạng chặn `tile.openstreetmap.org` (curl cũng lỗi). URL tile và dòng ghi nguồn giữ nguyên bản Minh đã đạt 29/10; Minh kiểm khi review (chạy trên máy mình) | Chờ |
+| UI-1 (nền OSM) | Có nền dự phòng (R8) khi tile lỗi. Nền OSM thật **chưa kiểm được trên máy này**: mạng chặn `tile.openstreetmap.org` (curl cũng lỗi). URL tile và dòng ghi nguồn giữ nguyên bản Minh đã đạt 29/10; Minh kiểm khi review (chạy trên máy mình) | Chờ |
 
 Phát hiện khi kiểm, đã sửa: dòng kịch bản ghi "không đóng đường" dù đang đóng cạnh; lỗi backend tắt chỉ hiện "HTTP 502"; badge vẫn báo "sẵn sàng" khi backend đã tắt và không tự hồi phục.
 

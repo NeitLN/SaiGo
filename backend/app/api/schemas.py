@@ -135,6 +135,16 @@ class ScenarioOut(BaseModel):
     rules: list[RuleOut]
 
 
+class NetworkResponse(BaseModel):
+    """Mạng đường của đồ thị đang nạp, để UI vẽ nền khi không tải được tile OSM (T56 R8).
+
+    `lines[i]` là hình học `[lon, lat]` của một đoạn đường; đoạn hai chiều chỉ có một lần.
+    """
+
+    dataset_id: str
+    lines: list[list[list[float]]]
+
+
 class DatasetResponse(BaseModel):
     """Đồ thị đang nạp và các kịch bản dùng được (cùng cấu trúc `saigo-scenarios/1`)."""
 

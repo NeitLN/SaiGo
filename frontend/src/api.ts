@@ -133,6 +133,18 @@ export interface TourResponse {
 
 export const MAX_TOUR_STOPS = 14 // khớp schemas.MAX_TOUR_STOPS của backend
 
+// Mạng đường của vùng đang nạp, chỉ dùng làm nền khi không tải được tile OSM (T56 R8). Toạ độ [lon, lat].
+export interface NetworkResponse {
+  dataset_id: string
+  lines: [number, number][][]
+}
+
+export async function getNetwork(): Promise<NetworkResponse> {
+  const res = await fetch('/api/network')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function getHealth(): Promise<HealthResponse> {
   const res = await fetch('/api/health')
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

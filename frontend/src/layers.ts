@@ -4,12 +4,21 @@ import L from 'leaflet'
 import type { AlgorithmResult, LatLon, RouteResponse, Scenario } from './api'
 
 // Màu lấy từ token của theme Astryx (đọc trên phần tử bản đồ, nằm trong <Theme>), không viết mã màu cứng.
-type Palette = { dijkstra: string; astar: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string }
+type Palette = {
+  dijkstra: string; astar: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string
+  road: string
+}
 
 function readPalette(el: HTMLElement): Palette {
-  const css = getComputedStyle(el)
-  const v = (name: string) => css.getPropertyValue(name).trim()
-  return {
+  // Token có thể là `light-dark(#.., #..)`: SVG/canvas không hiểu hàm này (canvas rơi về màu đen), nên đổi ra
+  // màu cụ thể bằng cách gán vào `color` của một phần tử thử rồi đọc lại giá trị đã tính.
+  const probe = document.createElement('i')
+  el.appendChild(probe)
+  const v = (name: string) => {
+    probe.style.color = `var(${name})`
+    return getComputedStyle(probe).color
+  }
+  const palette = {
     dijkstra: v('--color-data-categorical-blue'),
     astar: v('--color-data-categorical-orange'),
     source: v('--color-data-categorical-green'),
@@ -18,7 +27,10 @@ function readPalette(el: HTMLElement): Palette {
     zone: v('--color-data-categorical-orange'),
     tour: v('--color-data-categorical-purple'),
     surface: v('--color-background-card'),
+    road: v('--color-text-secondary'),
   }
+  probe.remove()
+  return palette
 }
 
 // GeoJSON là [lon, lat]; Leaflet cần [lat, lon].
@@ -57,6 +69,7 @@ export class MapLayers {
   private routes = L.layerGroup()
   private closed = L.layerGroup()
   private points = L.layerGroup()
+  private network: L.Layer | null = null
   private palette: Palette
   private map: L.Map
 
@@ -67,6 +80,22 @@ export class MapLayers {
     this.routes.addTo(map)
     this.closed.addTo(map)
     this.points.addTo(map)
+  }
+
+  /**
+   * Nền dự phòng khi không tải được tile OSM (T56 R8): vẽ mạng đường của vùng demo từ dữ liệu đồ thị.
+   * Pane riêng nằm trên lớp tile, dưới mọi lớp vẽ khác; canvas cho ~2.700 đường; không bấm được để
+   * cú bấm vẫn rơi xuống bản đồ (chọn điểm).
+   */
+  setNetwork(lines: [number, number][][]) {
+    if (this.network) this.network.remove()
+    const pane = this.map.getPane('basemap') ?? this.map.createPane('basemap')
+    pane.style.zIndex = '250'
+    pane.style.pointerEvents = 'none'
+    const renderer = L.canvas({ pane: 'basemap' })
+    this.network = L.polyline(lines.map(toLatLngs), {
+      pane: 'basemap', renderer, color: this.palette.road, weight: 1.5, opacity: 0.35, interactive: false,
+    }).addTo(this.map)
   }
 
   // Vùng ùn tắc của kịch bản: hình tròn tô nhạt, không bấm được để không chặn thao tác chọn điểm.
