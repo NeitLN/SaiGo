@@ -56,10 +56,11 @@ class RouteRequest(BaseModel):
     def validate_algorithms(cls, v: list[str]) -> list[str]:
         if not v:
             raise ValueError("danh sách thuật toán không được rỗng")
-        allowed = {"dijkstra", "astar"}
+        allowed = {"dijkstra", "astar", "alt"}
         for algo in v:
             if algo not in allowed:
-                raise ValueError(f"thuật toán không hỗ trợ: {algo!r}, chỉ hỗ trợ 'dijkstra', 'astar'")
+                raise ValueError(
+                    f"thuật toán không hỗ trợ: {algo!r}, chỉ hỗ trợ 'dijkstra', 'astar', 'alt'")
         return v
 
 
