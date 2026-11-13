@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import time
 
+from app.algorithms.alt import alt, get_alt_index
 from app.algorithms.astar import astar
+from app.algorithms.bidijkstra import bidijkstra
 from app.algorithms.dijkstra import dijkstra
 from app.algorithms.heuristics import make_geo_heuristic
 from app.algorithms.result import SearchResult
@@ -100,22 +102,81 @@ def _run_algorithm(
     s_node: int,
     t_node: int,
     trace_limit: int,
+    *,
+    meta: GraphMeta | None = None,
 ) -> tuple[SearchResult, float]:
-    """Chạy thuật toán và đo thời gian thực thi (ms) bằng perf_counter_ns."""
+    """Chạy thuật toán và đo thời gian thực thi (ms) bằng perf_counter_ns.
+
+    `meta` chỉ cần cho ALT (chọn landmark trên SCC lớn nhất); CLI cũ gọi không truyền vẫn chạy.
+    """
     if algo == "dijkstra":
         t0 = time.perf_counter_ns()
         res = dijkstra(graph, snap, s_node, t_node, trace_limit=trace_limit)
         t1 = time.perf_counter_ns()
-    else:  # astar (RouteRequest schema đã đảm bảo chỉ có "dijkstra" hoặc "astar")
+    elif algo == "astar":
         t0 = time.perf_counter_ns()
         # Dựng heuristic tính vào thời gian A*, cùng định nghĩa với benchmark (EXPERIMENT_PLAN 3.1 bước 5).
         # Chỉ tốn O(1) vì geo_scale đã tính sẵn lúc khởi động (main.py).
         h = make_geo_heuristic(graph, t_node)
         res = astar(graph, snap, s_node, t_node, h, trace_limit=trace_limit)
         t1 = time.perf_counter_ns()
+    elif algo == "alt":
+        # Bảng landmark dựng một lần rồi cache; cố ý nằm ngoài phép đo để runtime_ms chỉ là truy vấn.
+        index = get_alt_index(graph, meta)
+        t0 = time.perf_counter_ns()
+        res = alt(graph, snap, s_node, t_node, index, trace_limit=trace_limit)
+        t1 = time.perf_counter_ns()
+    else:  # bidijkstra (RouteRequest schema đã đảm bảo chỉ có 4 thuật toán này)
+        # in_edges là cấu trúc đồ thị, dựng một lần rồi cache (như out_edges của Dijkstra), nên không lặp lại mỗi truy vấn.
+        t0 = time.perf_counter_ns()
+        res = bidijkstra(graph, snap, s_node, t_node, trace_limit=trace_limit)
+        t1 = time.perf_counter_ns()
 
     runtime_ms = (t1 - t0) / 1_000_000.0
     return res, round(runtime_ms, 3)
+
+
+def _costs_agree(a: AlgorithmRouteResult, b: AlgorithmRouteResult) -> bool | None:
+    """So chi phí hai kết quả; None khi thiếu dữ liệu để so (một bên lỗi/không có cost)."""
+    if a.status == "ok" and b.status == "ok":
+        if a.cost_s is None or b.cost_s is None:
+            return None
+        return abs(a.cost_s - b.cost_s) <= 1e-6 * max(1.0, a.cost_s)
+    if a.status == "no_path" and b.status == "no_path":
+        return True
+    return False
+
+
+def _alt_warnings(results: dict[str, AlgorithmRouteResult]) -> list[str]:
+    """ALT dùng chi phí cơ sở nên phải cho cùng kết quả với Dijkstra; lệch nghĩa là có lỗi.
+
+    Chỉ thêm cảnh báo, không đổi nghĩa `costs_match` (vẫn là phép so Dijkstra–A* như cũ).
+    """
+    if "alt" not in results or "dijkstra" not in results:
+        return []
+    d, a = results["dijkstra"], results["alt"]
+    if _costs_agree(d, a) is not False:
+        return []
+    return [
+        f"ALT không khớp Dijkstra (Dijkstra: {d.status} {d.cost_s}, ALT: {a.status} {a.cost_s}); "
+        "heuristic landmark chỉ đúng khi kịch bản không làm cạnh nào rẻ hơn chi phí cơ sở."
+    ]
+
+
+def _bidijkstra_warnings(results: dict[str, AlgorithmRouteResult]) -> list[str]:
+    """Dijkstra hai chiều tối ưu trên cùng snapshot nên phải khớp Dijkstra; lệch nghĩa là có lỗi.
+
+    Chỉ thêm cảnh báo, không đổi nghĩa `costs_match` (vẫn là phép so Dijkstra–A* như cũ).
+    """
+    if "bidijkstra" not in results or "dijkstra" not in results:
+        return []
+    d, b = results["dijkstra"], results["bidijkstra"]
+    if _costs_agree(d, b) is not False:
+        return []
+    return [
+        f"Dijkstra hai chiều không khớp Dijkstra (Dijkstra: {d.status} {d.cost_s}, "
+        f"bidijkstra: {b.status} {b.cost_s}); hai thuật toán phải cho cùng chi phí trên mọi snapshot."
+    ]
 
 
 def route(
@@ -151,7 +212,7 @@ def route(
     results: dict[str, AlgorithmRouteResult] = {}
 
     for algo in req.algorithms:
-        res, runtime_ms = _run_algorithm(algo, graph, snap, s_node, t_node, req.trace_limit)
+        res, runtime_ms = _run_algorithm(algo, graph, snap, s_node, t_node, req.trace_limit, meta=meta)
         geom = build_geometry(graph, meta, s_node, res.edge_ids, res.status)
         trace_coords = [[graph.node_lon[nid], graph.node_lat[nid]] for nid in res.trace]
 
@@ -169,20 +230,10 @@ def route(
             trace_truncated=res.trace_truncated,
         )
 
-    # 4. Kiểm tra costs_match khi có cả Dijkstra và A*
+    # 4. Kiểm tra costs_match khi có cả Dijkstra và A* (giữ nguyên nghĩa cũ)
     costs_match = None
     if "dijkstra" in results and "astar" in results:
-        res_d = results["dijkstra"]
-        res_a = results["astar"]
-        if res_d.status == "ok" and res_a.status == "ok":
-            cd = res_d.cost_s
-            ca = res_a.cost_s
-            if cd is not None and ca is not None:
-                costs_match = abs(cd - ca) <= 1e-6 * max(1.0, cd)
-        elif res_d.status == "no_path" and res_a.status == "no_path":
-            costs_match = True
-        else:
-            costs_match = False
+        costs_match = _costs_agree(results["dijkstra"], results["astar"])
 
     return RouteResponse(
         dataset_id=graph.dataset_id,
@@ -190,5 +241,5 @@ def route(
         snapped=snapped,
         results=results,
         costs_match=costs_match,
-        warnings=[],
+        warnings=_alt_warnings(results) + _bidijkstra_warnings(results),
     )
