@@ -16,5 +16,9 @@ Mỗi phiếu tự đủ: người nhận chỉ cần đọc phiếu (và các f
 | [T20 — A*](T20-astar.md) | Tiến | 30–31/10 | [#9](https://github.com/NeitLN/SaiGGo/issues/9) | ✅ #62 |
 | [T12 — CLI](T12-cli.md) | Bảo (chuyển từ Tiến 26/10) | 30–31/10 | [#8](https://github.com/NeitLN/SaiGGo/issues/8) | |
 | [T21 — Đối chứng NetworkX](T21-oracle.md) | Duy Anh (làm thay dự phòng của Bảo) | 26/10 | [#10](https://github.com/NeitLN/SaiGGo/issues/10) | ✅ #64 |
+| [T62 — E3 tăng quy mô](T62-scaling.md) | Tiến (Minh review) | 13/11 | [#27](https://github.com/NeitLN/SaiGo/issues/27) | Đặc tả đã duyệt 13/11 |
+| [T63 — E4 ùn tắc, đóng đường](T63-congestion-closure.md) | Tiến (Minh review) | 14/11 | [#28](https://github.com/NeitLN/SaiGo/issues/28) | Đặc tả đã duyệt 13/11 |
+| [T74 — E5 tour](T74-tour-benchmark.md) | Tiến (Minh review) | 15/11 | [#36](https://github.com/NeitLN/SaiGo/issues/36) | Đặc tả đã duyệt 13/11 |
+| [M9 — Hoàn thiện (G1, T65, T80–T83)](M9-finish.md) | Tiến (Minh review) | 13–22/11 | — | Mini |
 
 Khi xong một phiếu: ghi bằng chứng (lệnh và kết quả) trong PR, sửa dòng PROGRESS của task mình. Không tự sửa ROADMAP hay STATUS; người tích hợp cập nhật sau khi ghép và kiểm chung.
