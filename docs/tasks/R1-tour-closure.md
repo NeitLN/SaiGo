@@ -45,6 +45,31 @@ Kiểm UI bằng Playwright (bấm thật, đọc số trên trang), ghi bảng 
 - **Frontend:** `api.ts` thêm kiểu; `layers.drawTour()` nhận ứng viên, vẽ vùng bấm từng cạnh, dùng lại cách chọn cạnh gần con trỏ của `drawRoutes`; `App.tsx` chế độ tour có `closed` riêng, gửi `blocked_edge_ids` + `keep_order`; `TourResults.tsx` thêm thẻ và tóm tắt điểm hỏng.
 - **Test:** `tests/test_api_tour.py` thêm ví dụ C1–C4 trên `mini.json`; test `realdata` cho case `kho-5-diem` đóng một cạnh; Playwright cho C5–C7.
 
+## Kết quả kiểm chứng (14/11, Tiến)
+
+Backend nhánh `r1-tour-closure` với `SAIGO_GRAPH` = `hcm-benthanh-r2000-20261024`, Vite dev, Chromium điều khiển bằng Playwright (bấm chuột thật lên nét bấm của cạnh, đọc số trên trang và response).
+
+| Ví dụ | Kết quả | |
+|---|---|---|
+| Không gửi trường mới | Đúng ba ứng viên; `kho-5-diem` 1.066,0 / 1.003,3 / 898,1 s như trước | Đạt |
+| `mini.json`, đóng S→B, thứ tự cũ B, A, T | `kept_order` 360 s (tính tay: 130 + 90 + 40 + 100); NN 180 s vẫn được chọn; mọi ứng viên nối tiếp đúng chiều, chi phí = tổng trọng số, không qua S→B | Đạt |
+| `kept_order` không được chọn, không tính gap | `chosen` ∈ ba phương án cũ; `gap_pct` tính theo phương án được chọn | Đạt |
+| `keep_order` sai (thiếu, thừa, trùng, id lạ, rỗng) | 422, thông báo nêu `keep_order` | Đạt (5 dạng) |
+| Không khả thi kèm `keep_order` | `infeasible_under_model`, không có ứng viên | Đạt |
+| `edge_geometries`, `edge_twin_ids` | Nối lại đúng `geometry`; cạnh đối của S→B là B→S | Đạt |
+| Đồ thị thật, đóng cạnh giữa tour NN + 2-opt (cạnh 2789) | `kept_order` 898,8 s ≥ 898,1 s, giữ đúng thứ tự cũ; không ứng viên nào qua cạnh đóng | Đạt |
+| UI: bấm cạnh giữa tour | Một request có `blocked_edge_ids` [2789] và `keep_order` = thứ tự thẻ đang xem; đoạn đỏ; "Đang đóng 1 cạnh"; số 4 thẻ khớp response | Đạt |
+| UI: bước 10 của demo, bấm cạnh 1666 | Giữ thứ tự cũ 962,7 s; sắp lại NN + 2-opt 692,5 s (Tao Đàn → Nhà thờ → Nhà hát → Bạch Đằng → Bảo tàng); khớp `cases.json` và test `realdata` | Đạt |
+| UI: Mở lại tất cả | Về 1.066,0 / 1.003,3 / 898,1 s; không gửi `keep_order`; mất thẻ giữ thứ tự cũ | Đạt |
+| UI: case `tour-khong-kha-thi` | "Không tới được từ kho: Nhà hát Thành phố"; không vẽ tour, không còn vùng bấm | Đạt |
+| Hồi quy chế độ tìm đường | Case "Hai điểm qua trung tâm" 186,1 s | Đạt |
+| `pytest -q`, `tsc --noEmit`, `npm run build` | 442 passed, 6 skipped; tsc sạch; build OK | Đạt |
+
+**Giới hạn và ghi chú:**
+- Sau khi đóng cạnh 1666, phương án sắp lại (692,5 s) rẻ hơn cả tour trước khi đóng (898,1 s). Không phải vì đóng đường có lợi: tour NN + 2-opt cũ là cực trị địa phương kém (tối ưu 627,8 s, gap 43%); ma trận đổi làm NN xuất phát theo hướng khác. Khi trình bày phải nói rõ điều này.
+- Ở khung nhìn mặc định, vài cạnh của tour nằm ngoài vùng bản đồ (bị cột kết quả che); khi demo cần thu nhỏ một mức trước khi bấm cạnh 1666.
+- Cạnh đóng sẵn của case (`tour-khong-kha-thi`) không tô đỏ, vì UI chỉ có id, không có hình học (giống case "Không còn đường" của T56).
+
 ## Ngoài phạm vi
 
 Đóng đường giữa chừng khi shipper đã đi được một phần tour; tour mở; nhiều shipper. Thí nghiệm hàng loạt "giữ thứ tự cũ / sắp lại" thuộc R2.

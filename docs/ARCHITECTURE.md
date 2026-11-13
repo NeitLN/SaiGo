@@ -179,14 +179,15 @@ Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo ti
 |---|---|
 | `status` | `"ok"` hoặc `"infeasible_under_model"` (có chặng không đi được; xem `unreachable`) |
 | `snapped` | `"depot"` và id từng điểm giao → `{id, node_id, lat, lon, snap_distance_m}` |
-| `candidates` | `input`, `nearest_neighbor`, `nearest_neighbor_2opt` → `{stop_order, cost_s, distance_m, improvement_pct, edge_ids, geometry}`; rỗng khi không khả thi |
-| `chosen` | Phương án rẻ nhất; hòa thì giữ phương án đứng trước (không thay thứ tự nhập bằng lời giải tệ hơn) |
+| `candidates` | `input`, `nearest_neighbor`, `nearest_neighbor_2opt` → `{stop_order, cost_s, distance_m, improvement_pct, edge_ids, geometry, edge_twin_ids, edge_geometries}`; thêm `nearest_neighbor_2opt_oropt` khi `include_or_opt`, `kept_order` khi request có `keep_order` (R1); rỗng khi không khả thi. `edge_twin_ids`, `edge_geometries` cùng định nghĩa với `/api/route` (R1) |
+| `chosen` | Phương án rẻ nhất trong `input`, `nearest_neighbor`, `nearest_neighbor_2opt` (và Or-opt khi bật); hòa thì giữ phương án đứng trước (không thay thứ tự nhập bằng lời giải tệ hơn). Không bao giờ là `kept_order` |
 | `optimal` | Chỉ khi `include_optimal` và tổng số điểm ≤ 11 (kể cả kho, `HELD_KARP_MAX_POINTS`): `{stop_order, cost_s, gap_pct}` (gap của phương án được chọn) |
 | `unreachable` | Các cặp `{from_id, to_id}` không đi được |
 | `matrix_runtime_ms`, `order_runtime_ms` | Đo riêng thời gian xây ma trận và thời gian sắp thứ tự |
 
 - Ma trận xây bằng Dijkstra một nguồn tới các điểm còn lại cho từng hàng (`dijkstra_many`); tuyến của mỗi phương án ghép từ đúng các chặng đó, nên `cost_s` = tổng trọng số các cạnh trong `edge_ids`.
 - 1–14 điểm giao; id khác nhau và khác `"depot"`. Điểm cách đường > 150 m, hai điểm gắn vào cùng một node, kịch bản/cạnh không có → 422. Chưa hỗ trợ tour mở: `return_to_depot` chỉ nhận `true` (TOPIC 15.3). Ở cả hai endpoint, `blocked_edge_ids` chỉ nhận số nguyên (không nhận `true`/`false`) và `scenario_id: ""` là kịch bản không có (422); chỉ `null` mới là `baseline`.
+- **R1 (14/11), chỉ thêm trường:** `keep_order` (tùy chọn) là thứ tự id điểm giao trước khi đóng đường, phải là hoán vị đúng của `stops` (sai → 422). Có nó thì response thêm ứng viên `kept_order`: đúng thứ tự đó, mỗi chặng lấy từ ma trận của snapshot mới; không tính vào `chosen` hay `gap_pct`, để so "giữ thứ tự cũ" với "sắp lại" mà không tính công sắp lại cho thuật toán tìm đường. Request không có trường mới thì response như trước. Phiếu: [tasks/R1-tour-closure.md](tasks/R1-tour-closure.md).
 
 ### 4.1. Contract v1 cho walking skeleton [Đã chốt 25/10 — Q6]
 
