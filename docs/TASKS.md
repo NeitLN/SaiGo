@@ -427,7 +427,7 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - 🧠 Vì sao cắt từ một lần tải thay vì tải nhiều lần; vì sao vẽ biểu đồ theo `|V|` đo được chứ không theo bán kính.
 
 ### T62 — Chạy thí nghiệm tăng quy mô
-- 👤 Tiến · ⏱ 3 h · ⛓ T60, T61
+- 👤 Tiến (Minh review) · ⏱ 3 h · ⛓ T60, T61
 - **Việc cần làm:** workload fixed trips (250 cặp dùng chung cho cả 4 kích thước) theo EXPERIMENT_PLAN mục 6. Growing trips đã cắt 26/10 (D11).
 - 📁 `scripts/run_benchmarks.py`, `results/<run_id>/`
 - 📦 CSV E3 · ✅ Đủ 4 kích thước (bỏ bớt chỉ khi nhóm đồng ý riêng, ghi rõ lý do) · ▶ `python scripts/run_benchmarks.py --suite scaling --seed 42`
@@ -449,7 +449,7 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - 🧠 Đọc biểu đồ log–log; boxplot.
 
 ### G1 — Điểm kiểm bằng chứng 05/11
-- 👤 Tiến (cả nhóm họp) · ⏱ 1 h · ⛓ T33, T41, T60
+- 👤 Tiến (Minh review) · ⏱ 1 h · ⛓ T33, T41, T60
 - **Đổi 26/10** (D13): G1 không còn quyết định tích hợp tour (tour đã nằm trong phạm vi cam kết); thay bằng điểm kiểm bằng chứng.
 - **Mục tiêu:** ngày 05/11 biết chắc MVP tích hợp có kịp 08/11 không.
 - **Việc cần làm:** kiểm từng điều kiện ở [ROADMAP.md](ROADMAP.md) mục 3 (bằng chứng đúng đắn, CSV benchmark đầu tiên, đóng đường chạy trên bản đồ, giờ còn lại của từng người); không kịp thì kích hoạt cắt theo [đề xuất phạm vi](proposals/2026-10-26-pham-vi.md) mục 4; ghi quyết định vào issue và PROGRESS.md.
@@ -495,7 +495,8 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 - 🧠 Vì sao không dùng khoảng cách thẳng cho ma trận.
 
 ### T73 — UI tour tối giản
-- 👤 Minh (Tiến review) · ⏱ 3 h · ⛓ T72
+- 👤 Tiến (Minh review) · ⏱ 3 h · ⛓ T72
+- **Ghi công:** UI tour trên giao diện cũ do Minh làm (#101, #104); Tiến gộp vào giao diện React ở T56 (#103).
 - **13/11:** UI tour đã viết xong, chỉ còn chờ `/api/tour` (T72, #102). Tour cũng có trong giao diện React (T56).
 - **Việc cần làm:** preset kho + 5 điểm từ `cases.json`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt; marker đánh số theo thẻ được chọn.
 - 📁 `frontend/src/*.ts` · 📦 Demo tour · ✅ Bước 9 của kịch bản demo chạy được · ▶ Thủ công
@@ -519,7 +520,7 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 - 🧠 Tái lập là gì.
 
 ### T81 — Đồng bộ tài liệu
-- 👤 Tiến · ⏱ 2 h · ⛓ T65
+- 👤 Tiến (Minh review) · ⏱ 2 h · ⛓ T65
 - **Việc cần làm:** cập nhật README (cách chạy, kết quả thật, giới hạn); kiểm DEMO.md (đã viết lại 26/10) khớp app; ghi trong TOPIC.md những điểm đã đổi (trỏ tới PROJECT_BRIEF mục 4); điền `docs/ALGORITHMS.md`.
 - 📦 Tài liệu khớp code · ✅ Không còn mô tả chức năng chưa làm như đã làm · ▶ Review chéo
 - 🧠 —

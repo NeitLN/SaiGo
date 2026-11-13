@@ -26,7 +26,7 @@ kiwisolver==1.5.1
 matplotlib==3.11.2
 networkx==3.6.1
 numpy==2.4.6
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
 osmnx==2.1.1
 packaging==26.3
 pandas==3.1.0

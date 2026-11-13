@@ -113,6 +113,7 @@ ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window,
 | D13 | Mốc: **điểm kiểm bằng chứng 05/11**, **MVP tích hợp 08/11**, 09–12/11 không thêm tính năng; essay bắt đầu từ tuần 3 *(26/10)* | Thay cổng G1 "có tích hợp tour không", vì tour đã nằm trong phạm vi |
 | D14 | Phân công từ 13/11: Tiến làm toàn bộ việc còn lại, Minh review chính, Duy Anh và Bảo làm khi được Tiến gán *(Tiến chốt)* | 07–13/11 main không có commit mới vì việc kẹt ở chờ approve/merge giữa bốn người; còn 6 ngày tới demo 19/11 |
 | D16 | Đóng băng tính năng dời từ 09/11 (D13) sang **17/11** *(13/11, Tiến chốt)* | 09–13/11 vẫn phải thêm giao diện React (T56) và nền dự phòng khi tile OSM bị chặn; 17/11 là hạn chót T56. Sau 17/11 chỉ sửa lỗi, chạy thí nghiệm, viết essay |
+| D17 | Giữ 6 PR Duy Anh đã merge ngày 13/11 (ALT #115, Dijkstra hai chiều #119, vùng demo-large #116, so sánh 4 thuật toán #121, Or-opt cho tour #122, CLI check-heuristic và route --scenario/--block #110); từ đây Tiến chịu trách nhiệm phần này như phần mở rộng. PR đang mở của thành viên khác đóng lại, giữ branch *(13/11, Tiến chốt)* | Các tính năng đã qua CI và đã có trên main; revert tốn công hơn giữ. Phần mở rộng không thay câu hỏi nghiên cứu (RQ1–RQ3), chỉ bổ sung so sánh; essay ghi rõ đây là phần thêm sau kế hoạch |
 
 Không gửi thư riêng cho giảng viên (giảng viên xem repo khi nộp cuối kỳ). Các thay đổi so với proposal (D1, D11–D13) được giải thích ở mục này và ở phần giới hạn của essay.
 
