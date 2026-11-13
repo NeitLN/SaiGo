@@ -1,0 +1,279 @@
+{
+  "run_id": "20261113-1327-compare-871bf02",
+  "suite": "compare",
+  "command": "D:\\SaiGGo-wt\\venv311\\Scripts\\python.exe D:\\SaiGGo-wt\\opencode\\scripts\\compare_algorithms.py",
+  "graphs": [
+    {
+      "path": "D:\\SaiGGo-wt\\opencode\\data\\processed\\hcm-benthanh-r2000-20261024.json",
+      "dataset_id": "hcm-benthanh-r2000-20261024",
+      "sha256": "928c1f8bb372d7ee59fe1f427d18d9befdfa7a2b8e36aef6e5b7df177d3e479c",
+      "file_bytes": 1169528,
+      "n_nodes": 1889,
+      "n_edges": 4004,
+      "scc_nodes": 1745,
+      "L_m": 4000.0,
+      "L_source": "manifest",
+      "warmup_used": 20,
+      "warmup_seconds": 1.0,
+      "sampling": {
+        "L_m": 4000.0,
+        "L_source": "manifest",
+        "target_per_stratum": {
+          "ngan": 166,
+          "trung_binh": 166,
+          "dai": 166
+        },
+        "actual_per_stratum": {
+          "ngan": 166,
+          "trung_binh": 167,
+          "dai": 167
+        },
+        "rejected": {
+          "same_node": 1,
+          "stratum_full": 961
+        },
+        "fallback_used": false,
+        "strata_stats": {
+          "ngan": {
+            "count": 166,
+            "delta_min": 0.0122,
+            "delta_median": 0.1235,
+            "delta_max": 0.1998
+          },
+          "trung_binh": {
+            "count": 167,
+            "delta_min": 0.2013,
+            "delta_median": 0.3678,
+            "delta_max": 0.499
+          },
+          "dai": {
+            "count": 167,
+            "delta_min": 0.501,
+            "delta_median": 0.6888,
+            "delta_max": 1.2774
+          }
+        }
+      }
+    },
+    {
+      "path": "D:\\SaiGGo-wt\\opencode\\data\\processed\\hcm-benthanh-r4500-20261024.json",
+      "dataset_id": "hcm-benthanh-r4500-20261024",
+      "sha256": "7cb46484a201eba653f6b97c0a70b27e32852910de4d4ad18eea4a3937007ce9",
+      "file_bytes": 6586486,
+      "n_nodes": 10143,
+      "n_edges": 22953,
+      "scc_nodes": 9450,
+      "L_m": 9076.32,
+      "L_source": "bbox",
+      "warmup_used": 20,
+      "warmup_seconds": 1.0,
+      "sampling": {
+        "L_m": 9076.32,
+        "L_source": "bbox",
+        "target_per_stratum": {
+          "ngan": 166,
+          "trung_binh": 166,
+          "dai": 166
+        },
+        "actual_per_stratum": {
+          "ngan": 166,
+          "trung_binh": 167,
+          "dai": 167
+        },
+        "rejected": {
+          "same_node": 0,
+          "stratum_full": 936
+        },
+        "fallback_used": false,
+        "strata_stats": {
+          "ngan": {
+            "count": 166,
+            "delta_min": 0.0039,
+            "delta_median": 0.1367,
+            "delta_max": 0.1996
+          },
+          "trung_binh": {
+            "count": 167,
+            "delta_min": 0.2038,
+            "delta_median": 0.3529,
+            "delta_max": 0.4979
+          },
+          "dai": {
+            "count": 167,
+            "delta_min": 0.5001,
+            "delta_median": 0.7037,
+            "delta_max": 1.2195
+          }
+        }
+      }
+    }
+  ],
+  "scenarios": [
+    "baseline",
+    "peak-center"
+  ],
+  "algorithms": [
+    "dijkstra",
+    "bidijkstra",
+    "astar",
+    "alt"
+  ],
+  "alt_k_requested": 8,
+  "alt_index": [
+    {
+      "dataset_id": "hcm-benthanh-r2000-20261024",
+      "k": 8,
+      "landmarks": [
+        386,
+        1507,
+        1750,
+        1529,
+        1174,
+        894,
+        198,
+        305
+      ],
+      "preprocess_ms": 29.684,
+      "memory_bytes": 241792
+    },
+    {
+      "dataset_id": "hcm-benthanh-r4500-20261024",
+      "k": 8,
+      "landmarks": [
+        3010,
+        5279,
+        2785,
+        8308,
+        9716,
+        1122,
+        6130,
+        9592
+      ],
+      "preprocess_ms": 365.881,
+      "memory_bytes": 1298304
+    }
+  ],
+  "n_pairs": 500,
+  "seed": 20261113,
+  "repeats": 5,
+  "warmup": 20,
+  "warmup_seconds": 1.0,
+  "drift_check": {
+    "ok_range": [
+      0.83,
+      1.2
+    ],
+    "method": "đo lại 3 truy vấn tầng dai của kịch bản đầu bằng Dijkstra ở cuối mỗi đồ thị",
+    "runs": [
+      {
+        "dataset_id": "hcm-benthanh-r2000-20261024",
+        "scenario_id": "baseline",
+        "stratum": "dai",
+        "n_queries": 3,
+        "recorded_ms": 1.1278,
+        "recheck_ms": 1.2598,
+        "ratio": 1.117,
+        "status": "ok"
+      },
+      {
+        "dataset_id": "hcm-benthanh-r4500-20261024",
+        "scenario_id": "baseline",
+        "stratum": "dai",
+        "n_queries": 3,
+        "recorded_ms": 11.6017,
+        "recheck_ms": 10.0531,
+        "ratio": 0.867,
+        "status": "ok"
+      }
+    ]
+  },
+  "strata_thresholds": {
+    "delta_ngan_lt": 0.2,
+    "delta_trung_binh_lt": 0.5,
+    "delta_dai_ge": 0.5,
+    "delta": "hav_m / L_m của từng đồ thị (bảng graphs)",
+    "strata": [
+      "ngan",
+      "trung_binh",
+      "dai"
+    ]
+  },
+  "cost_check": "cả 4 kết quả phải khớp Dijkstra (1e-6 · max(1, cost)), lệch là dừng",
+  "design": "mỗi cặp đo cả 2 kịch bản xen kẽ (không đo theo khối kịch bản) để trôi tốc độ máy ảnh hưởng lên mọi kịch bản như nhau; thứ tự đo đảo giữa cặp chẵn/lẻ",
+  "runtime_timing": "perf_counter_ns sát quanh lời gọi; A* gồm dựng heuristic; ALT gồm ensure_alt_compatible nhưng không gồm tiền xử lý index",
+  "python_executable": "D:\\SaiGGo-wt\\venv311\\Scripts\\python.exe",
+  "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "measurement_columns": [
+    "run_id",
+    "suite",
+    "dataset_id",
+    "size_label",
+    "n_nodes",
+    "n_edges",
+    "query_id",
+    "workload",
+    "stratum",
+    "source",
+    "target",
+    "hav_m",
+    "algo",
+    "scenario_id",
+    "blocked_count",
+    "status",
+    "cost_s",
+    "distance_m",
+    "expanded",
+    "unique_expanded",
+    "reopened",
+    "relaxations",
+    "pushes",
+    "max_frontier",
+    "runtime_ns_median",
+    "runtime_ns_min",
+    "repeats",
+    "graph_sha256",
+    "k"
+  ],
+  "summary_columns": [
+    "run_id",
+    "dataset_id",
+    "graph_sha256",
+    "size_label",
+    "n_nodes",
+    "n_edges",
+    "scenario_id",
+    "stratum",
+    "algo",
+    "k",
+    "n_queries",
+    "expanded_median",
+    "expanded_q1",
+    "expanded_q3",
+    "runtime_ns_median",
+    "runtime_ns_q1",
+    "runtime_ns_q3",
+    "runtime_ms_median",
+    "preprocess_ms",
+    "memory_bytes"
+  ],
+  "cli_args": {
+    "graphs": [
+      "data\\processed\\hcm-benthanh-r2000-20261024.json",
+      "data\\processed\\hcm-benthanh-r4500-20261024.json"
+    ],
+    "scenario_file": "data\\config\\scenarios.json",
+    "scenarios": [
+      "baseline",
+      "peak-center"
+    ],
+    "pairs": 500,
+    "seed": 20261113,
+    "repeats": 5,
+    "warmup": 20,
+    "warmup_seconds": 1.0,
+    "alt_k": 8,
+    "run_id": null,
+    "out": null,
+    "no_figure": false
+  }
+}
