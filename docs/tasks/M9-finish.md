@@ -1,5 +1,7 @@
 # M9 — Hoàn thiện (G1, T65, T80–T83)
 
+> **14/11 (D18):** lịch và thứ tự ưu tiên trong phiếu này được thay bằng [ROADMAP](../ROADMAP.md) mục 7 (R0–R4). Định nghĩa từng task (mục tiêu, đầu ra, xác minh) vẫn dùng. G1 đã ghi lại ở PROGRESS mục 2.
+
 **Mức Mini (13/11):** việc tài liệu, kiểm tay và viết, dễ sửa lại, không đổi code hay contract. Người làm: Tiến; review: Minh (D14). Mỗi mục: mục tiêu · đầu ra · cách xác minh.
 
 | Task | Mục tiêu | Đầu ra | Xác minh |

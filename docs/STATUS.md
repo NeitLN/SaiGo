@@ -1,66 +1,59 @@
 # STATUS
-Cập nhật: 28/10/2026 · Người tích hợp: Tiến · Đọc file này đầu mỗi session; giữ ≤ 100 dòng, ghi đè mỗi cuối session.
+Cập nhật: 14/11/2026 · Người tích hợp: Tiến · Đọc file này đầu mỗi session; giữ ≤ 100 dòng, ghi đè mỗi cuối session.
 
-Bộ nhớ dự án: mục tiêu/phạm vi/deadline ở [PROJECT_BRIEF.md](PROJECT_BRIEF.md) · quyết định kỹ thuật ở [ARCHITECTURE.md](ARCHITECTURE.md) và [DATA_MODEL.md](DATA_MODEL.md) · mốc, quyết định đắt nếu đổi, kế hoạch tuần ở [ROADMAP.md](ROADMAP.md) · từng task ở [TASKS.md](TASKS.md) + GitHub Issues · bằng chứng chi tiết và lỗi tồn tại ở [PROGRESS.md](PROGRESS.md).
+Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.md](PROJECT_BRIEF.md) mục 4 (D1–D18) · kiến trúc và API ở [ARCHITECTURE.md](ARCHITECTURE.md) · **kế hoạch phần còn lại ở [ROADMAP.md](ROADMAP.md) mục 7 (R0–R4)** · trạng thái từng task và bằng chứng ở [PROGRESS.md](PROGRESS.md) · số đo ở [EXPERIMENTS.md](EXPERIMENTS.md).
 
 ## Tóm tắt
-- **Hiện tại (main `e172ea9`):** trên `main` đã có bộ nạp đồ thị (T01), hàm địa lý (T10), Dijkstra (T11), A* (T20), đối chứng NetworkX trên đồ thị ngẫu nhiên (T21), báo cáo heuristic (T22), snapshot ùn tắc (T40), đóng đường (T41), khung benchmark (T60), biểu đồ (T64), tour trên ma trận (T70, T71), API skeleton `/api/route` trên `mini.json` (T13). Chưa có: dữ liệu thật dùng chung, bản đồ (T14), số đo benchmark.
-- **Mong muốn:** walking skeleton chạy trên 2 máy trước 29/10; **điểm kiểm bằng chứng 05/11**; MVP tích hợp 08/11 (gồm cả tour); final 12/11.
+- **Hiện tại (main, 14/11):** đủ lõi của proposal: dữ liệu OSM đóng băng (Release `data-raw-20261024`), Dijkstra, A*, đối chứng NetworkX (fixture, đồ thị ngẫu nhiên, 200 cặp đồ thị thật), ùn tắc theo vùng, đóng đoạn đường, tour NN / 2-opt có hướng / Held–Karp, API `/api/route`, `/api/tour`, `/api/dataset`, `/api/network`, giao diện React + Astryx (T56), kết quả E2–E5 và E2b. Mở rộng sau kế hoạch: ALT, Dijkstra hai chiều, Or-opt (D17).
+- **Mong muốn:** làm trọn như bản cuối (essay 10 trang, thuyết trình 15 phút có demo), dù không còn nộp chính thức (D18).
 - **Phải giữ nguyên:**
-  - `main` chỉ nhận PR có review + CI xanh;
+  - `main` chỉ nhận PR có review + CI xanh (`backend`, `frontend`, `identity` bắt buộc);
   - commit chỉ mang tên thành viên nhóm (job `identity`);
   - dữ liệu thô đóng băng theo sha256;
   - contract `/api/route` v1 chỉ được thêm trường;
-  - không số liệu nào chưa đo.
-- **Chưa biết:** máy thứ hai build lại dữ liệu có ra cùng sha256 không; Python chạy đồ thị lớn nhất mất bao lâu.
+  - không số liệu nào chưa đo; mọi số trong tài liệu có `run_id`.
+- **Chưa biết:** nền tile OSM thật (UI-1) trên giao diện mới, vì mạng các máy kiểm hiện chặn `tile.openstreetmap.org`.
 
 ## Đang ở đâu
-- **Chiều 26/10 Duy Anh quay lại** và merge 12 PR (#64–#76), gồm cả T13 (API skeleton) và T50 (snap) vốn giao cho Minh. Phần thuật toán và khung thực nghiệm gần như đã xong trên fixture; đường găng giờ là **dữ liệu thật (T34)** và **bản đồ (T14 → T52–T54)**.
-- **Repo đã đổi tên thành `NeitLN/SaiGo`.** GitHub tự chuyển hướng link cũ khi xem, nhưng thao tác ghi qua API thì không; script và link trong repo đã sửa theo tên mới. Máy ai đã clone thì chạy `git remote set-url origin https://github.com/NeitLN/SaiGo.git`.
-- **26/10, lịch sử `main` đã được viết lại** để bỏ 2 dòng đồng tác giả ngoài nhóm. Ai clone trước đó: `git fetch origin; git switch main; git reset --hard origin/main`.
-- Chờ review / merge:
-  - PR đồng bộ phạm vi (branch `t07b-sync-scope`): tài liệu theo quyết định 26/10.
-  - **Minh:** #46 → #47 → #53 mất approve vì Duy Anh gộp `main` vào (và đã sửa `test_load_graph_reads_file`); cần approve lại rồi merge, sau đó tạo Release (T34).
-- Còn lại tuần 2: Minh T34, T14; Bảo T15, T12. MW chỉ còn chờ T14 (phía API đã xong ở #73). Chi tiết: [ROADMAP](ROADMAP.md) mục 6.
+- R0 (tài liệu khớp thực tế): EXPERIMENTS đã sửa và thêm E2b (#127); PR đồng bộ PROGRESS, STATUS, ROADMAP, DEMO, ARCHITECTURE đang review.
+- Tiếp theo: R1, lập lại tour sau khi đóng đường. Đây là khoảng trống lớn nhất so với proposal (slide 3, 7, 12): backend `plan_tour()` đã nhận `blocked_edge_ids`, nhưng chế độ tour trên UI chưa gửi cạnh đóng, chưa cho bấm đóng đoạn, và chưa có so sánh giữ thứ tự cũ / sắp lại.
 
 ## Bị chặn / rủi ro
-- `outer.graphml` (sha256 `24a28327…`) chỉ có trên máy Minh; chưa có Release. Mọi tiêu chí trên dữ liệu thật (T01, T22, T33, T60) chờ việc này.
-- Review vội: 9 PR của Duy Anh (300–1.100 dòng) được approve sau 0–6 phút, không có nhận xét. Từ nay người review chạy test và để lại ít nhất một nhận xét cụ thể.
-- Minh dùng Python 3.14 (networkx 3.7); nhóm chuẩn là 3.11 (networkx 3.6.1). Benchmark chỉ chạy trên 3.11.
+- UI-1 chưa kiểm được trên máy này; nền dự phòng `/api/network` đã có (T56 R8). Kiểm ở R3 trên mạng khác; chuẩn bị video demo.
+- Các PR cũ đã có PR khác thay (#97, #104, #107, #108) còn mở; cần đóng tay trên GitHub.
+- MVP 08/11 không đạt đúng hạn (PROGRESS mục 1); không ảnh hưởng kế hoạch mới vì không còn hạn nộp.
 
 ## Quyết định
 | Quyết định | Trạng thái | Nguồn |
 |---|---|---|
-| Walking skeleton MW (T13–T15) trước 29/10 | **Đã duyệt** | Tiến, 25/10 |
-| Contract `/api/route` v1 ([ARCHITECTURE](ARCHITECTURE.md) mục 4.1) | **Đã chốt** | 25/10 |
-| Khóa phiên bản (`requirements-lock.txt`, Python 3.11), job `audit` | **Đã duyệt** | 25/10 |
-| Kế hoạch tuần 2 ([ROADMAP](ROADMAP.md) mục 6): T13 → Minh, T12 → Bảo | **Đã duyệt** (#56, ghi nhận ở #63) | Nhóm, sáng 26/10 |
-| Đổi phạm vi ([đề xuất](proposals/2026-10-26-pham-vi.md)): bỏ T32, RQ1b chỉ fixed trips (4 kích thước, chốt 28/10), bản đồ rút gọn, điểm kiểm 05/11 + MVP 08/11 | **Đã duyệt** | Nhóm, sáng 26/10 |
-| Tour (D10): sáng cắt, **chiều giữ lại**; T72–T74 trước 08/11 | **Đã chốt** | Tiến, chiều 26/10 |
-| Không gửi thư riêng cho giảng viên; lý do đổi phạm vi ghi trong PROJECT_BRIEF mục 4 và essay | **Đã chốt** | Tiến, chiều 26/10 |
-| Q1–Q5, Q7 ([ROADMAP](ROADMAP.md) mục 5) | **Đã duyệt**; Q2 còn chờ Release (T34) | Nhóm, 26/10 |
-| Ngưỡng snap 150 m | **[Đề xuất]**, giả định hiện hành | — |
-| Khoản cắt 4 (đóng đường qua API/CLI) và 5 (RQ1b còn 2 kích thước) | **Chưa kích hoạt**; cần nhóm đồng ý riêng | — |
+| Kế hoạch R0–R4 thay lịch M9 (D18) | **Đã chốt** | Tiến ủy quyền, 14/11 |
+| R1: báo cả "giữ thứ tự cũ" và "sắp lại" trên cùng snapshot; cho đóng đoạn trên tour; thêm case "tour không còn khả thi" | **Đã chốt** | Tiến ủy quyền, 14/11 (ROADMAP mục 7) |
+| Bỏ khỏi DEMO: nhật ký snapshot, so Dijkstra/A* trên một chặng của tour | **Đã chốt** | D18 |
+| Giữ ALT, Dijkstra hai chiều, Or-opt làm phần mở rộng | **Đã chốt** | D17 |
+| Giao diện React + Astryx | **Đã merge** (#103) | D15 |
+| Ngưỡng snap 150 m | Giả định hiện hành, đã dùng trong mọi thí nghiệm | — |
 
 ## Bước tiếp theo
-1. Merge PR đồng bộ; đóng T32 *not planned*; chạy `create_backlog.py --sync` và `setup_project.py --sync` (tạo T34, đổi người làm và mô tả issue theo TASKS).
-2. Đưa `identity` vào check bắt buộc của branch `main`.
-3. Minh: approve lại #46 → #47 → #53, merge, tạo Release (T34); rồi T14.
-4. Bảo: T15 (29/10), T12 (30–31/10).
-5. Họp 01/11: rà ngân sách tuần 3 khi đã có Duy Anh, gồm T72–T74; chia lại người trả lời câu hỏi bảo vệ.
+1. Merge PR đồng bộ tài liệu R0.
+2. R1: viết phiếu `docs/tasks/R1-tour-closure.md` (mức Standard), rồi làm API, UI, test, case demo mới.
+3. R2: E5 thêm n = 5, báo max và p90; thí nghiệm nhỏ giữ thứ tự cũ / sắp lại sau khi đóng.
+4. R3: chạy trên máy thứ hai theo README; kiểm UI-1 ở mạng khác.
+5. R4: essay, slide, video demo.
 
 ## Bộ kiểm nhanh (chạy đầu mỗi session)
-- `.venv\Scripts\python.exe -m pytest -q` → tại `main` `a86cf9e` (26/10): 231 passed, 1 skipped (test `realdata`, chưa có dữ liệu)
-- `cd frontend; npm run build` → build được
-- `python scripts/tracking/create_backlog.py --dry-run` → không lỗi, in tổng số task/giờ
-- Mỗi tuần: `.venv\Scripts\python.exe -m pip_audit -r requirements-lock.txt` · `cd frontend; npm audit` (job `audit` trong CI làm việc này ở mỗi PR)
+- `.venv\Scripts\python.exe -m pytest -q` → 14/11 trên main: 429 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; có đồ thị demo thì các test `realdata` khác vẫn chạy)
+- `cd frontend; npm run build` → build được (Vite cảnh báo chunk > 500 KB, chấp nhận vì chạy local)
+- `python scripts/tracking/create_backlog.py --dry-run` → không lỗi (48 task, 147 giờ ước lượng)
+- Mỗi tuần: `.venv\Scripts\python.exe -m pip_audit -r requirements-lock.txt` · `cd frontend; npm audit` (job `audit` trong CI chạy ở mỗi PR)
 
 ## Lệnh khác
 - Dựng môi trường: `powershell -ExecutionPolicy Bypass -File scripts\setup_dev.ps1` (thêm `-Data` cho OSMnx)
-- Chạy: `uvicorn app.main:app --reload --app-dir backend` + `cd frontend; npm run dev`
+- Dữ liệu: tải Release `data-raw-20261024` rồi `python scripts/prepare_data.py build --area demo` (ONBOARDING mục 3)
+- Chạy: `$env:SAIGO_GRAPH = "data/processed/hcm-benthanh-r2000-20261024.json"; uvicorn app.main:app --reload --app-dir backend` + `cd frontend; npm run dev` → http://localhost:5173
+- Thí nghiệm: E2 `run_benchmarks.py --suite demo` · E3 `run_scaling.py` · E4 `run_scenarios.py` · E5 `run_tour.py` · E2b `compare_algorithms.py`; bảng: `summarize_results.py results/<run_id>`; hình: `plot_results.py results/<run_id>`
 - Burndown: `python scripts/tracking/burndown.py --out build/tracking`
-- Đồng bộ backlog: `create_backlog.py --sync`, `setup_project.py --sync`
 
 ## Tài liệu lệch với code / với quyết định
-- [ARCHITECTURE.md](ARCHITECTURE.md) mục 3 và 4 viết từ kế hoạch. Trên `main` (14/11): API có `/api/health`, `/api/dataset`, `/api/route`, `/api/tour`, `/api/network` (nền dự phòng khi không tải được tile OSM, T56 R8); `/api/route` snap bằng `graph/snap.nearest_node` (ngưỡng 150 m, T51); đã có `cli.py`. Phần còn lại của file này dừng ở 28/10, viết lại ở T81.
-- Issue trên GitHub (người làm, mô tả T32/T53/T54/T61/T62/G1) còn theo kế hoạch cũ cho tới khi chạy `--sync` sau PR đồng bộ. Khi lệch, TASKS.md được ưu tiên.
+- README còn ghi trạng thái 26/10 ("chưa có kết quả thực nghiệm") và phạm vi cũ; sửa ở R0/R4 cùng phần kết quả.
+- `docs/ALGORITHMS.md` chưa có ALT, Dijkstra hai chiều, Or-opt (T81, R4).
+- TOPIC.md là đặc tả gốc 01/10; khi khác PROJECT_BRIEF thì PROJECT_BRIEF được ưu tiên.
