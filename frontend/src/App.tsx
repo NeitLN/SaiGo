@@ -348,7 +348,8 @@ export default function App() {
           : 'Bấm Tìm đường. Bấm lên bản đồ lần nữa để chọn lại từ đầu.')
     : (!depot ? 'Bấm lên bản đồ để đặt kho.'
       : tour?.status === 'ok' ? 'Bấm vào một đoạn trên tour để đóng đoạn đó; tour được lập lại. Bấm lên bản đồ để thêm điểm giao.'
-        : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`)
+        : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`
+          + (tourBlocked.length ? ' Các đoạn đang đóng vẫn giữ khi lập tour mới; bấm Mở lại tất cả để bỏ.' : ''))
 
   const controls = (
     <VStack gap={4}>
