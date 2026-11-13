@@ -11,7 +11,7 @@ export interface LatLon {
   lon: number
 }
 
-export type Algorithm = 'dijkstra' | 'astar'
+export type Algorithm = 'dijkstra' | 'astar' | 'alt'
 
 export interface RouteRequest {
   source: LatLon
@@ -57,7 +57,7 @@ export interface RouteResponse {
   warnings?: string[]
 }
 
-export const ALGORITHM_LABEL: Record<Algorithm, string> = { dijkstra: 'Dijkstra', astar: 'A*' }
+export const ALGORITHM_LABEL: Record<Algorithm, string> = { dijkstra: 'Dijkstra', astar: 'A*', alt: 'ALT (landmark)' }
 
 // GET /api/dataset (T51). Kịch bản giữ đúng cấu trúc `saigo-scenarios/1` của data/config/scenarios.json
 // và `CongestionZone` của backend/app/graph/scenario.py (DATA_MODEL mục 4.1).

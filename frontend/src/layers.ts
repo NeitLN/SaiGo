@@ -5,7 +5,7 @@ import type { AlgorithmResult, LatLon, RouteResponse, Scenario } from './api'
 
 // Màu lấy từ token của theme Astryx (đọc trên phần tử bản đồ, nằm trong <Theme>), không viết mã màu cứng.
 type Palette = {
-  dijkstra: string; astar: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string
+  dijkstra: string; astar: string; alt: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string
   road: string
 }
 
@@ -21,6 +21,7 @@ export function readPalette(el: HTMLElement): Palette {
   const palette = {
     dijkstra: v('--color-data-categorical-blue'),
     astar: v('--color-data-categorical-orange'),
+    alt: v('--color-data-categorical-teal'),
     source: v('--color-data-categorical-green'),
     target: v('--color-data-categorical-red'),
     closed: v('--color-error'),
@@ -146,6 +147,7 @@ export class MapLayers {
     this.routes.clearLayers()
     const d = res.results.dijkstra
     const a = res.results.astar
+    const alt = res.results.alt
     if (sameRoute(d, a)) {
       const latlngs = toLatLngs(d!.geometry.coordinates)
       L.polyline(latlngs, { color: this.palette.astar, weight: 10, opacity: 0.9, interactive: false }).addTo(this.routes)
@@ -158,6 +160,14 @@ export class MapLayers {
       if (a?.status === 'ok') {
         L.polyline(toLatLngs(a.geometry.coordinates), { color: this.palette.astar, weight: 4, dashArray: '8 6', interactive: false })
           .addTo(this.routes)
+      }
+    }
+    if (alt?.status === 'ok') {
+      const latlngs = toLatLngs(alt.geometry.coordinates)
+      if (sameRoute(alt, d)) {
+        L.polyline(latlngs, { color: this.palette.alt, weight: 2.5, opacity: 0.95, interactive: false }).addTo(this.routes)
+      } else {
+        L.polyline(latlngs, { color: this.palette.alt, weight: 4, dashArray: '4 4', opacity: 0.9, interactive: false }).addTo(this.routes)
       }
     }
     if (onSegmentClick && d) {

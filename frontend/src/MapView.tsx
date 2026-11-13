@@ -11,6 +11,7 @@ const CENTER: L.LatLngTuple = [10.7725, 106.698]
 export interface ExpandedNodes {
   dijkstra?: AlgorithmResult
   astar?: AlgorithmResult
+  alt?: AlgorithmResult
 }
 
 export interface ReplayProps {
@@ -32,6 +33,7 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
   const mapRef = useRef<L.Map | null>(null)
   const dLayerRef = useRef<L.LayerGroup | null>(null)
   const aLayerRef = useRef<L.LayerGroup | null>(null)
+  const altLayerRef = useRef<L.LayerGroup | null>(null)
   // Một canvas cho mọi lần vẽ node mở rộng; tạo mới mỗi lần effect chạy sẽ để lại canvas cũ trên pane.
   const rendererRef = useRef<L.Canvas | null>(null)
   const legendControlRef = useRef<L.Control | null>(null)
@@ -54,11 +56,13 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
     pane.style.zIndex = '350'
     pane.style.pointerEvents = 'none'
 
-    // Hai layer riêng cho Dijkstra và A* (A* vẽ sau để nổi lên trên khi trùng node)
+    // Ba layer riêng cho Dijkstra, A* và ALT (vẽ theo thứ tự để các node nổi rõ)
     const dLayer = L.layerGroup().addTo(map)
     const aLayer = L.layerGroup().addTo(map)
+    const altLayer = L.layerGroup().addTo(map)
     dLayerRef.current = dLayer
     aLayerRef.current = aLayer
+    altLayerRef.current = altLayer
     rendererRef.current = L.canvas({ pane: 'expanded-nodes' })
 
     const layers = new MapLayers(map)
@@ -99,16 +103,18 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
       mapRef.current = null
       dLayerRef.current = null
       aLayerRef.current = null
+      altLayerRef.current = null
       rendererRef.current = null
     }
   }, [onReady])
 
-  // Lớp vẽ node đã mở rộng, phát lại animation và chú thích (T56 / A13, A14)
+  // Lớp vẽ node đã mở rộng, phát lại animation và chú thích (T56 / A13, A14, A15)
   useEffect(() => {
     const map = mapRef.current
     const dLayer = dLayerRef.current
     const aLayer = aLayerRef.current
-    if (!map || !dLayer || !aLayer) return
+    const altLayer = altLayerRef.current
+    if (!map || !dLayer || !aLayer || !altLayer) return
 
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current)
@@ -118,6 +124,7 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
     if (!expandedNodes) {
       dLayer.clearLayers()
       aLayer.clearLayers()
+      altLayer.clearLayers()
       if (legendControlRef.current) {
         legendControlRef.current.remove()
         legendControlRef.current = null
@@ -129,13 +136,16 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
 
     const d = expandedNodes.dijkstra
     const a = expandedNodes.astar
+    const alt = expandedNodes.alt
     const dTrace = d?.trace ?? []
     const aTrace = a?.trace ?? []
-    const totalSteps = Math.max(dTrace.length, aTrace.length)
+    const altTrace = alt?.trace ?? []
+    const totalSteps = Math.max(dTrace.length, aTrace.length, altTrace.length)
 
     if (totalSteps === 0) {
       dLayer.clearLayers()
       aLayer.clearLayers()
+      altLayer.clearLayers()
       if (legendControlRef.current) {
         legendControlRef.current.remove()
         legendControlRef.current = null
@@ -175,26 +185,34 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
       if (!div) return
 
       if (step >= totalSteps) {
-        // Kết thúc: hiện đủ như lớp tĩnh của #112
+        // Kết thúc: hiện đủ như lớp tĩnh của #112 / A15
         const dText = d && d.expanded !== undefined
           ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-blue);opacity:0.6;margin-right:5px;vertical-align:middle;"></span>Dijkstra mở ${d.expanded} node${d.trace_truncated && d.trace ? ` (hiện ${d.trace.length} đầu tiên)` : ''}`
           : ''
         const aText = a && a.expanded !== undefined
           ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-orange);margin-right:5px;vertical-align:middle;"></span>A* mở ${a.expanded} node${a.trace_truncated && a.trace ? ` (hiện ${a.trace.length} đầu tiên)` : ''}`
           : ''
-        const items = [dText, aText].filter(Boolean)
+        const altText = alt && alt.expanded !== undefined
+          ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-teal);margin-right:5px;vertical-align:middle;"></span>ALT mở ${alt.expanded} node${alt.trace_truncated && alt.trace ? ` (hiện ${alt.trace.length} đầu tiên)` : ''}`
+          : ''
+        const items = [dText, aText, altText].filter(Boolean)
         div.innerHTML = items.join(' <span style="color: var(--color-text-secondary);">·</span> ')
       } else {
-        // Đang phát lại hoặc tạm dừng ở bước k: "bước k: Dijkstra x / N · A* y / M"
+        // Đang phát lại hoặc tạm dừng ở bước k: "bước k: Dijkstra x / N · A* y / M · ALT z / P"
         const dCount = Math.min(step, dTrace.length)
         const aCount = Math.min(step, aTrace.length)
+        const altCount = Math.min(step, altTrace.length)
         const dTotal = d?.expanded ?? dTrace.length
         const aTotal = a?.expanded ?? aTrace.length
+        const altTotal = alt?.expanded ?? altTrace.length
 
         const dText = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-blue);opacity:0.6;margin-right:5px;vertical-align:middle;"></span>Dijkstra ${dCount} / ${dTotal}`
         const aText = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-orange);margin-right:5px;vertical-align:middle;"></span>A* ${aCount} / ${aTotal}`
+        const altText = alt
+          ? ` <span style="color: var(--color-text-secondary);">·</span> <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-teal);margin-right:5px;vertical-align:middle;"></span>ALT ${altCount} / ${altTotal}`
+          : ''
 
-        div.innerHTML = `bước ${step}: ${dText} <span style="color: var(--color-text-secondary);">·</span> ${aText}`
+        div.innerHTML = `bước ${step}: ${dText} <span style="color: var(--color-text-secondary);">·</span> ${aText}${altText}`
       }
     }
 
@@ -232,6 +250,25 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
           interactive: false,
         }).addTo(aLayer)
       }
+
+      // ALT: chấm nhỏ teal
+      if (alt) {
+        const altStart = Math.min(fromStep, altTrace.length)
+        const altEnd = Math.min(toStep, altTrace.length)
+        for (let i = altStart; i < altEnd; i++) {
+          const [lon, lat] = altTrace[i]
+          L.circleMarker([lat, lon], {
+            pane: 'expanded-nodes',
+            renderer,
+            radius: 3.5,
+            color: palette.alt,
+            weight: 0.8,
+            fillColor: palette.alt,
+            fillOpacity: 0.85,
+            interactive: false,
+          }).addTo(altLayer)
+        }
+      }
     }
 
     const status = replay?.status ?? 'static'
@@ -240,11 +277,13 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
     if (status === 'reset') {
       dLayer.clearLayers()
       aLayer.clearLayers()
+      altLayer.clearLayers()
       currentStepRef.current = 0
       updateLegend(0)
     } else if (status === 'static' || status === 'ended') {
       dLayer.clearLayers()
       aLayer.clearLayers()
+      altLayer.clearLayers()
       renderRange(0, totalSteps)
       currentStepRef.current = totalSteps
       updateLegend(totalSteps)
@@ -254,6 +293,7 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
       if (currentStepRef.current >= totalSteps) {
         dLayer.clearLayers()
         aLayer.clearLayers()
+        altLayer.clearLayers()
         currentStepRef.current = 0
       }
 

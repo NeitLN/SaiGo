@@ -28,7 +28,7 @@ import TourResults from './TourResults'
 type Mode = 'route' | 'tour'
 
 // Mỗi lần gửi request là một query mới (n tăng); effect hủy request cũ nên chỉ kết quả mới nhất được hiện.
-interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; showExpanded: boolean; n: number }
+interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; showExpanded: boolean; showAlt: boolean; n: number }
 interface TourQuery { depot: TourPoint; stops: TourPoint[]; scenarioId: string; n: number }
 
 const fmt = (p: LatLon | null) => (p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—')
@@ -56,6 +56,7 @@ export default function App() {
   const [source, setSource] = useState<LatLon | null>(null)
   const [target, setTarget] = useState<LatLon | null>(null)
   const [showExpanded, setShowExpanded] = useState(false)
+  const [showAlt, setShowAlt] = useState(false)
   type ReplayStatus = 'static' | 'playing' | 'paused' | 'reset' | 'ended'
   const [replayStatus, setReplayStatus] = useState<ReplayStatus>('static')
   const [replaySpeed, setReplaySpeed] = useState(5)
@@ -125,7 +126,8 @@ export default function App() {
     setBusy(true)
     setError(null)
     postRoute({
-      source: routeQuery.source, target: routeQuery.target, algorithms: ['dijkstra', 'astar'],
+      source: routeQuery.source, target: routeQuery.target,
+      algorithms: routeQuery.showAlt ? ['dijkstra', 'astar', 'alt'] : ['dijkstra', 'astar'],
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked,
       ...(routeQuery.showExpanded ? { trace_limit: 5000 } : {}),
     }, ctl.signal)
@@ -273,10 +275,17 @@ export default function App() {
     setRouteQuery((q) => (q ? { ...q, showExpanded: val, n: q.n + 1 } : q))
   }
 
+  const toggleAlt = (val: boolean) => {
+    setShowAlt(val)
+    setReplayStatus('static')
+    setReplayKey((k) => k + 1)
+    setRouteQuery((q) => (q ? { ...q, showAlt: val, n: q.n + 1 } : q))
+  }
+
   const findRoute = () => {
     setReplayStatus('static')
     setReplayKey((k) => k + 1)
-    if (source && target) setRouteQuery({ source, target, scenarioId, blocked, showExpanded, n: Date.now() })
+    if (source && target) setRouteQuery({ source, target, scenarioId, blocked, showExpanded, showAlt, n: Date.now() })
   }
 
   const swap = () => {
@@ -285,7 +294,7 @@ export default function App() {
     if (!source || !target) return
     setSource(target)
     setTarget(source)
-    if (route) setRouteQuery({ source: target, target: source, scenarioId, blocked, showExpanded, n: Date.now() })
+    if (route) setRouteQuery({ source: target, target: source, scenarioId, blocked, showExpanded, showAlt, n: Date.now() })
     else resetRoute()
   }
 
@@ -331,7 +340,7 @@ export default function App() {
       setCaseBlocked(bl)
       setSource(c.source)
       setTarget(c.target)
-      setRouteQuery({ source: c.source, target: c.target, scenarioId: sid, blocked: bl, showExpanded, n: Date.now() })
+      setRouteQuery({ source: c.source, target: c.target, scenarioId: sid, blocked: bl, showExpanded, showAlt, n: Date.now() })
     } else if (c.mode === 'tour' && c.depot && c.stops) {
       const d: TourPoint = { id: 'depot', label: c.depot.name, lat: c.depot.lat, lon: c.depot.lon }
       const st = c.stops.map((s, i) => ({ id: `p${i + 1}`, label: s.name, lat: s.lat, lon: s.lon }))
@@ -420,6 +429,11 @@ export default function App() {
               />
             </VStack>
           )}
+          <Switch
+            label="So sánh thêm ALT"
+            value={showAlt}
+            onChange={toggleAlt}
+          />
           {blocked.length > 0 && (
             <HStack gap={2} vAlign="center" hAlign="between">
               <Text type="supporting">Đang đóng {blocked.length} cạnh</Text>
@@ -475,6 +489,7 @@ export default function App() {
                   ? {
                       dijkstra: route.res.results.dijkstra,
                       astar: route.res.results.astar,
+                      alt: showAlt ? route.res.results.alt : undefined,
                     }
                   : null
               }
