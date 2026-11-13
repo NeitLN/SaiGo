@@ -150,36 +150,66 @@ Hình: `fig_e4_ratio_by_scenario.png` trong thư mục run.
 
 ## E5 — Kết quả: tour (T74)
 
-**Run:** `20261113-0448-tour-12dd1e0` (thư mục `results/20261113-0448-tour-12dd1e0/`) · lệnh `python scripts/run_benchmarks.py --suite tour --graph data/processed/hcm-benthanh-r2000-20261024.json --seed 42` · commit `12dd1e0`, `git_dirty: false` · đồ thị demo (sha256 `928c1f8b…`), kịch bản cơ sở · máy: laptop Windows 11 của Tiến, Python 3.11.9.
+**Run:** `20261113-0448-tour-12dd1e0` (n = 4, 6, 8, 10; lệnh `python scripts/run_benchmarks.py --suite tour --graph data/processed/hcm-benthanh-r2000-20261024.json --seed 42`; commit `12dd1e0`) và `20261114-0517-tour-04a0d7e` (n = 5, thêm ở R2 để có cùng cỡ với case demo; lệnh `python scripts/run_tour.py --graph data/processed/hcm-benthanh-r2000-20261024.json --sizes 5 --sets 20 --seed 42`; commit `04a0d7e`) · cả hai `git_dirty: false` · đồ thị demo (sha256 `928c1f8b…`), kịch bản cơ sở · máy: laptop Windows 11 của Tiến, Python 3.11.9.
 
-**Cách đo:** n ∈ {4, 6, 8, 10} điểm giao × 20 bộ (seed 42); kho và điểm giao lấy ngẫu nhiên trong SCC, mọi cặp điểm cách nhau ≥ 150 m; thứ tự nhập = thứ tự sinh. Ma trận chi phí dựng từ đồ thị bằng đúng hàm của `/api/tour` (`services/tour.cost_matrix`). Bảng dưới do `python scripts/summarize_results.py results/20261113-0448-tour-12dd1e0` sinh ra.
+**Cách đo:** n ∈ {4, 5, 6, 8, 10} điểm giao × 20 bộ (seed 42); kho và điểm giao lấy ngẫu nhiên trong SCC, mọi cặp điểm cách nhau ≥ 150 m; thứ tự nhập = thứ tự sinh. Ma trận chi phí dựng từ đồ thị bằng đúng hàm của `/api/tour` (`services/tour.cost_matrix`). Bảng dưới do `python scripts/summarize_results.py results/20261113-0448-tour-12dd1e0 results/20261114-0517-tour-04a0d7e` sinh ra.
 
-**Kiểm tính đúng (đạt hết):** 80/80 bộ khả thi; mọi bộ có Held–Karp ≤ NN + 2-opt ≤ NN; bộ "Kho + 5 điểm giao" của T55 chạy qua cùng hàm ra 1.066,0 / 1.003,3 / 898,1 / 627,8 s, khớp `/api/tour` (test `realdata`).
+**Kiểm tính đúng (đạt hết):** 100/100 bộ khả thi; mọi bộ có Held–Karp ≤ NN + 2-opt ≤ NN; bộ "Kho + 5 điểm giao" của T55 chạy qua cùng hàm ra 1.066,0 / 1.003,3 / 898,1 / 627,8 s, khớp `/api/tour` (test `realdata`).
 
-| Điểm giao | Phương án | Median Improvement % | IQR Improvement % | Median Gap % | IQR Gap % | Median thời gian sắp thứ tự (ms) | Bộ khả thi |
-|---|---|---|---|---|---|---|---|
-| 4 | thứ tự nhập | — | — | 13,17 | [6,34; 26,45] | 0 | 20/20 |
-| 4 | NN | 9,53 | [3,89; 20,9] | 1,7 | [0; 6,69] | 0,007 | 20/20 |
-| 4 | NN + 2-opt | 11,58 | [5,96; 20,9] | 0 | [0; 0,07] | 0,022 | 20/20 |
-| 4 | Held–Karp | — | — | — | — | 0,019 | 20/20 |
-| 6 | thứ tự nhập | — | — | 39,05 | [30,99; 54,7] | 0 | 20/20 |
-| 6 | NN | 24,57 | [16,46; 29,28] | 8,08 | [3,35; 12,91] | 0,01 | 20/20 |
-| 6 | NN + 2-opt | 27,84 | [23,63; 35,17] | 0 | [0; 0,71] | 0,046 | 20/20 |
-| 6 | Held–Karp | — | — | — | — | 0,106 | 20/20 |
-| 8 | thứ tự nhập | — | — | 57,53 | [45,05; 70,57] | 0 | 20/20 |
-| 8 | NN | 30,03 | [23,74; 35,44] | 9,27 | [6,6; 13,3] | 0,014 | 20/20 |
-| 8 | NN + 2-opt | 36,4 | [29,51; 40,45] | 0,19 | [0; 3,88] | 0,082 | 20/20 |
-| 8 | Held–Karp | — | — | — | — | 0,616 | 20/20 |
-| 10 | thứ tự nhập | — | — | 71,62 | [61,99; 81,83] | 0 | 20/20 |
-| 10 | NN | 32,37 | [28,59; 39,39] | 14,09 | [7,96; 20,25] | 0,022 | 20/20 |
-| 10 | NN + 2-opt | 41,04 | [36,79; 42,46] | 1,76 | [0; 5,06] | 0,147 | 20/20 |
-| 10 | Held–Karp | — | — | — | — | 3,814 | 20/20 |
+| Điểm giao | Phương án | Median Improvement % | IQR Improvement % | Median Gap % | IQR Gap % | p90 Gap % | Max Gap % | Median thời gian sắp thứ tự (ms) | Bộ khả thi |
+|---|---|---|---|---|---|---|---|---|---|
+| 4 | thứ tự nhập | — | — | 13,17 | [6,34; 26,45] | 37,5 | 58,23 | 0 | 20/20 |
+| 4 | NN | 9,53 | [3,89; 20,9] | 1,7 | [0; 6,69] | 11,39 | 14,53 | 0,007 | 20/20 |
+| 4 | NN + 2-opt | 11,58 | [5,96; 20,9] | 0 | [0; 0,07] | 3,39 | 11,31 | 0,022 | 20/20 |
+| 4 | Held–Karp | — | — | — | — | — | — | 0,019 | 20/20 |
+| 5 | thứ tự nhập | — | — | 35,3 | [30,39; 41,31] | 52,86 | 64,04 | 0 | 20/20 |
+| 5 | NN | 21,22 | [10,2; 25,07] | 6,63 | [1,24; 16,37] | 20,83 | 21,39 | 0,009 | 20/20 |
+| 5 | NN + 2-opt | 25,41 | [19,99; 27,49] | 0 | [0; 0,48] | 7,36 | 12,22 | 0,033 | 20/20 |
+| 5 | Held–Karp | — | — | — | — | — | — | 0,044 | 20/20 |
+| 6 | thứ tự nhập | — | — | 39,05 | [30,99; 54,7] | 61,16 | 64,12 | 0 | 20/20 |
+| 6 | NN | 24,57 | [16,46; 29,28] | 8,08 | [3,35; 12,91] | 16,54 | 24,53 | 0,01 | 20/20 |
+| 6 | NN + 2-opt | 27,84 | [23,63; 35,17] | 0 | [0; 0,71] | 1,64 | 13,85 | 0,046 | 20/20 |
+| 6 | Held–Karp | — | — | — | — | — | — | 0,106 | 20/20 |
+| 8 | thứ tự nhập | — | — | 57,53 | [45,05; 70,57] | 93,78 | 131,45 | 0 | 20/20 |
+| 8 | NN | 30,03 | [23,74; 35,44] | 9,27 | [6,6; 13,3] | 19,95 | 24,63 | 0,014 | 20/20 |
+| 8 | NN + 2-opt | 36,4 | [29,51; 40,45] | 0,19 | [0; 3,88] | 5,89 | 13,52 | 0,082 | 20/20 |
+| 8 | Held–Karp | — | — | — | — | — | — | 0,616 | 20/20 |
+| 10 | thứ tự nhập | — | — | 71,62 | [61,99; 81,83] | 89,6 | 136,76 | 0 | 20/20 |
+| 10 | NN | 32,37 | [28,59; 39,39] | 14,09 | [7,96; 20,25] | 23,05 | 34,51 | 0,022 | 20/20 |
+| 10 | NN + 2-opt | 41,04 | [36,79; 42,46] | 1,76 | [0; 5,06] | 8,61 | 14,07 | 0,147 | 20/20 |
+| 10 | Held–Karp | — | — | — | — | — | — | 3,814 | 20/20 |
 
-Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms với n = 4 / 6 / 8 / 10. p90 gap của NN + 2-opt: 3,4 / 1,6 / 5,9 / 8,6% với n = 4 / 6 / 8 / 10. NN + 2-opt trùng tối ưu ở 45/80 bộ; gap lớn nhất của NN + 2-opt là 14,1%, của NN là 34,5%. Hình: `fig_e5_tour.png` trong thư mục run.
+Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms với n = 4 / 6 / 8 / 10; n = 5 (run sau, cùng máy) 3,84 ms. NN + 2-opt trùng tối ưu ở 45/80 bộ của run đầu. Hình: `fig_e5_tour.png` trong thư mục run đầu (chỉ có n = 4, 6, 8, 10; chưa vẽ lại với n = 5).
 
 **Diễn giải (không phải số đo):**
 
-- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). Phần 2-opt cải thiện thêm so với NN, tính trên **từng bộ** (Improvement của NN + 2-opt trừ Improvement của NN cùng bộ) rồi lấy median: 0,36 / 4,40 / 4,87 / 6,01 điểm phần trăm với n = 4 / 6 / 8 / 10. (Hiệu giữa hai median trong bảng là 2,05 / 3,27 / 6,37 / 8,67 điểm, lớn hơn vì median của hiệu khác hiệu của median.) Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
+- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). Phần 2-opt cải thiện thêm so với NN, tính trên **từng bộ** (Improvement của NN + 2-opt trừ Improvement của NN cùng bộ) rồi lấy median: 0,36 / 4,56 / 4,40 / 4,87 / 6,01 điểm phần trăm với n = 4 / 5 / 6 / 8 / 10. (Hiệu giữa hai median trong bảng là 2,05 / 3,27 / 6,37 / 8,67 điểm, lớn hơn vì median của hiệu khác hiệu của median.) Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
 - NN + 2-opt gần tối ưu: median gap 0–1,8%, p75 ≤ 5,1%. NN một mình kém hơn hẳn (median gap 1,7–14,1%).
 - Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) gấp khoảng 128 lần (n = 4) đến 53 lần (n = 10) thời gian sắp thứ tự bằng NN + 2-opt (dưới 0,15 ms). Held–Karp tăng nhanh theo n (median 0,019 → 0,106 → 0,616 → 3,814 ms), cùng chiều với độ phức tạp lý thuyết O(2ⁿ·n²). Mỗi phương án chỉ đo một lần mỗi bộ, theo thứ tự cố định, không warm-up riêng, nên bốn điểm đo này không đủ để xác nhận bậc tăng; chỉ dùng chúng để nói Held–Karp đắt dần và vì vậy chỉ làm đối chứng tới 10 điểm giao.
-- **Case demo không đại diện được bằng E5:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). E5 không có bộ 5 điểm giao, nên chỉ nói được: trong 80 bộ ngẫu nhiên (n = 4–10) không gặp gap lớn như vậy; gap lớn nhất của NN + 2-opt là 14,1%, của NN một mình là 34,5%. Sau run này, #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; Or-opt không nằm trong 4 phương án đo ở E5.
+- **Case demo không đại diện được bằng E5:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). Trong 20 bộ ngẫu nhiên cùng cỡ (n = 5, thêm ở R2), gap lớn nhất của NN + 2-opt chỉ 12,2% (p90 7,4%); trong cả 100 bộ (n = 4–10) lớn nhất là 14,1%. Vậy gap lớn như case demo không gặp trong 100 bộ ngẫu nhiên; case demo dùng để giải thích cực trị địa phương, không đại diện cho mức gap thường gặp. #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; **Or-opt chỉ dùng minh họa**: không nằm trong các phương án đo ở E5, nên không có số đo tổng quát nào về nó.
+
+## E5b — Tour sau khi đóng đường: giữ thứ tự cũ so với sắp lại (R2)
+
+Câu hỏi của proposal (slide 12): khi một đoạn đường trên tuyến bị đóng, nên đi tiếp đúng thứ tự cũ hay sắp lại thứ tự? Báo riêng hai phương án để thuật toán tìm đường không được tính công của việc sắp lại.
+
+**Run:** `20261114-0517-tourclosure-04a0d7e` (thư mục `results/20261114-0517-tourclosure-04a0d7e/`) · lệnh `python scripts/run_tour_closure.py --graph data/processed/hcm-benthanh-r2000-20261024.json --sizes 5 --sets 20 --seed 42` · commit `04a0d7e`, `git_dirty: false` · đồ thị demo, kịch bản cơ sở · cùng máy với E5.
+
+**Cách đo:** đúng 20 bộ n = 5 của run E5 n = 5 (cùng hàm sinh bộ, cùng seed). Mỗi bộ: tour cũ = phương án `/api/tour` chọn trên kịch bản cơ sở (`choose_tour`); đóng cạnh ở vị trí ⌊k/2⌋ trên tuyến của tour cũ, kèm cạnh đối nếu có (như "đóng đoạn" trên UI; 6/20 bộ có cạnh đối); trên snapshot mới tính **giữ thứ tự cũ** (cùng thứ tự, mỗi chặng tìm lại) và **sắp lại** (`choose_tour` lại). Không đo thời gian.
+
+**Kiểm tính đúng (đạt hết):** giữ thứ tự cũ không rẻ hơn tour cũ ở mọi bộ; không tuyến nào đi qua cạnh đóng (kiểm trong script, không có `violations.json`).
+
+| Chỉ số (20 bộ) | Kết quả |
+|---|---|
+| Bộ không còn tour khép kín sau khi đóng | 2/20 (có chặng không đi được sau khi đóng; cạnh đóng 2060 ở bộ 3, 1725 + 1707 ở bộ 10) |
+| Giữ thứ tự cũ: chi phí tăng so với tour cũ (18 bộ còn khả thi) | median 1,42%, p90 4,04%, lớn nhất 13,66% |
+| Sắp lại so với giữ thứ tự cũ | rẻ hơn ở 3/18 bộ, bằng ở 15/18, không bộ nào đắt hơn (quan sát trong mẫu này; `choose_tour` sau khi đóng không xét thứ tự cũ nên không bảo đảm điều này) |
+| Phần sắp lại rẻ hơn giữ thứ tự cũ, `100·(C_giữ − C_sắp)/C_giữ` | median 0%, p90 2,53%, lớn nhất 7,25% |
+| Sắp lại rẻ hơn cả tour cũ (trước khi đóng) | 1/18 bộ |
+
+p90 nội suy tuyến tính như các bảng khác.
+
+**Diễn giải (không phải số đo):**
+
+- Đóng **một** đoạn giữa tuyến thường chỉ làm tour dài thêm ít (median 1,4%), có thể vì mạng đường trung tâm dày, có đường vòng gần (chưa kiểm); nhưng 2/20 bộ mất hẳn tour khép kín, nên hệ thống phải báo được "không còn tour đầy đủ" (R1) thay vì vẽ tour thiếu điểm.
+- Sắp lại hiếm khi đổi thứ tự (3/18) và lợi tối đa 7,3% trong mẫu này. Case demo của DEMO bước 10 (đóng cạnh 1666: giữ thứ tự cũ 962,7 s, sắp lại 692,5 s, chênh 28%) nằm ngoài khoảng quan sát được ở đây; nó được chọn có chủ ý để minh họa và lợi lớn chủ yếu vì tour cũ của case đó là cực trị địa phương kém (gap 43%, xem E5), không phải vì đóng đường. Khi trình bày phải nói rõ.
+- Chỉ một cách đóng (một đoạn giữa tuyến), một cỡ n và 20 bộ; không suy ra cho đóng nhiều đoạn, cho n lớn hơn, hay cho vùng thưa đường.

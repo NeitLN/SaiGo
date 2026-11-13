@@ -647,6 +647,8 @@ def e5_section(tour_rows: Sequence[TourRow], metas: Sequence[RunMeta]) -> Sectio
                 _iqr(improvements),
                 fmt_number(median(gaps), 2) if gaps else MISSING,
                 _iqr(gaps),
+                fmt_number(percentile(gaps, 0.9), 2) if gaps else MISSING,
+                fmt_number(max(gaps), 2) if gaps else MISSING,
                 fmt_number(median(order_ms), 3) if order_ms else MISSING,
                 f"{stats.n_feasible[size]}/{stats.n_total[size]}",
             ))
@@ -662,13 +664,14 @@ def e5_section(tour_rows: Sequence[TourRow], metas: Sequence[RunMeta]) -> Sectio
                      "`held_karp`.")
     table = Table(
         headers=("Điểm giao", "Phương án", "Median Improvement %", "IQR Improvement %",
-                 "Median Gap %", "IQR Gap %", "Median order_ms", "Bộ khả thi"),
+                 "Median Gap %", "IQR Gap %", "p90 Gap %", "Max Gap %", "Median order_ms", "Bộ khả thi"),
         rows=tuple(table_rows),
         formulas=("Improvement% = 100·(C_input − C_phương_án)/C_input; Gap% = "
                   "100·(C_phương_án − C_held_karp)/C_held_karp — tính **từng bộ** rồi mới lấy "
                   "median và tứ phân vị theo n_stops (mục 8); thứ tự nhập là mốc của Improvement "
                   "còn Held–Karp là mốc của Gap. order_ms = order_ns / 1e6; IQR = [q1; q3], chỉ "
-                  "tính khi nhóm đủ 2 bộ khả thi."),
+                  "tính khi nhóm đủ 2 bộ khả thi; p90 nội suy tuyến tính giữa hai giá trị kề (như "
+                  "numpy mặc định); Max là bộ tệ nhất."),
         notes=tuple(notes),
     )
     run_ids = first_seen(r.run_id for r in tour_rows if r.run_id)
