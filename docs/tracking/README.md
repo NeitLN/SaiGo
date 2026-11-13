@@ -5,14 +5,14 @@
 | Muốn xem | Nơi xem |
 |---|---|
 | Bảng công việc (Todo / In Progress / In Review / Done), giờ ước lượng, tuần | [GitHub Project — SaiGo Delivery Plan](https://github.com/users/NeitLN/projects/3) |
-| Burndown theo giờ, thống kê theo tuần và theo thành viên (cập nhật mỗi ngày) | Issue ghim có nhãn [`tracking`](https://github.com/NeitLN/SaiGGo/issues?q=label%3Atracking) |
+| Burndown theo giờ, thống kê theo tuần và theo thành viên (cập nhật mỗi ngày) | Issue ghim có nhãn [`tracking`](https://github.com/NeitLN/SaiGo/issues?q=label%3Atracking) |
 | Tổng kết từng tuần | Bình luận tự động trong issue `tracking` sau khi tuần kết thúc (mỗi tuần một lần) |
-| Số liệu burndown đã chốt từng ngày | [`daily.csv`](https://github.com/NeitLN/SaiGGo/blob/tracking/daily.csv) trên branch `tracking` (chỉ ghi thêm); ảnh chụp mỗi lần chạy ở thư mục `history/` |
-| Các mốc và hạn | [Milestones](https://github.com/NeitLN/SaiGGo/milestones) |
-| Ai làm task nào | [Issues có nhãn `task`](https://github.com/NeitLN/SaiGGo/issues?q=label%3Atask), lọc theo Assignee |
-| Review giữa các thành viên | [Pull requests](https://github.com/NeitLN/SaiGGo/pulls?q=is%3Apr) |
-| Biên bản họp | [Issues có nhãn `meeting`](https://github.com/NeitLN/SaiGGo/issues?q=label%3Ameeting) |
-| Đóng góp commit | [Insights → Contributors](https://github.com/NeitLN/SaiGGo/graphs/contributors) |
+| Số liệu burndown đã chốt từng ngày | [`daily.csv`](https://github.com/NeitLN/SaiGo/blob/tracking/daily.csv) trên branch `tracking` (chỉ ghi thêm); ảnh chụp mỗi lần chạy ở thư mục `history/` |
+| Các mốc và hạn | [Milestones](https://github.com/NeitLN/SaiGo/milestones) |
+| Ai làm task nào | [Issues có nhãn `task`](https://github.com/NeitLN/SaiGo/issues?q=label%3Atask), lọc theo Assignee |
+| Review giữa các thành viên | [Pull requests](https://github.com/NeitLN/SaiGo/pulls?q=is%3Apr) |
+| Biên bản họp | [Issues có nhãn `meeting`](https://github.com/NeitLN/SaiGo/issues?q=label%3Ameeting) |
+| Đóng góp commit | [Insights → Contributors](https://github.com/NeitLN/SaiGo/graphs/contributors) |
 | Kế hoạch gốc và trạng thái kiểm chứng | [docs/ROADMAP.md](../ROADMAP.md), [docs/PROGRESS.md](../PROGRESS.md) |
 
 ## Burndown được tính thế nào

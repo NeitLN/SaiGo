@@ -9,22 +9,22 @@ Làm xong [ONBOARDING.md](../ONBOARDING.md) mục 1–5 trước; chạy `script
 
 | Thứ tự | Issue | Task | Dự kiến | Review bởi |
 |---|---|---|---|---|
-| 1 | [#4](https://github.com/NeitLN/SaiGGo/issues/4) | T02 · Thử OSMnx trên Windows | 23–24/10 | Tiến |
-| 2 | [#12](https://github.com/NeitLN/SaiGGo/issues/12) | T30 · Chốt vùng và tải dữ liệu một lần | 24–25/10 | Tiến |
-| 3 | [#13](https://github.com/NeitLN/SaiGGo/issues/13) | T31 · GraphML → `saigo-graph/1` + báo cáo kiểm tra (cùng Tiến) | 25–27/10 | Duy Anh |
-| 4 | [#14](https://github.com/NeitLN/SaiGGo/issues/14) | T32 · Vẽ mạng đường thật trên bản đồ | 27–28/10 | Tiến |
-| 5 | [#19](https://github.com/NeitLN/SaiGGo/issues/19) | T50 · Snap điểm về node | 31/10–01/11 | Tiến |
-| 6 | [#21](https://github.com/NeitLN/SaiGGo/issues/21) | T52 · UI chọn 2 điểm, 2 tuyến, bảng so sánh | 01–03/11 | Tiến |
-| 7 | [#26](https://github.com/NeitLN/SaiGGo/issues/26) | T61 · Cắt lồng nhau cho thí nghiệm tăng quy mô | 02–03/11 | Tiến |
-| 8 | [#22](https://github.com/NeitLN/SaiGGo/issues/22) | T53 · UI node mở rộng + kịch bản | 02–04/11 | Tiến |
-| 9 | [#23](https://github.com/NeitLN/SaiGGo/issues/23) | T54 · UI đóng đường + báo không có đường (cùng Tiến) | 03–04/11 | Duy Anh |
-| 10 | [#35](https://github.com/NeitLN/SaiGGo/issues/35) | T73 · UI tour (chỉ khi qua cổng G1) | 06–08/11 | Tiến |
-| 11 | [#39](https://github.com/NeitLN/SaiGGo/issues/39) | T82 · Tập demo + video dự phòng (cùng Bảo) | 10–12/11 | Tiến |
+| 1 | [#4](https://github.com/NeitLN/SaiGo/issues/4) | T02 · Thử OSMnx trên Windows | 23–24/10 | Tiến |
+| 2 | [#12](https://github.com/NeitLN/SaiGo/issues/12) | T30 · Chốt vùng và tải dữ liệu một lần | 24–25/10 | Tiến |
+| 3 | [#13](https://github.com/NeitLN/SaiGo/issues/13) | T31 · GraphML → `saigo-graph/1` + báo cáo kiểm tra (cùng Tiến) | 25–27/10 | Duy Anh |
+| 4 | [#14](https://github.com/NeitLN/SaiGo/issues/14) | T32 · Vẽ mạng đường thật trên bản đồ | 27–28/10 | Tiến |
+| 5 | [#19](https://github.com/NeitLN/SaiGo/issues/19) | T50 · Snap điểm về node | 31/10–01/11 | Tiến |
+| 6 | [#21](https://github.com/NeitLN/SaiGo/issues/21) | T52 · UI chọn 2 điểm, 2 tuyến, bảng so sánh | 01–03/11 | Tiến |
+| 7 | [#26](https://github.com/NeitLN/SaiGo/issues/26) | T61 · Cắt lồng nhau cho thí nghiệm tăng quy mô | 02–03/11 | Tiến |
+| 8 | [#22](https://github.com/NeitLN/SaiGo/issues/22) | T53 · UI node mở rộng + kịch bản | 02–04/11 | Tiến |
+| 9 | [#23](https://github.com/NeitLN/SaiGo/issues/23) | T54 · UI đóng đường + báo không có đường (cùng Tiến) | 03–04/11 | Duy Anh |
+| 10 | [#35](https://github.com/NeitLN/SaiGo/issues/35) | T73 · UI tour (chỉ khi qua cổng G1) | 06–08/11 | Tiến |
+| 11 | [#39](https://github.com/NeitLN/SaiGo/issues/39) | T82 · Tập demo + video dự phòng (cùng Bảo) | 10–12/11 | Tiến |
 
-Thêm: phần của mình trong [#31](https://github.com/NeitLN/SaiGGo/issues/31) (T65) và [#40](https://github.com/NeitLN/SaiGGo/issues/40) (T83).
-Danh sách luôn cập nhật: [issue được giao cho bạn](https://github.com/NeitLN/SaiGGo/issues?q=is%3Aopen+assignee%3AJayson135724).
+Thêm: phần của mình trong [#31](https://github.com/NeitLN/SaiGo/issues/31) (T65) và [#40](https://github.com/NeitLN/SaiGo/issues/40) (T83).
+Danh sách luôn cập nhật: [issue được giao cho bạn](https://github.com/NeitLN/SaiGo/issues?q=is%3Aopen+assignee%3AJayson135724).
 
-**Bạn review:** [#15](https://github.com/NeitLN/SaiGGo/issues/15) T33 (Duy Anh + Tiến); mọi PR đụng `frontend/`, `data/`, `scripts/prepare_data.py`, `scripts/make_crops.py` (CODEOWNERS tự gửi yêu cầu).
+**Bạn review:** [#15](https://github.com/NeitLN/SaiGo/issues/15) T33 (Duy Anh + Tiến); mọi PR đụng `frontend/`, `data/`, `scripts/prepare_data.py`, `scripts/make_crops.py` (CODEOWNERS tự gửi yêu cầu).
 
 ## Đọc trước
 

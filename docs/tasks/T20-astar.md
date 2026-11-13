@@ -1,8 +1,8 @@
 # T20 — A* với heuristic địa lý
 
-**Trạng thái: ✅ đã merge 26/10 ([#62](https://github.com/NeitLN/SaiGGo/pull/62)).** Bằng chứng: bảng `expanded` trong PR khớp cả 6 tình huống tính tay.
+**Trạng thái: ✅ đã merge 26/10 ([#62](https://github.com/NeitLN/SaiGo/pull/62)).** Bằng chứng: bảng `expanded` trong PR khớp cả 6 tình huống tính tay.
 
-Tuần mục tiêu: 2 (30–31/10) · Giao cho: Tiến (thay Duy Anh) · Nhánh: `t20-astar` · Issue: [#9](https://github.com/NeitLN/SaiGGo/issues/9)
+Tuần mục tiêu: 2 (30–31/10) · Giao cho: Tiến (thay Duy Anh) · Nhánh: `t20-astar` · Issue: [#9](https://github.com/NeitLN/SaiGo/issues/9)
 Review: Minh · Người tích hợp: Tiến
 Phụ thuộc: T11 và T10 (**bắt đầu**; đã merge #59, #58) · kiểm thứ tự ID cạnh trong `load_graph` (PR nhỏ, làm trước) · Ước lượng: 3 giờ
 

@@ -1,6 +1,6 @@
 # T15 — Chạy walking skeleton trên máy thứ hai
 
-Tuần mục tiêu: 2 (29/10) · Giao cho: Bảo · Nhánh: `t15-second-machine` (chỉ khi cần sửa tài liệu) · Issue: [#51](https://github.com/NeitLN/SaiGGo/issues/51)
+Tuần mục tiêu: 2 (29/10) · Giao cho: Bảo · Nhánh: `t15-second-machine` (chỉ khi cần sửa tài liệu) · Issue: [#51](https://github.com/NeitLN/SaiGo/issues/51)
 Review: Tiến · Người tích hợp: Tiến
 Phụ thuộc: T13 và T14 **đã merge vào `main`** (**bắt đầu**) · Ước lượng: 2 giờ
 

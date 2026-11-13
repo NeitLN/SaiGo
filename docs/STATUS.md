@@ -1,5 +1,5 @@
 # STATUS
-Cập nhật: 26/10/2026, chiều · Người tích hợp: Tiến · Đọc file này đầu mỗi session; giữ ≤ 100 dòng, ghi đè mỗi cuối session.
+Cập nhật: 28/10/2026 · Người tích hợp: Tiến · Đọc file này đầu mỗi session; giữ ≤ 100 dòng, ghi đè mỗi cuối session.
 
 Bộ nhớ dự án: mục tiêu/phạm vi/deadline ở [PROJECT_BRIEF.md](PROJECT_BRIEF.md) · quyết định kỹ thuật ở [ARCHITECTURE.md](ARCHITECTURE.md) và [DATA_MODEL.md](DATA_MODEL.md) · mốc, quyết định đắt nếu đổi, kế hoạch tuần ở [ROADMAP.md](ROADMAP.md) · từng task ở [TASKS.md](TASKS.md) + GitHub Issues · bằng chứng chi tiết và lỗi tồn tại ở [PROGRESS.md](PROGRESS.md).
 
@@ -15,7 +15,8 @@ Bộ nhớ dự án: mục tiêu/phạm vi/deadline ở [PROJECT_BRIEF.md](PROJE
 - **Chưa biết:** máy thứ hai build lại dữ liệu có ra cùng sha256 không; Python chạy đồ thị lớn nhất mất bao lâu.
 
 ## Đang ở đâu
-- **Chiều 26/10 Duy Anh quay lại** và merge 10 PR (#64–#73). Phần thuật toán và khung thực nghiệm gần như đã xong trên fixture; đường găng giờ là **dữ liệu thật (T34)** và **bản đồ (T14 → T52–T54)**.
+- **Chiều 26/10 Duy Anh quay lại** và merge 12 PR (#64–#76), gồm cả T13 (API skeleton) và T50 (snap) vốn giao cho Minh. Phần thuật toán và khung thực nghiệm gần như đã xong trên fixture; đường găng giờ là **dữ liệu thật (T34)** và **bản đồ (T14 → T52–T54)**.
+- **Repo đã đổi tên thành `NeitLN/SaiGo`.** GitHub tự chuyển hướng link cũ khi xem, nhưng thao tác ghi qua API thì không; script và link trong repo đã sửa theo tên mới. Máy ai đã clone thì chạy `git remote set-url origin https://github.com/NeitLN/SaiGo.git`.
 - **26/10, lịch sử `main` đã được viết lại** để bỏ 2 dòng đồng tác giả ngoài nhóm. Ai clone trước đó: `git fetch origin; git switch main; git reset --hard origin/main`.
 - Chờ review / merge:
   - PR đồng bộ phạm vi (branch `t07b-sync-scope`): tài liệu theo quyết định 26/10.
@@ -61,5 +62,5 @@ Bộ nhớ dự án: mục tiêu/phạm vi/deadline ở [PROJECT_BRIEF.md](PROJE
 - Đồng bộ backlog: `create_backlog.py --sync`, `setup_project.py --sync`
 
 ## Tài liệu lệch với code / với quyết định
-- [ARCHITECTURE.md](ARCHITECTURE.md) mục 3 và 4 mô tả file/API **dự kiến**. API có `/api/health` và `/api/route` (skeleton, `services/routing.py`); chưa có `cli.py`, `snap.py`.
+- [ARCHITECTURE.md](ARCHITECTURE.md) mục 3 và 4 viết từ kế hoạch. Trên `main` (14/11): API có `/api/health`, `/api/dataset`, `/api/route`, `/api/tour`; `/api/route` snap bằng `graph/snap.nearest_node` (ngưỡng 150 m, T51); đã có `cli.py`. Phần còn lại của file này dừng ở 28/10, viết lại ở T81.
 - Issue trên GitHub (người làm, mô tả T32/T53/T54/T61/T62/G1) còn theo kế hoạch cũ cho tới khi chạy `--sync` sau PR đồng bộ. Khi lệch, TASKS.md được ưu tiên.

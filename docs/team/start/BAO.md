@@ -9,15 +9,15 @@ Làm xong [ONBOARDING.md](../ONBOARDING.md) mục 1–5 trước. Mục 2 (đặ
 
 | Thứ tự | Issue | Task | Dự kiến | Review bởi |
 |---|---|---|---|---|
-| 1 | [#5](https://github.com/NeitLN/SaiGGo/issues/5) | T03 · Bảng kết quả tính tay cho đồ thị mẫu | 23–24/10 | Duy Anh |
-| 2 | [#18](https://github.com/NeitLN/SaiGGo/issues/18) | T42 · Kịch bản ùn tắc cho demo | 30–31/10 | Tiến |
-| 3 | [#24](https://github.com/NeitLN/SaiGGo/issues/24) | T55 · Case demo + kiểm thử thủ công | 04/11 | Tiến |
-| 4 | [#29](https://github.com/NeitLN/SaiGGo/issues/29) | T64 · Vẽ biểu đồ | 04–06/11 | Tiến |
-| 5 | [#37](https://github.com/NeitLN/SaiGGo/issues/37) | T80 · Đóng băng tính năng + chạy trên máy thứ hai | 10/11 | Tiến |
-| 6 | [#39](https://github.com/NeitLN/SaiGGo/issues/39) | T82 · Tập demo + video dự phòng (cùng Minh) | 10–12/11 | Tiến |
+| 1 | [#5](https://github.com/NeitLN/SaiGo/issues/5) | T03 · Bảng kết quả tính tay cho đồ thị mẫu | 23–24/10 | Duy Anh |
+| 2 | [#18](https://github.com/NeitLN/SaiGo/issues/18) | T42 · Kịch bản ùn tắc cho demo | 30–31/10 | Tiến |
+| 3 | [#24](https://github.com/NeitLN/SaiGo/issues/24) | T55 · Case demo + kiểm thử thủ công | 04/11 | Tiến |
+| 4 | [#29](https://github.com/NeitLN/SaiGo/issues/29) | T64 · Vẽ biểu đồ | 04–06/11 | Tiến |
+| 5 | [#37](https://github.com/NeitLN/SaiGo/issues/37) | T80 · Đóng băng tính năng + chạy trên máy thứ hai | 10/11 | Tiến |
+| 6 | [#39](https://github.com/NeitLN/SaiGo/issues/39) | T82 · Tập demo + video dự phòng (cùng Minh) | 10–12/11 | Tiến |
 
-Thêm: phần của mình trong [#31](https://github.com/NeitLN/SaiGGo/issues/31) (T65) và [#40](https://github.com/NeitLN/SaiGGo/issues/40) (T83).
-Danh sách luôn cập nhật: [issue được giao cho bạn](https://github.com/NeitLN/SaiGGo/issues?q=is%3Aopen+assignee%3Adobaovlu).
+Thêm: phần của mình trong [#31](https://github.com/NeitLN/SaiGo/issues/31) (T65) và [#40](https://github.com/NeitLN/SaiGo/issues/40) (T83).
+Danh sách luôn cập nhật: [issue được giao cho bạn](https://github.com/NeitLN/SaiGo/issues?q=is%3Aopen+assignee%3Adobaovlu).
 
 **Bạn review:** PR đụng `docs/`, `data/demo/`, `tests/fixtures/`, `scripts/plot_results.py` (CODEOWNERS tự gửi yêu cầu). Khi review tài liệu, kiểm tra: lệnh trong tài liệu có chạy được không, link có mở được không, có chỗ nào khó hiểu không.
 

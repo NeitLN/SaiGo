@@ -9,20 +9,20 @@ Làm xong [ONBOARDING.md](../ONBOARDING.md) mục 1–5 trước.
 
 | Thứ tự | Issue | Task | Dự kiến | Review bởi |
 |---|---|---|---|---|
-| 1 | [#3](https://github.com/NeitLN/SaiGGo/issues/3) | T01 · Định dạng đồ thị, fixture mẫu, bộ nạp Graph | 23–24/10 | Tiến |
-| 2 | [#6](https://github.com/NeitLN/SaiGGo/issues/6) | T10 · Hàm địa lý (haversine, trung điểm) | 24–25/10 | Tiến |
-| 3 | [#7](https://github.com/NeitLN/SaiGGo/issues/7) | T11 · Dijkstra + SearchResult | 24–26/10 | Tiến |
-| 4 | [#9](https://github.com/NeitLN/SaiGGo/issues/9) | T20 · A* + heuristic địa lý | 26–27/10 | Tiến |
-| 5 | [#10](https://github.com/NeitLN/SaiGGo/issues/10) | T21 · Đối chứng NetworkX trên đồ thị ngẫu nhiên | 27–28/10 | Tiến |
-| 6 | [#11](https://github.com/NeitLN/SaiGGo/issues/11) | T22 · Kiểm tra điều kiện heuristic | 27–28/10 | Tiến |
-| 7 | [#15](https://github.com/NeitLN/SaiGGo/issues/15) | T33 · Dữ liệu thật + đối chứng 200 cặp (cùng Tiến) | 28–29/10 | Minh |
-| 8 | [#32](https://github.com/NeitLN/SaiGGo/issues/32) | T70 · Tour trên ma trận: NN, 2-opt có hướng | 29–31/10 | Tiến |
-| 9 | [#33](https://github.com/NeitLN/SaiGGo/issues/33) | T71 · Held–Karp | 31/10–02/11 | Tiến |
+| 1 | [#3](https://github.com/NeitLN/SaiGo/issues/3) | T01 · Định dạng đồ thị, fixture mẫu, bộ nạp Graph | 23–24/10 | Tiến |
+| 2 | [#6](https://github.com/NeitLN/SaiGo/issues/6) | T10 · Hàm địa lý (haversine, trung điểm) | 24–25/10 | Tiến |
+| 3 | [#7](https://github.com/NeitLN/SaiGo/issues/7) | T11 · Dijkstra + SearchResult | 24–26/10 | Tiến |
+| 4 | [#9](https://github.com/NeitLN/SaiGo/issues/9) | T20 · A* + heuristic địa lý | 26–27/10 | Tiến |
+| 5 | [#10](https://github.com/NeitLN/SaiGo/issues/10) | T21 · Đối chứng NetworkX trên đồ thị ngẫu nhiên | 27–28/10 | Tiến |
+| 6 | [#11](https://github.com/NeitLN/SaiGo/issues/11) | T22 · Kiểm tra điều kiện heuristic | 27–28/10 | Tiến |
+| 7 | [#15](https://github.com/NeitLN/SaiGo/issues/15) | T33 · Dữ liệu thật + đối chứng 200 cặp (cùng Tiến) | 28–29/10 | Minh |
+| 8 | [#32](https://github.com/NeitLN/SaiGo/issues/32) | T70 · Tour trên ma trận: NN, 2-opt có hướng | 29–31/10 | Tiến |
+| 9 | [#33](https://github.com/NeitLN/SaiGo/issues/33) | T71 · Held–Karp | 31/10–02/11 | Tiến |
 
-Thêm: viết phần của mình trong [#31](https://github.com/NeitLN/SaiGGo/issues/31) (T65, kết quả) và [#40](https://github.com/NeitLN/SaiGGo/issues/40) (T83, essay).
-Danh sách luôn cập nhật: [issue được giao cho bạn](https://github.com/NeitLN/SaiGGo/issues?q=is%3Aopen+assignee%3Aanh7032).
+Thêm: viết phần của mình trong [#31](https://github.com/NeitLN/SaiGo/issues/31) (T65, kết quả) và [#40](https://github.com/NeitLN/SaiGo/issues/40) (T83, essay).
+Danh sách luôn cập nhật: [issue được giao cho bạn](https://github.com/NeitLN/SaiGo/issues?q=is%3Aopen+assignee%3Aanh7032).
 
-**Bạn review:** [#5](https://github.com/NeitLN/SaiGGo/issues/5) T03 của Bảo (đáp án tính tay; T11 dùng file này), các PR của Tiến (PR #43, PR onboarding, T12, T40, T41, T51, T60…). CODEOWNERS tự gửi yêu cầu review cho bạn ở `backend/app/algorithms/` và `backend/app/graph/`.
+**Bạn review:** [#5](https://github.com/NeitLN/SaiGo/issues/5) T03 của Bảo (đáp án tính tay; T11 dùng file này), các PR của Tiến (PR #43, PR onboarding, T12, T40, T41, T51, T60…). CODEOWNERS tự gửi yêu cầu review cho bạn ở `backend/app/algorithms/` và `backend/app/graph/`.
 
 ## Đọc trước
 
@@ -54,7 +54,7 @@ Danh sách luôn cập nhật: [issue được giao cho bạn](https://github.co
    - Mọi cạnh có `haversine(u, v) ≤ length_m` (dùng tạm công thức tự viết trong test; T10 sẽ có hàm chung).
    - File có `speed_kmh: 0` bị từ chối.
 4. Chạy `.venv\Scripts\python.exe -m pytest tests/test_graph_model.py -q`, mở PR `Closes #3`.
-5. **Phối hợp:** khi PR được merge, bình luận vào [#13](https://github.com/NeitLN/SaiGGo/issues/13) (T31 của Minh) rằng định dạng đã chốt, kèm link file. Minh xuất dữ liệu thật đúng định dạng này.
+5. **Phối hợp:** khi PR được merge, bình luận vào [#13](https://github.com/NeitLN/SaiGo/issues/13) (T31 của Minh) rằng định dạng đã chốt, kèm link file. Minh xuất dữ liệu thật đúng định dạng này.
 
 **Bẫy chung:** không chuyển đồ thị sang vô hướng; cạnh song song phải có ID riêng; km/h ÷ 3,6 = m/s; trong JSON, `geometry` là `[lon, lat]` còn node là `lat`/`lon` có tên trường.
 

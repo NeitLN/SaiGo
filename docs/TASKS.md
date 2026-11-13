@@ -348,7 +348,8 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 ## M6 — Bản đồ tương tác
 
 ### T50 — Snap điểm về node
-- 👤 Minh (Tiến hỗ trợ) · ⏱ 2 h · ⛓ T10, T31
+- 👤 Duy Anh (Minh review) · ⏱ 2 h · ⛓ T10, T31
+- **26/10:** Duy Anh làm thay Minh (#76): hàm `nearest_node` và test. API chuyển từ `nearest_node_naive` sang hàm này ở T51.
 - **Việc cần làm:** thay hàm `nearest_node_naive(graph, meta, lat, lon)` của T13 bằng `nearest_node(graph, meta, lat, lon, max_m=150)` chỉ trên node có `meta.node_in_scc`; trả `node_id`, `snap_distance_m`; lỗi rõ ràng khi quá xa/ngoài vùng; test trên fixture.
 - 📁 `backend/app/graph/snap.py`, `tests/test_snap.py`
 - 📦 Hàm snap · ✅ Test xanh · ▶ `pytest tests/test_snap.py -q`

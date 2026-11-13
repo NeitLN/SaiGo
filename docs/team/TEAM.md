@@ -9,7 +9,7 @@
 
 Bắt đầu làm việc: [ONBOARDING.md](ONBOARDING.md) (cài đặt, quy trình) và phiếu riêng trong [start/](start/).
 
-Phân công chi tiết từng task: tab [Issues](https://github.com/NeitLN/SaiGGo/issues?q=label%3Atask) (lọc theo người được giao) hoặc [Project](https://github.com/users/NeitLN/projects/3).
+Phân công chi tiết từng task: tab [Issues](https://github.com/NeitLN/SaiGo/issues?q=label%3Atask) (lọc theo người được giao) hoặc [Project](https://github.com/users/NeitLN/projects/3).
 
 ## Cam kết làm việc [Đề xuất — cả nhóm xác nhận ở buổi họp đầu]
 

@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import re
 import subprocess
 import sys
@@ -27,7 +28,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-REPO = "NeitLN/SaiGGo"
+REPO = os.environ.get("GITHUB_REPOSITORY", "NeitLN/SaiGo")
 TASKS_URL = f"https://github.com/{REPO}/blob/main/docs/TASKS.md"
 
 PEOPLE = {

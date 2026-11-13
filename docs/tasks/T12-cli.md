@@ -1,6 +1,6 @@
 # T12 — CLI tìm đường (có cả A*)
 
-Tuần mục tiêu: 2 (30–31/10) · Giao cho: Bảo (thay Tiến, vì Tiến nhận thêm T11, T20) · Nhánh: `t12-cli` · Issue: [#8](https://github.com/NeitLN/SaiGGo/issues/8)
+Tuần mục tiêu: 2 (30–31/10) · Giao cho: Bảo (thay Tiến, vì Tiến nhận thêm T11, T20) · Nhánh: `t12-cli` · Issue: [#8](https://github.com/NeitLN/SaiGo/issues/8)
 Review: Tiến · Người tích hợp: Tiến
 Phụ thuộc: T11 (**bắt đầu**; đã merge #59) · T13 (**tích hợp**: `--from-latlon` dùng hàm snap của T13; làm phần tên node trước) · T20 (**chấp nhận**: chỉ tính là xong khi gọi được cả A*) · Ước lượng: 2 giờ
 
