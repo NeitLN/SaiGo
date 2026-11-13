@@ -2,25 +2,33 @@
 
     python -m app.cli route --graph tests/fixtures/mini.json --from S --to T --algo both
     python -m app.cli route --graph <file> --from-latlon 10.7725,106.6980 --to-latlon 10.7730,106.7050
+    python -m app.cli route --graph <file> --from S --to T --scenario peak-center --block 12 13
+    python -m app.cli check-heuristic --graph data/processed/<file>.json
 
-Thời gian chạy đo bằng perf_counter_ns chỉ quanh lời gọi thuật toán (dùng chung `_run_algorithm`
-với API), không tính phần nạp đồ thị hay snap tọa độ.
+`route` dựng snapshot bằng kịch bản ùn tắc + danh sách cạnh đóng (T40); `check-heuristic` kiểm
+điều kiện độ dài của heuristic A* trên đồ thị (T22, docs/DATA_MODEL.md mục 5.1). Thời gian chạy đo
+bằng perf_counter_ns chỉ quanh lời gọi thuật toán (dùng chung `_run_algorithm` với API), không tính
+phần nạp đồ thị hay snap tọa độ.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
-from app.algorithms.heuristics import geo_scale
+from app.algorithms.heuristics import geo_scale, heuristic_report
 from app.algorithms.result import SearchResult
+from app.graph.closures import validate_blocked
 from app.graph.model import Graph, GraphMeta, load_graph, node_by_name
-from app.graph.scenario import baseline_snapshot
+from app.graph.scenario import build_snapshot, load_scenarios
 from app.graph.snap import nearest_node
 from app.services.routing import _run_algorithm
 
 ALGOS = {"dijkstra": ["dijkstra"], "astar": ["astar"], "both": ["dijkstra", "astar"]}
 LABEL = {"dijkstra": "Dijkstra", "astar": "A*"}
+# Gốc repo tính từ backend/app/cli.py; mặc định đọc đúng file kịch bản đã commit.
+DEFAULT_SCENARIO_FILE = Path(__file__).resolve().parents[2] / "data" / "config" / "scenarios.json"
 
 
 def _latlon(text: str) -> tuple[float, float]:
@@ -64,11 +72,48 @@ def costs_match(a: SearchResult, b: SearchResult) -> bool:
     return a.status == b.status
 
 
+def cmd_check_heuristic(args: argparse.Namespace) -> int:
+    """In báo cáo điều kiện độ dài heuristic (DATA_MODEL 5.1): v_max, c, vi phạm, cạnh tệ nhất."""
+    try:
+        graph, _ = load_graph(args.graph)
+    except (OSError, ValueError) as exc:
+        print(f"Lỗi: không nạp được đồ thị {args.graph}: {exc}", file=sys.stderr)
+        return 2
+    report = heuristic_report(graph)
+    print(f"Đồ thị: {graph.dataset_id} ({len(graph.node_lat)} node, {len(graph.edge_u)} cạnh)")
+    print(f"v_max: {report.v_max_mps:.6f} m/s ({report.v_max_mps * 3.6:.1f} km/h)")
+    print(f"c: {report.c:.10f}")
+    print(f"Số cạnh vi phạm (length < haversine − 1 mm): {report.n_violations}")
+    if report.worst:
+        print("Cạnh tệ nhất (tối đa 5, tỉ lệ length/haversine nhỏ nhất):")
+        for v in report.worst:
+            print(f"  cạnh {v.edge_id}: length {v.length_m:.3f} m · "
+                  f"haversine {v.haversine_m:.3f} m · tỉ lệ {v.ratio:.6f}")
+    if report.c < 0.999:
+        print(f"Cảnh báo: c = {report.c:.6f} < 0.999 — điều tra cạnh vi phạm (DATA_MODEL 5.1).")
+    return 0
+
+
 def cmd_route(args: argparse.Namespace) -> int:
     try:
         graph, meta = load_graph(args.graph)
     except (OSError, ValueError) as exc:
         print(f"Lỗi: không nạp được đồ thị {args.graph}: {exc}", file=sys.stderr)
+        return 2
+    try:
+        scenarios = load_scenarios(args.scenario_file)
+    except (OSError, ValueError) as exc:
+        print(f"Lỗi: không nạp được file kịch bản {args.scenario_file}: {exc}", file=sys.stderr)
+        return 2
+    scenario = scenarios.get(args.scenario)
+    if scenario is None:
+        print(f"Lỗi: không có kịch bản {args.scenario!r}; các kịch bản đang có: "
+              f"{', '.join(scenarios)}", file=sys.stderr)
+        return 2
+    try:
+        blocked = validate_blocked(graph, args.block)
+    except ValueError as exc:
+        print(f"Lỗi: {exc}", file=sys.stderr)
         return 2
     # Tính sẵn c (duyệt mọi cạnh, có cache) để thời gian đo của A* không tính bước này.
     geo_scale(graph)
@@ -82,8 +127,9 @@ def cmd_route(args: argparse.Namespace) -> int:
     print(f"Đồ thị: {graph.dataset_id} ({len(graph.node_lat)} node, {len(graph.edge_u)} cạnh)")
     print(f"Từ: {s_desc}")
     print(f"Đến: {t_desc}")
+    print(f"Kịch bản: {scenario.id} · đóng: {', '.join(map(str, sorted(blocked))) or 'không'}")
 
-    snap = baseline_snapshot(graph)
+    snap = build_snapshot(graph, meta, scenario, blocked)
     results = {}
     for algo in ALGOS[args.algo]:
         res, runtime_ms = _run_algorithm(algo, graph, snap, s, t, trace_limit=0)
@@ -109,7 +155,19 @@ def build_parser() -> argparse.ArgumentParser:
     dst.add_argument("--to", dest="target", help="tên node điểm đến")
     dst.add_argument("--to-latlon", type=_latlon, help="tọa độ điểm đến, dạng lat,lon")
     route.add_argument("--algo", choices=list(ALGOS), default="both", help="thuật toán (mặc định: both)")
+    route.add_argument("--scenario", default="baseline",
+                       help="id kịch bản ùn tắc trong file kịch bản (mặc định: baseline)")
+    route.add_argument("--scenario-file", default=str(DEFAULT_SCENARIO_FILE),
+                       help="file kịch bản JSON (mặc định: data/config/scenarios.json ở gốc repo)")
+    route.add_argument("--block", type=int, nargs="+", default=[], metavar="EDGE_ID",
+                       help="id cạnh có hướng bị đóng (có thể truyền nhiều id)")
     route.set_defaults(func=cmd_route)
+
+    check = sub.add_parser("check-heuristic",
+                           help="kiểm tra điều kiện độ dài của heuristic A* trên đồ thị")
+    check.add_argument("--graph", required=True,
+                       help="file đồ thị JSON (ví dụ data/processed/<file>.json)")
+    check.set_defaults(func=cmd_check_heuristic)
     return parser
 
 
