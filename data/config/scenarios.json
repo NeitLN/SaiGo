@@ -1,6 +1,6 @@
 {
   "format": "saigo-scenarios/1",
-  "_comment": "Kịch bản ùn tắc mô phỏng (docs/DATA_MODEL.md mục 4.1), dùng cho demo trên đồ thị hcm-benthanh-r2000-20261024 (T42). Hệ số alpha là giả định, không phải số đo giao thông. Kịch bản thử trên fixture nằm ở tests/fixtures/scenarios_mini.json.",
+  "_comment": "Kịch bản ùn tắc mô phỏng (docs/DATA_MODEL.md mục 4.1), dùng cho demo trên đồ thị hcm-benthanh-r2000-20261024 (T42) và hcm-benthanh-r4500-20261024 (O17). Hệ số alpha là giả định, không phải số đo giao thông. Kịch bản thử trên fixture nằm ở tests/fixtures/scenarios_mini.json.",
   "scenarios": [
     {
       "id": "baseline",
