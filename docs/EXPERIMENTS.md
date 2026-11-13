@@ -69,8 +69,9 @@ Tiền xử lý ALT: 29,7 ms và 0,24 MB (2 km); 365,9 ms và 1,30 MB (4,5 km). 
 
 **Diễn giải (không phải số đo):**
 
-- Heuristic càng chặt thì mở càng ít node (ALT < A* < hai chiều < Dijkstra ở mọi ô), nhưng thời gian chỉ giảm khi phần tiết kiệm lớn hơn chi phí mỗi node: ở tầng ngắn ALT **chậm hơn** Dijkstra 2–2,5 lần (s = 0,39–0,44) dù mở ít node nhất.
-- ALT có lợi rõ nhất ở chuyến dài trên bản đồ lớn (s = 2,67 ở 4,5 km), đúng nơi E2 thấy A* gần như không giúp. Đây là một run trên một máy; không suy ra cho đồ thị khác.
+- Số node mở rộng giảm theo thứ tự Dijkstra > hai chiều > A* > ALT ở mọi ô. Hai chiều giảm nhờ tìm từ cả hai đầu (không dùng heuristic); A* và ALT giảm nhờ heuristic, và heuristic landmark của ALT trên các cặp này chặt hơn heuristic địa lý của A* (thấy qua số node; không đúng cho mọi cặp nút).
+- Ít node hơn chưa chắc nhanh hơn: thời gian chỉ giảm khi phần tiết kiệm lớn hơn chi phí thêm cho mỗi node. Ở tầng ngắn, ALT **chậm hơn** Dijkstra khoảng 2,3–2,6 lần (s = 0,44 và 0,39) dù mở ít node nhất.
+- Trên vùng 2 km (cùng kích thước vùng của E2), tầng dài: A* s = 1,06, gần như không nhanh hơn, khớp với E2; ALT s = 1,94. Lợi lớn nhất của ALT là ở vùng 4,5 km, tầng dài (s = 2,67; A* ở đó s = 1,27). Đây là một run trên một máy; không suy ra cho đồ thị khác.
 - Kết luận cho essay: số node mở rộng và thời gian truy vấn là hai thước đo khác nhau; chọn thuật toán phụ thuộc độ dài chuyến đi và việc có chấp nhận tiền xử lý hay không.
 
 ## E3 — Đồ thị cho thí nghiệm tăng quy mô (T61)
