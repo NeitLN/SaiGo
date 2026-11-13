@@ -98,14 +98,17 @@ export interface TourRequest {
   scenario_id?: string
   blocked_edge_ids?: number[]
   include_optimal?: boolean
+  keep_order?: string[] // R1 C1: thứ tự id điểm giao trước khi đóng đường
 }
 
-export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt'
+// kept_order chỉ có khi request gửi keep_order (R1 C2); không bao giờ là `chosen`.
+export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt' | 'kept_order'
 
 export const TOUR_METHOD_LABEL: Record<TourMethod, string> = {
   input: 'Thứ tự nhập',
   nearest_neighbor: 'Nearest Neighbor',
   nearest_neighbor_2opt: 'NN + 2-opt',
+  kept_order: 'Giữ thứ tự cũ',
 }
 
 export interface TourCandidate {
@@ -115,6 +118,8 @@ export interface TourCandidate {
   improvement_pct: number
   edge_ids: number[]
   geometry: LineString
+  edge_twin_ids?: (number | null)[]        // R1 C3, cùng định nghĩa với /api/route
+  edge_geometries?: [number, number][][]
 }
 
 export interface TourResponse {

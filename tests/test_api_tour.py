@@ -299,6 +299,19 @@ def test_real_close_mid_edge_of_tour_keeps_and_reorders(demo_client):
         assert not set(blocked) & set(cand["edge_ids"])
 
 
+def test_real_demo_closure_edge_1666_matches_case(demo_client):
+    """Bước 10 của demo: số ghi trong cases.json (expected.close_edge_1666) đúng với API."""
+    body, case = demo_case("kho-5-diem")
+    exp = case["expected"]["close_edge_1666"]
+    r = demo_client.post("/api/tour", json={**body, "blocked_edge_ids": exp["blocked_edge_ids"],
+                                            "keep_order": case["expected"]["baseline"]["nn_2opt_order"]}).json()
+    c = r["candidates"]
+    assert c["kept_order"]["cost_s"] == pytest.approx(exp["kept_order"], abs=0.05)
+    assert r["chosen"] == exp["chosen"]
+    assert c["nearest_neighbor_2opt"]["cost_s"] == pytest.approx(exp["nearest_neighbor_2opt"], abs=0.05)
+    assert c["nearest_neighbor_2opt"]["stop_order"] == exp["nn_2opt_order"]
+
+
 def test_real_infeasible_case_names_unreachable_stop(demo_client):
     """C7: case 'tour-khong-kha-thi' đóng cạnh duy nhất vào Nhà hát Thành phố (p2)."""
     body, case = demo_case("tour-khong-kha-thi")

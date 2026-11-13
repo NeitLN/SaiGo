@@ -10,7 +10,16 @@ import { VStack } from '@astryxdesign/core/VStack'
 import { TOUR_METHOD_LABEL, type TourMethod, type TourResponse } from './api'
 import { num, seconds } from './RouteResults'
 
-const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt']
+// kept_order chỉ có sau khi đóng đường (R1 C6): thứ tự cũ đi lại trên đường hiện tại, để so với việc sắp lại.
+const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order']
+
+/** Điểm giao không tới được từ kho hoặc không quay về được kho (R1 C4); đủ để nêu tên, vì tour khép kín qua kho. */
+function brokenStops(unreachable: { from_id: string; to_id: string }[]): { noReach: string[]; noReturn: string[] } {
+  return {
+    noReach: unreachable.filter((p) => p.from_id === 'depot').map((p) => p.to_id),
+    noReturn: unreachable.filter((p) => p.to_id === 'depot').map((p) => p.from_id),
+  }
+}
 
 export default function TourResults({ res, labels, selected, onSelect }: {
   res: TourResponse
@@ -20,10 +29,17 @@ export default function TourResults({ res, labels, selected, onSelect }: {
 }) {
   const name = (id: string) => labels[id] ?? id
   if (res.status === 'infeasible_under_model') {
+    const { noReach, noReturn } = brokenStops(res.unreachable)
     return (
       <Banner status="error" title="Không lập được tour đầy đủ" collapsible={false}
         description="Có chặng không đi được trong kịch bản này, nên không hiện tour thiếu điểm.">
         <VStack gap={1}>
+          {noReach.length > 0 && (
+            <Text type="body" weight="semibold">Không tới được từ kho: {noReach.map(name).join(', ')}</Text>
+          )}
+          {noReturn.length > 0 && (
+            <Text type="body" weight="semibold">Không quay về được kho: {noReturn.map(name).join(', ')}</Text>
+          )}
           {res.unreachable.map((p) => (
             <Text key={`${p.from_id}-${p.to_id}`} type="body">Không đi được: {name(p.from_id)} → {name(p.to_id)}</Text>
           ))}
@@ -46,6 +62,9 @@ export default function TourResults({ res, labels, selected, onSelect }: {
               </HStack>
               <Text type="body">Thời gian di chuyển ước tính: {seconds(c.cost_s)}</Text>
               <Text type="body">Quãng đường: {num(c.distance_m, 0)} m</Text>
+              {m === 'kept_order' && (
+                <Text type="supporting">Thứ tự trước khi đóng đường, mỗi chặng tìm lại trên đường hiện tại.</Text>
+              )}
               {m !== 'input' && <Text type="body">Cải thiện so với thứ tự nhập: {num(c.improvement_pct)}%</Text>}
               <Text type="supporting">Thứ tự: {c.stop_order.map(name).join(' → ')}</Text>
               <Button label={isSelected ? 'Đang hiển thị' : 'Xem trên bản đồ'} size="sm"

@@ -51,11 +51,19 @@ export interface RouteSegment {
   latlngs: L.LatLng[]
 }
 
+/** Phần chung của một tuyến hai điểm và một phương án tour: danh sách cạnh kèm hình học từng cạnh. */
+interface EdgePath {
+  status?: string
+  edge_ids?: number[]
+  edge_twin_ids?: (number | null)[]
+  edge_geometries?: [number, number][][]
+}
+
 /** Tách tuyến thành từng cạnh theo `edge_geometries` (T54, #100): phần tử i là hình học của `edge_ids[i]`. */
-export function routeSegments(r: AlgorithmResult): RouteSegment[] {
+export function routeSegments(r: EdgePath): RouteSegment[] {
   const ids = r.edge_ids ?? []
   const geoms = r.edge_geometries ?? []
-  if (r.status !== 'ok' || geoms.length !== ids.length) return []
+  if ((r.status !== undefined && r.status !== 'ok') || geoms.length !== ids.length) return []
   return ids.map((edgeId, i) => ({ edgeId, twinId: r.edge_twin_ids?.[i] ?? null, latlngs: toLatLngs(geoms[i]) }))
 }
 
@@ -160,36 +168,40 @@ export class MapLayers {
           .addTo(this.routes)
       }
     }
-    if (onSegmentClick && d) {
-      // Cạnh ngắn chỉ dài vài pixel nên vùng bấm 18 px của các cạnh kề nhau chồng lên nhau, và nét vẽ sau
-      // sẽ "ăn" cú bấm. Vì vậy không tin nét nào nằm trên: khi rê chuột hoặc bấm, chọn cạnh có hình học
-      // gần con trỏ nhất (tính bằng pixel) và tô sáng trước đúng cạnh đó, để người dùng thấy sẽ đóng gì.
-      const segs = routeSegments(d)
-      const preview = L.layerGroup().addTo(this.routes)
-      const showPreview = (seg: RouteSegment | null) => {
-        preview.clearLayers()
-        if (seg) {
-          L.polyline(seg.latlngs, { color: this.palette.closed, weight: 9, opacity: 0.55, interactive: false }).addTo(preview)
-          // Cạnh chỉ dài vài pixel thì nét tô gần như không thấy: thêm chấm ở giữa cạnh để vẫn nhận ra.
-          const mid = seg.latlngs[Math.floor(seg.latlngs.length / 2)]
-          const first = seg.latlngs[0]
-          const at = seg.latlngs.length === 2 ? L.latLng((first.lat + mid.lat) / 2, (first.lng + mid.lng) / 2) : mid
-          L.circleMarker(at, { radius: 7, color: this.palette.closed, weight: 3, fillColor: this.palette.surface, fillOpacity: 1, interactive: false })
-            .addTo(preview)
-        }
+    if (onSegmentClick && d) this.addHitSegments(routeSegments(d), onSegmentClick)
+  }
+
+  /**
+   * Vùng bấm để đóng đoạn trên tuyến hoặc tour (T54, R1). Cạnh ngắn chỉ dài vài pixel nên vùng bấm 18 px
+   * của các cạnh kề nhau chồng lên nhau, và nét vẽ sau sẽ "ăn" cú bấm. Vì vậy không tin nét nào nằm trên:
+   * khi rê chuột hoặc bấm, chọn cạnh có hình học gần con trỏ nhất (tính bằng pixel) và tô sáng trước đúng
+   * cạnh đó, để người dùng thấy sẽ đóng gì.
+   */
+  private addHitSegments(segs: RouteSegment[], onSegmentClick: (seg: RouteSegment) => void) {
+    const preview = L.layerGroup().addTo(this.routes)
+    const showPreview = (seg: RouteSegment | null) => {
+      preview.clearLayers()
+      if (seg) {
+        L.polyline(seg.latlngs, { color: this.palette.closed, weight: 9, opacity: 0.55, interactive: false }).addTo(preview)
+        // Cạnh chỉ dài vài pixel thì nét tô gần như không thấy: thêm chấm ở giữa cạnh để vẫn nhận ra.
+        const mid = seg.latlngs[Math.floor(seg.latlngs.length / 2)]
+        const first = seg.latlngs[0]
+        const at = seg.latlngs.length === 2 ? L.latLng((first.lat + mid.lat) / 2, (first.lng + mid.lng) / 2) : mid
+        L.circleMarker(at, { radius: 7, color: this.palette.closed, weight: 3, fillColor: this.palette.surface, fillOpacity: 1, interactive: false })
+          .addTo(preview)
       }
-      for (const seg of segs) {
-        L.polyline(seg.latlngs, { weight: 18, opacity: 0, className: 'route-hit' })
-          .bindTooltip('Bấm để đóng đoạn đang tô đỏ', { sticky: true })
-          .on('mousemove', (e: L.LeafletMouseEvent) => showPreview(this.nearestSegment(segs, e.containerPoint)))
-          .on('mouseout', () => showPreview(null))
-          .on('click', (e: L.LeafletMouseEvent) => {
-            L.DomEvent.stop(e) // không để cú bấm lọt xuống bản đồ (chọn lại điểm)
-            showPreview(null)
-            onSegmentClick(this.nearestSegment(segs, e.containerPoint) ?? seg)
-          })
-          .addTo(this.routes)
-      }
+    }
+    for (const seg of segs) {
+      L.polyline(seg.latlngs, { weight: 18, opacity: 0, className: 'route-hit' })
+        .bindTooltip('Bấm để đóng đoạn đang tô đỏ', { sticky: true })
+        .on('mousemove', (e: L.LeafletMouseEvent) => showPreview(this.nearestSegment(segs, e.containerPoint)))
+        .on('mouseout', () => showPreview(null))
+        .on('click', (e: L.LeafletMouseEvent) => {
+          L.DomEvent.stop(e) // không để cú bấm lọt xuống bản đồ (chọn lại điểm)
+          showPreview(null)
+          onSegmentClick(this.nearestSegment(segs, e.containerPoint) ?? seg)
+        })
+        .addTo(this.routes)
     }
   }
 
@@ -235,11 +247,14 @@ export class MapLayers {
     })
   }
 
-  drawTour(coords: [number, number][]) {
+  /** Vẽ phương án tour đang chọn; có `onSegmentClick` thì bấm được từng cạnh để đóng đoạn (R1 C5). */
+  drawTour(cand: EdgePath & { geometry: { coordinates: [number, number][] } }, onSegmentClick?: (seg: RouteSegment) => void) {
     this.routes.clearLayers()
+    const coords = cand.geometry.coordinates
     if (coords.length) {
       L.polyline(toLatLngs(coords), { color: this.palette.tour, weight: 5, opacity: 0.85, interactive: false }).addTo(this.routes)
     }
+    if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick)
   }
 
   clearRoutes() {
