@@ -10,6 +10,7 @@ import { HStack } from '@astryxdesign/core/HStack'
 import { Layout, LayoutContent, LayoutHeader, LayoutPanel } from '@astryxdesign/core/Layout'
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
 import { Selector } from '@astryxdesign/core/Selector'
+import { Slider } from '@astryxdesign/core/Slider'
 import { Spinner } from '@astryxdesign/core/Spinner'
 import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
@@ -55,6 +56,10 @@ export default function App() {
   const [source, setSource] = useState<LatLon | null>(null)
   const [target, setTarget] = useState<LatLon | null>(null)
   const [showExpanded, setShowExpanded] = useState(false)
+  type ReplayStatus = 'static' | 'playing' | 'paused' | 'reset' | 'ended'
+  const [replayStatus, setReplayStatus] = useState<ReplayStatus>('static')
+  const [replaySpeed, setReplaySpeed] = useState(5)
+  const [replayKey, setReplayKey] = useState(0)
   const [closed, setClosed] = useState<RouteSegment[]>([])          // đoạn người dùng bấm đóng (T54)
   const [caseBlocked, setCaseBlocked] = useState<number[]>([])      // cạnh đóng sẵn của case demo
   const [routeQuery, setRouteQuery] = useState<RouteQuery | null>(null)
@@ -212,6 +217,8 @@ export default function App() {
     setClosed([])
     setCaseBlocked([])
     setError(null)
+    setReplayStatus('static')
+    setReplayKey((k) => k + 1)
   }
 
   const resetTour = () => {
@@ -239,16 +246,42 @@ export default function App() {
     else setStops([...stops, { ...p, id: `p${stops.length + 1}`, label: `Điểm ${stops.length + 1}` }])
   }
 
+  const handlePlayPause = () => {
+    if (replayStatus === 'playing') {
+      setReplayStatus('paused')
+    } else {
+      if (replayStatus === 'static' || replayStatus === 'ended') {
+        setReplayKey((k) => k + 1)
+      }
+      setReplayStatus('playing')
+    }
+  }
+
+  const handleReset = () => {
+    setReplayStatus('reset')
+    setReplayKey((k) => k + 1)
+  }
+
+  const handleEnded = useCallback(() => {
+    setReplayStatus('ended')
+  }, [])
+
   const toggleExpanded = (val: boolean) => {
     setShowExpanded(val)
+    setReplayStatus('static')
+    setReplayKey((k) => k + 1)
     setRouteQuery((q) => (q ? { ...q, showExpanded: val, n: q.n + 1 } : q))
   }
 
   const findRoute = () => {
+    setReplayStatus('static')
+    setReplayKey((k) => k + 1)
     if (source && target) setRouteQuery({ source, target, scenarioId, blocked, showExpanded, n: Date.now() })
   }
 
   const swap = () => {
+    setReplayStatus('static')
+    setReplayKey((k) => k + 1)
     if (!source || !target) return
     setSource(target)
     setTarget(source)
@@ -274,6 +307,8 @@ export default function App() {
   }
 
   const changeScenario = (id: string) => {
+    setReplayStatus('static')
+    setReplayKey((k) => k + 1)
     setScenarioId(id)
     setRouteQuery((q) => (q ? { ...q, scenarioId: id, n: q.n + 1 } : q))
     setTourQuery((q) => (q ? { ...q, scenarioId: id, n: q.n + 1 } : q))
@@ -284,6 +319,8 @@ export default function App() {
     if (!c) return
     setCaseId(id)
     setError(null)
+    setReplayStatus('static')
+    setReplayKey((k) => k + 1)
     const sid = c.scenario_id && scenarios.some((s) => s.id === c.scenario_id) ? c.scenario_id : 'baseline'
     setScenarioId(sid)
     if (c.mode === 'route' && c.source && c.target) {
@@ -355,6 +392,34 @@ export default function App() {
             value={showExpanded}
             onChange={toggleExpanded}
           />
+          {showExpanded && route && (
+            <VStack gap={2}>
+              <HStack gap={2} vAlign="center">
+                <Button
+                  label={replayStatus === 'playing' ? 'Tạm dừng' : (replayStatus === 'ended' ? 'Phát lại' : 'Phát')}
+                  size="sm"
+                  variant="secondary"
+                  onClick={handlePlayPause}
+                />
+                <Button
+                  label="Về đầu"
+                  size="sm"
+                  variant="ghost"
+                  isDisabled={replayStatus === 'reset'}
+                  onClick={handleReset}
+                />
+              </HStack>
+              <Slider
+                label="Tốc độ"
+                min={1}
+                max={20}
+                step={1}
+                value={replaySpeed}
+                onChange={(val: number) => setReplaySpeed(val)}
+                formatValue={(v) => `${v}×`}
+              />
+            </VStack>
+          )}
           {blocked.length > 0 && (
             <HStack gap={2} vAlign="center" hAlign="between">
               <Text type="supporting">Đang đóng {blocked.length} cạnh</Text>
@@ -410,6 +475,16 @@ export default function App() {
                   ? {
                       dijkstra: route.res.results.dijkstra,
                       astar: route.res.results.astar,
+                    }
+                  : null
+              }
+              replay={
+                showExpanded && mode === 'route' && route
+                  ? {
+                      status: replayStatus,
+                      speed: replaySpeed,
+                      key: replayKey,
+                      onEnded: handleEnded,
                     }
                   : null
               }
