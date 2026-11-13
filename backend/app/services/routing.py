@@ -6,6 +6,7 @@ import time
 
 from app.algorithms.alt import alt, get_alt_index
 from app.algorithms.astar import astar
+from app.algorithms.bidijkstra import bidijkstra
 from app.algorithms.dijkstra import dijkstra
 from app.algorithms.heuristics import make_geo_heuristic
 from app.algorithms.result import SearchResult
@@ -119,11 +120,16 @@ def _run_algorithm(
         h = make_geo_heuristic(graph, t_node)
         res = astar(graph, snap, s_node, t_node, h, trace_limit=trace_limit)
         t1 = time.perf_counter_ns()
-    else:  # alt (RouteRequest schema đã đảm bảo chỉ có "dijkstra", "astar" hoặc "alt")
+    elif algo == "alt":
         # Bảng landmark dựng một lần rồi cache; cố ý nằm ngoài phép đo để runtime_ms chỉ là truy vấn.
         index = get_alt_index(graph, meta)
         t0 = time.perf_counter_ns()
         res = alt(graph, snap, s_node, t_node, index, trace_limit=trace_limit)
+        t1 = time.perf_counter_ns()
+    else:  # bidijkstra (RouteRequest schema đã đảm bảo chỉ có 4 thuật toán này)
+        # in_edges là cấu trúc đồ thị, dựng một lần rồi cache (như out_edges của Dijkstra), nên không lặp lại mỗi truy vấn.
+        t0 = time.perf_counter_ns()
+        res = bidijkstra(graph, snap, s_node, t_node, trace_limit=trace_limit)
         t1 = time.perf_counter_ns()
 
     runtime_ms = (t1 - t0) / 1_000_000.0
@@ -154,6 +160,22 @@ def _alt_warnings(results: dict[str, AlgorithmRouteResult]) -> list[str]:
     return [
         f"ALT không khớp Dijkstra (Dijkstra: {d.status} {d.cost_s}, ALT: {a.status} {a.cost_s}); "
         "heuristic landmark chỉ đúng khi kịch bản không làm cạnh nào rẻ hơn chi phí cơ sở."
+    ]
+
+
+def _bidijkstra_warnings(results: dict[str, AlgorithmRouteResult]) -> list[str]:
+    """Dijkstra hai chiều tối ưu trên cùng snapshot nên phải khớp Dijkstra; lệch nghĩa là có lỗi.
+
+    Chỉ thêm cảnh báo, không đổi nghĩa `costs_match` (vẫn là phép so Dijkstra–A* như cũ).
+    """
+    if "bidijkstra" not in results or "dijkstra" not in results:
+        return []
+    d, b = results["dijkstra"], results["bidijkstra"]
+    if _costs_agree(d, b) is not False:
+        return []
+    return [
+        f"Dijkstra hai chiều không khớp Dijkstra (Dijkstra: {d.status} {d.cost_s}, "
+        f"bidijkstra: {b.status} {b.cost_s}); hai thuật toán phải cho cùng chi phí trên mọi snapshot."
     ]
 
 
@@ -219,5 +241,5 @@ def route(
         snapped=snapped,
         results=results,
         costs_match=costs_match,
-        warnings=_alt_warnings(results),
+        warnings=_alt_warnings(results) + _bidijkstra_warnings(results),
     )
