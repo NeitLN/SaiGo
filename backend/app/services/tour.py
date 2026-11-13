@@ -13,7 +13,15 @@ import time
 
 from app.algorithms.dijkstra import dijkstra_many
 from app.algorithms.result import build_route
-from app.algorithms.tour import HELD_KARP_MAX_POINTS, choose_tour, held_karp, nearest_neighbor, tour_cost, two_opt
+from app.algorithms.tour import (
+    HELD_KARP_MAX_POINTS,
+    choose_tour,
+    held_karp,
+    nearest_neighbor,
+    or_opt,
+    tour_cost,
+    two_opt,
+)
 from app.api.schemas import (
     SnappedStop,
     TourCandidate,
@@ -85,6 +93,8 @@ def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[s
     orders = {"input": list(range(n))}
     orders["nearest_neighbor"] = nearest_neighbor(D)
     orders["nearest_neighbor_2opt"] = two_opt(D, orders["nearest_neighbor"])
+    if req.include_or_opt:
+        orders["nearest_neighbor_2opt_oropt"] = or_opt(D, orders["nearest_neighbor_2opt"])
 
     c_input = plan.candidates["input"]
     candidates = {}
@@ -105,8 +115,20 @@ def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[s
     if req.include_optimal:
         best = held_karp(D)
         c_opt = tour_cost(D, best)
-        optimal = TourOptimal(stop_order=[ids[k] for k in best[1:]], cost_s=c_opt,
-                              gap_pct=100.0 * (plan.cost_s - c_opt) / c_opt if c_opt > 0 else 0.0)
+        or_opt_gap = None
+        if req.include_or_opt:
+            c_or = candidates["nearest_neighbor_2opt_oropt"].cost_s
+            if c_opt > 0:
+                raw_gap = 100.0 * (c_or - c_opt) / c_opt
+                or_opt_gap = 0.0 if abs(raw_gap) < 1e-9 else raw_gap
+            else:
+                or_opt_gap = 0.0
+        optimal = TourOptimal(
+            stop_order=[ids[k] for k in best[1:]],
+            cost_s=c_opt,
+            gap_pct=100.0 * (plan.cost_s - c_opt) / c_opt if c_opt > 0 else 0.0,
+            or_opt_gap_pct=or_opt_gap,
+        )
 
     return TourResponse(status="ok", candidates=candidates, chosen=plan.method, optimal=optimal,
                         order_runtime_ms=order_ms, **base)

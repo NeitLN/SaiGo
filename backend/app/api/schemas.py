@@ -165,6 +165,7 @@ class TourRequest(BaseModel):
     scenario_id: str | None = "baseline"
     blocked_edge_ids: list[StrictInt] = Field(default_factory=list)   # StrictInt: không nhận true/false là id 1/0
     include_optimal: bool = False      # Held–Karp làm đối chứng, chỉ khi tổng số điểm ≤ HELD_KARP_MAX_POINTS (11)
+    include_or_opt: bool = False       # Or-opt xen kẽ 2-opt, thêm ứng viên nearest_neighbor_2opt_oropt
     return_to_depot: Literal[True] = True   # chưa hỗ trợ tour mở (TOPIC 15.3): gửi false → 422
 
     @field_validator("stops")
@@ -195,6 +196,7 @@ class TourOptimal(BaseModel):
     stop_order: list[str]
     cost_s: float
     gap_pct: float                     # của phương án được chọn: 100 · (C_chọn − C_opt) / C_opt
+    or_opt_gap_pct: float | None = None  # gap của phương án Or-opt so với tối ưu Held–Karp
 
 
 class UnreachablePair(BaseModel):
