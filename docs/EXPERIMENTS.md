@@ -179,14 +179,14 @@ Hình: `fig_e4_ratio_by_scenario.png` trong thư mục run.
 | 10 | NN + 2-opt | 41,04 | [36,79; 42,46] | 1,76 | [0; 5,06] | 8,61 | 14,07 | 0,147 | 20/20 |
 | 10 | Held–Karp | — | — | — | — | — | — | 3,814 | 20/20 |
 
-Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms với n = 4 / 6 / 8 / 10; n = 5 (run sau, cùng máy) 3,84 ms. NN + 2-opt trùng tối ưu ở 45/80 bộ của run đầu. Hình: `fig_e5_tour.png` trong thư mục run.
+Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms với n = 4 / 6 / 8 / 10; n = 5 (run sau, cùng máy) 3,84 ms. NN + 2-opt trùng tối ưu ở 45/80 bộ của run đầu. Hình: `fig_e5_tour.png` trong thư mục run đầu (chỉ có n = 4, 6, 8, 10; chưa vẽ lại với n = 5).
 
 **Diễn giải (không phải số đo):**
 
-- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). Phần 2-opt cải thiện thêm so với NN, tính trên **từng bộ** (Improvement của NN + 2-opt trừ Improvement của NN cùng bộ) rồi lấy median: 0,36 / 4,40 / 4,87 / 6,01 điểm phần trăm với n = 4 / 6 / 8 / 10. (Hiệu giữa hai median trong bảng là 2,05 / 3,27 / 6,37 / 8,67 điểm, lớn hơn vì median của hiệu khác hiệu của median.) Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
+- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). Phần 2-opt cải thiện thêm so với NN, tính trên **từng bộ** (Improvement của NN + 2-opt trừ Improvement của NN cùng bộ) rồi lấy median: 0,36 / 4,56 / 4,40 / 4,87 / 6,01 điểm phần trăm với n = 4 / 5 / 6 / 8 / 10. (Hiệu giữa hai median trong bảng là 2,05 / 3,27 / 6,37 / 8,67 điểm, lớn hơn vì median của hiệu khác hiệu của median.) Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
 - NN + 2-opt gần tối ưu: median gap 0–1,8%, p75 ≤ 5,1%. NN một mình kém hơn hẳn (median gap 1,7–14,1%).
 - Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) gấp khoảng 128 lần (n = 4) đến 53 lần (n = 10) thời gian sắp thứ tự bằng NN + 2-opt (dưới 0,15 ms). Held–Karp tăng nhanh theo n (median 0,019 → 0,106 → 0,616 → 3,814 ms), cùng chiều với độ phức tạp lý thuyết O(2ⁿ·n²). Mỗi phương án chỉ đo một lần mỗi bộ, theo thứ tự cố định, không warm-up riêng, nên bốn điểm đo này không đủ để xác nhận bậc tăng; chỉ dùng chúng để nói Held–Karp đắt dần và vì vậy chỉ làm đối chứng tới 10 điểm giao.
-- **Case demo không đại diện được bằng E5:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). Trong 20 bộ ngẫu nhiên cùng cỡ (n = 5, thêm ở R2), gap lớn nhất của NN + 2-opt chỉ 12,2% (p90 7,4%); trong cả 100 bộ (n = 4–10) lớn nhất là 14,1%. Vậy case demo là trường hợp xấu hiếm gặp, dùng để giải thích cực trị địa phương, không đại diện cho mức gap thường gặp. #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; **Or-opt chỉ dùng minh họa**: không nằm trong các phương án đo ở E5, nên không có số đo tổng quát nào về nó.
+- **Case demo không đại diện được bằng E5:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). Trong 20 bộ ngẫu nhiên cùng cỡ (n = 5, thêm ở R2), gap lớn nhất của NN + 2-opt chỉ 12,2% (p90 7,4%); trong cả 100 bộ (n = 4–10) lớn nhất là 14,1%. Vậy gap lớn như case demo không gặp trong 100 bộ ngẫu nhiên; case demo dùng để giải thích cực trị địa phương, không đại diện cho mức gap thường gặp. #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; **Or-opt chỉ dùng minh họa**: không nằm trong các phương án đo ở E5, nên không có số đo tổng quát nào về nó.
 
 ## E5b — Tour sau khi đóng đường: giữ thứ tự cũ so với sắp lại (R2)
 
@@ -202,7 +202,7 @@ Câu hỏi của proposal (slide 12): khi một đoạn đường trên tuyến 
 |---|---|
 | Bộ không còn tour khép kín sau khi đóng | 2/20 (có chặng không đi được sau khi đóng; cạnh đóng 2060 ở bộ 3, 1725 + 1707 ở bộ 10) |
 | Giữ thứ tự cũ: chi phí tăng so với tour cũ (18 bộ còn khả thi) | median 1,42%, p90 4,04%, lớn nhất 13,66% |
-| Sắp lại so với giữ thứ tự cũ | rẻ hơn ở 3/18 bộ, bằng ở 15/18, không bộ nào đắt hơn |
+| Sắp lại so với giữ thứ tự cũ | rẻ hơn ở 3/18 bộ, bằng ở 15/18, không bộ nào đắt hơn (quan sát trong mẫu này; `choose_tour` sau khi đóng không xét thứ tự cũ nên không bảo đảm điều này) |
 | Phần sắp lại rẻ hơn giữ thứ tự cũ, `100·(C_giữ − C_sắp)/C_giữ` | median 0%, p90 2,53%, lớn nhất 7,25% |
 | Sắp lại rẻ hơn cả tour cũ (trước khi đóng) | 1/18 bộ |
 
@@ -210,6 +210,6 @@ p90 nội suy tuyến tính như các bảng khác.
 
 **Diễn giải (không phải số đo):**
 
-- Đóng **một** đoạn giữa tuyến thường chỉ làm tour dài thêm ít (median 1,4%) vì mạng đường trung tâm dày, có đường vòng gần; nhưng 2/20 bộ mất hẳn tour khép kín, nên hệ thống phải báo được "không còn tour đầy đủ" (R1) thay vì vẽ tour thiếu điểm.
+- Đóng **một** đoạn giữa tuyến thường chỉ làm tour dài thêm ít (median 1,4%), có thể vì mạng đường trung tâm dày, có đường vòng gần (chưa kiểm); nhưng 2/20 bộ mất hẳn tour khép kín, nên hệ thống phải báo được "không còn tour đầy đủ" (R1) thay vì vẽ tour thiếu điểm.
 - Sắp lại hiếm khi đổi thứ tự (3/18) và lợi tối đa 7,3% trong mẫu này. Case demo của DEMO bước 10 (đóng cạnh 1666: giữ thứ tự cũ 962,7 s, sắp lại 692,5 s, chênh 28%) nằm ngoài khoảng quan sát được ở đây; nó được chọn có chủ ý để minh họa và lợi lớn chủ yếu vì tour cũ của case đó là cực trị địa phương kém (gap 43%, xem E5), không phải vì đóng đường. Khi trình bày phải nói rõ.
 - Chỉ một cách đóng (một đoạn giữa tuyến), một cỡ n và 20 bộ; không suy ra cho đóng nhiều đoạn, cho n lớn hơn, hay cho vùng thưa đường.
