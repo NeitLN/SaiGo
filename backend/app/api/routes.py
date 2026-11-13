@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
-from app.api.schemas import DatasetResponse, HealthResponse, RouteRequest, RouteResponse, TourRequest, TourResponse
+from app.api.schemas import (DatasetResponse, HealthResponse, NetworkResponse, RouteRequest, RouteResponse,
+                             TourRequest, TourResponse)
 from app.graph.model import Graph, GraphMeta
 from app.services.routing import RouteInputError, route
 from app.services.tour import plan_tour
@@ -48,6 +49,13 @@ def dataset(request: Request) -> DatasetResponse:
     ]
     return DatasetResponse(dataset_id=graph.dataset_id, node_count=len(graph.node_lat),
                            edge_count=len(graph.edge_u), scenarios=scenarios)
+
+
+@router.get("/network", response_model=NetworkResponse)
+def network(request: Request) -> NetworkResponse:
+    """Mạng đường của vùng đang nạp, cho UI vẽ nền khi không tải được tile OSM (T56 R8)."""
+    graph, _ = _loaded(request)
+    return NetworkResponse(dataset_id=graph.dataset_id, lines=request.app.state.network)
 
 
 @router.post("/route", response_model=RouteResponse)

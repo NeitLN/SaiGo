@@ -103,7 +103,7 @@ ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window,
 | D3 | Ùn tắc là **theo vùng/loại đường**, không nhân đều toàn bản đồ | Nhân mọi cạnh cùng một hệ số α không đổi tuyến tối ưu, chỉ đổi con số; demo sẽ vô nghĩa |
 | D4 | Bỏ cache tuyến/ma trận ở bản đầu; mỗi request tính lại | Tránh lỗi cache lỗi thời sau khi đóng đường; đồ thị nhỏ nên tính lại vẫn nhanh |
 | D5 | Lưu đồ thị bằng JSON và list Python thường; không dùng NPZ/numpy trong thuật toán | Dễ đọc, dễ giải thích; tối ưu tốc độ không phải mục tiêu |
-| D6 | Frontend TypeScript thuần, không React | Khung hiện có đã là TypeScript thuần; bớt một thứ phải học |
+| D6 | Frontend TypeScript thuần, không React *(đảo bởi D15, 13/11)* | Khung hiện có đã là TypeScript thuần; bớt một thứ phải học |
 | D7 | Heuristic có hệ số an toàn `c` tính từ dữ liệu | Bảo đảm cận dưới ngay cả khi dữ liệu có cạnh ngắn hơn khoảng cách thẳng (xem DATA_MODEL mục 5) |
 | D8 | Không cam kết `.exe`; app chạy local bằng lệnh trong README | PDF không yêu cầu; đóng gói geospatial tốn thời gian |
 | D9 | Cài OSMnx bằng `pip install -e ".[data]"` trong cùng venv; nếu lỗi trên Windows thì dùng môi trường conda-forge riêng cho bước chuẩn bị dữ liệu | Ứng dụng demo chỉ đọc JSON, không cần OSMnx |
@@ -112,6 +112,7 @@ ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window,
 | D12 | Bản đồ rút gọn: không vẽ toàn mạng đường (T32), không có lớp chấm node mở rộng; đóng đường một chế độ *(26/10)* | Giữ đủ các bước demo cho RQ1, RQ3; `expanded` vẫn có trong bảng và benchmark |
 | D13 | Mốc: **điểm kiểm bằng chứng 05/11**, **MVP tích hợp 08/11**, 09–12/11 không thêm tính năng; essay bắt đầu từ tuần 3 *(26/10)* | Thay cổng G1 "có tích hợp tour không", vì tour đã nằm trong phạm vi |
 | D14 | Phân công từ 13/11: Tiến làm toàn bộ việc còn lại, Minh review chính, Duy Anh và Bảo làm khi được Tiến gán *(Tiến chốt)* | 07–13/11 main không có commit mới vì việc kẹt ở chờ approve/merge giữa bốn người; còn 6 ngày tới demo 19/11 |
+| D15 | Frontend chuyển sang **React 19 + Astryx** (T56, gộp T54 và T73); bản đồ vẫn dùng Leaflet trực tiếp *(13/11, Tiến chốt)* | T54, T73 chưa làm, nên làm luôn trên giao diện mới thay vì vá giao diện TS thuần. Có hạn chót riêng: chỉ merge nếu mọi ví dụ chấp nhận đạt và Minh chạy lại được trước 17/11, không thì demo 19/11 bằng giao diện cũ |
 | D16 | Đóng băng tính năng dời từ 09/11 (D13) sang **17/11** *(13/11, Tiến chốt)* | 09–13/11 vẫn phải thêm giao diện React (T56) và nền dự phòng khi tile OSM bị chặn; 17/11 là hạn chót T56. Sau 17/11 chỉ sửa lỗi, chạy thí nghiệm, viết essay |
 | D17 | Giữ 6 PR Duy Anh đã merge ngày 13/11 (ALT #115, Dijkstra hai chiều #119, vùng demo-large #116, so sánh 4 thuật toán #121, Or-opt cho tour #122, CLI check-heuristic và route --scenario/--block #110); từ đây Tiến chịu trách nhiệm phần này như phần mở rộng. PR đang mở của thành viên khác đóng lại, giữ branch *(13/11, Tiến chốt)* | Các tính năng đã qua CI và đã có trên main; revert tốn công hơn giữ. Phần mở rộng không thay câu hỏi nghiên cứu (RQ1–RQ3), chỉ bổ sung so sánh; essay ghi rõ đây là phần thêm sau kế hoạch |
 

@@ -63,6 +63,11 @@ def edge_coords(graph: Graph, meta: GraphMeta, e: int) -> list[list[float]]:
     return [[graph.node_lon[u], graph.node_lat[u]], [graph.node_lon[v], graph.node_lat[v]]]
 
 
+def network_lines(graph: Graph, meta: GraphMeta, twins: list[int | None]) -> list[list[list[float]]]:
+    """Hình học mọi đoạn đường để vẽ nền (T56 R8); cạnh có cạnh đối chỉ lấy cạnh id nhỏ hơn."""
+    return [edge_coords(graph, meta, e) for e in range(len(graph.edge_u)) if twins[e] is None or e < twins[e]]
+
+
 def build_geometry(
     graph: Graph,
     meta: GraphMeta,

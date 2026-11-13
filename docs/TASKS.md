@@ -403,6 +403,15 @@ Từ 26/10 không vẽ toàn mạng đường (T32 đã cắt); mục tiêu củ
 - ▶ Thủ công theo checklist.
 - 🧠 Mỗi case minh họa điều gì (RQ nào).
 
+### T56 — Giao diện React + Astryx (gộp T54, T73)
+- 👤 Tiến (Minh review) · ⏱ 8 h · ⛓ T51, T72
+- **Việc cần làm:** đặc tả đã duyệt ở [tasks/T56-ui-react-astryx.md](tasks/T56-ui-react-astryx.md): viết lại giao diện bằng React 19 + Astryx, giữ đủ hành vi của T52, T53; thêm đóng đoạn đường (T54), chế độ tour (T73), dropdown case demo (T55). Quyết định D15 ở PROJECT_BRIEF.
+- 📁 `frontend/*`
+- 📦 Giao diện mới chạy được toàn bộ kịch bản demo.
+- ✅ Mọi ví dụ chấp nhận trong phiếu T56 đạt; Minh chạy lại được trên máy mình khi review, **trước 17/11** (không kịp thì demo bằng giao diện cũ).
+- ▶ `npm run build`; trình duyệt tự động theo bảng ví dụ chấp nhận.
+- 🧠 Tách logic vẽ bản đồ (Leaflet) khỏi khung giao diện; bỏ response cũ khi người dùng bấm liên tục.
+
 ---
 
 ## M7 — Benchmark và tăng quy mô
@@ -497,7 +506,7 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 ### T73 — UI tour tối giản
 - 👤 Tiến (Minh review) · ⏱ 3 h · ⛓ T72
 - **Ghi công:** UI tour trên giao diện cũ do Minh làm (#101, #104); Tiến gộp vào giao diện React ở T56 (#103).
-- **13/11:** UI tour đã viết xong, chỉ còn chờ `/api/tour` (T72, #102). Tour cũng có trong giao diện React (T56).
+- **13/11:** tour có trong giao diện React (T56, #103). Bản trên giao diện cũ (#104) giữ làm dự phòng, chỉ merge nếu T56 không kịp 17/11.
 - **Việc cần làm:** preset kho + 5 điểm từ `cases.json`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt; marker đánh số theo thẻ được chọn.
 - 📁 `frontend/src/*.ts` · 📦 Demo tour · ✅ Bước 9 của kịch bản demo chạy được · ▶ Thủ công
 - 🧠 Hai tầng của bài toán giao hàng.
