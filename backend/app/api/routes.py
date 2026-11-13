@@ -73,6 +73,6 @@ def compute_tour(req: TourRequest, request: Request) -> TourResponse:
     """Tour kho → các điểm giao → kho: ba phương án thứ tự (nhập, NN, NN + 2-opt) trên cùng snapshot."""
     graph, meta = _loaded(request)
     try:
-        return plan_tour(graph, meta, req, request.app.state.scenarios)
+        return plan_tour(graph, meta, req, request.app.state.scenarios, request.app.state.twins)
     except RouteInputError as err:
         raise HTTPException(status_code=422, detail=str(err)) from None

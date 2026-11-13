@@ -30,9 +30,10 @@ from app.api.schemas import (
     TourResponse,
     UnreachablePair,
 )
+from app.graph.closures import reverse_twins
 from app.graph.model import Graph, GraphMeta
 from app.graph.scenario import Scenario, Snapshot
-from app.services.routing import RouteInputError, _snap, build_geometry, request_snapshot
+from app.services.routing import RouteInputError, _snap, build_geometry, edge_coords, request_snapshot
 
 
 def cost_matrix(graph: Graph, snap: Snapshot, nodes: list[int]) -> tuple[list[list[float]], list[list[list[int]]]]:
@@ -51,8 +52,14 @@ def cost_matrix(graph: Graph, snap: Snapshot, nodes: list[int]) -> tuple[list[li
     return D, legs
 
 
-def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[str, Scenario]) -> TourResponse:
-    """Xử lý `/api/tour`. Sai dữ liệu (điểm quá xa, trùng node, kịch bản/cạnh không có) → RouteInputError."""
+def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[str, Scenario],
+              twins: list[int | None] | None = None) -> TourResponse:
+    """Xử lý `/api/tour`. Sai dữ liệu (điểm quá xa, trùng node, kịch bản/cạnh không có) → RouteInputError.
+
+    `twins`: bảng cạnh đối dựng lúc khởi động (main.py); không truyền thì tự dựng (chậm hơn, chỉ cho script).
+    """
+    if twins is None:
+        twins = reverse_twins(graph, meta)
     n = len(req.stops) + 1
     if req.include_optimal and n > HELD_KARP_MAX_POINTS:
         raise RouteInputError(f"Chỉ tính tour tối ưu (Held–Karp) khi có tối đa {HELD_KARP_MAX_POINTS} điểm "
@@ -95,6 +102,10 @@ def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[s
     orders["nearest_neighbor_2opt"] = two_opt(D, orders["nearest_neighbor"])
     if req.include_or_opt:
         orders["nearest_neighbor_2opt_oropt"] = or_opt(D, orders["nearest_neighbor_2opt"])
+    if req.keep_order is not None:
+        # R1 C2: thứ tự trước khi đóng đường, mỗi chặng lấy từ ma trận của snapshot mới. Không đưa vào
+        # choose_tour, nên không được chọn và không tính vào gap: so sánh tách khỏi việc sắp lại.
+        orders["kept_order"] = [0] + [ids.index(pid) for pid in req.keep_order]
 
     c_input = plan.candidates["input"]
     candidates = {}
@@ -109,6 +120,8 @@ def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[s
             improvement_pct=100.0 * (c_input - cost) / c_input if c_input > 0 else 0.0,
             edge_ids=edges,
             geometry=build_geometry(graph, meta, nodes[0], edges, "ok"),
+            edge_twin_ids=[twins[e] for e in edges],
+            edge_geometries=[edge_coords(graph, meta, e) for e in edges],
         )
 
     optimal = None

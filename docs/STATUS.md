@@ -15,8 +15,8 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 - **Chưa biết:** nền tile OSM thật (UI-1) trên giao diện mới, vì mạng các máy kiểm hiện chặn `tile.openstreetmap.org`.
 
 ## Đang ở đâu
-- R0 (tài liệu khớp thực tế): EXPERIMENTS đã sửa và thêm E2b (#127); PR đồng bộ PROGRESS, STATUS, ROADMAP, DEMO, ARCHITECTURE đang review.
-- Tiếp theo: R1, lập lại tour sau khi đóng đường. Đây là khoảng trống lớn nhất so với proposal (slide 3, 7, 12): backend `plan_tour()` đã nhận `blocked_edge_ids`, nhưng chế độ tour trên UI chưa gửi cạnh đóng, chưa cho bấm đóng đoạn, và chưa có so sánh giữ thứ tự cũ / sắp lại.
+- R0 xong (#127, #128).
+- R1 (lập lại tour sau khi đóng đường, proposal slide 3, 7, 12): PR đang review. `/api/tour` thêm `keep_order` → ứng viên `kept_order`; chế độ tour bấm đóng đoạn trên tour; case "Tour không còn khả thi". Bằng chứng ở [phiếu R1](tasks/R1-tour-closure.md).
 
 ## Bị chặn / rủi ro
 - UI-1 chưa kiểm được trên máy này; nền dự phòng `/api/network` đã có (T56 R8). Kiểm ở R3 trên mạng khác; chuẩn bị video demo.
@@ -34,11 +34,10 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 | Ngưỡng snap 150 m | Giả định hiện hành, đã dùng trong mọi thí nghiệm | — |
 
 ## Bước tiếp theo
-1. Merge PR đồng bộ tài liệu R0.
-2. R1: viết phiếu `docs/tasks/R1-tour-closure.md` (mức Standard), rồi làm API, UI, test, case demo mới.
-3. R2: E5 thêm n = 5, báo max và p90; thí nghiệm nhỏ giữ thứ tự cũ / sắp lại sau khi đóng.
-4. R3: chạy trên máy thứ hai theo README; kiểm UI-1 ở mạng khác.
-5. R4: essay, slide, video demo.
+1. Merge PR R1.
+2. R2: E5 thêm n = 5, báo max và p90; thí nghiệm nhỏ giữ thứ tự cũ / sắp lại sau khi đóng.
+3. R3: chạy trên máy thứ hai theo README; kiểm UI-1 ở mạng khác.
+4. R4: essay, slide, video demo.
 
 ## Bộ kiểm nhanh (chạy đầu mỗi session)
 - `.venv\Scripts\python.exe -m pytest -q` → 14/11 trên main: 429 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; có đồ thị demo thì các test `realdata` khác vẫn chạy)

@@ -2,7 +2,7 @@
 
 Cập nhật 26/10 theo [đề xuất đổi phạm vi](proposals/2026-10-26-pham-vi.md) đã duyệt: bản đồ rút gọn (D12); tour giữ lại chiều 26/10 (D10) nhưng là chế độ phụ, chỉ ở bước 9. Kịch bản ngắn nằm ở [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 7; file này mô tả giao diện và checklist. Bản trước (xoay quanh tour, theo [TOPIC.md](TOPIC.md) mục 13 và 19) không còn dùng.
 
-**Cập nhật 14/11 (D15, D18):** giao diện là React + Astryx (T56, #103). Bỏ nhật ký snapshot (không thêm bằng chứng cho RQ nào; dòng "Kịch bản: …" trong khối kết quả ghi kịch bản và số cạnh đang đóng). Thêm bước 10–11: lập lại tour sau khi đóng đường, đúng câu chuyện "một kho, 5 điểm giao, một đường bị đóng" của proposal. Hai bước này **chưa làm**, thuộc R1 ([ROADMAP](ROADMAP.md) mục 7).
+**Cập nhật 14/11 (D15, D18):** giao diện là React + Astryx (T56, #103). Bỏ nhật ký snapshot (không thêm bằng chứng cho RQ nào; dòng "Kịch bản: …" trong khối kết quả ghi kịch bản và số cạnh đang đóng). Thêm bước 10–11: lập lại tour sau khi đóng đường, đúng câu chuyện "một kho, 5 điểm giao, một đường bị đóng" của proposal. Hai bước này làm ở R1 ([phiếu R1](tasks/R1-tour-closure.md)).
 
 Mọi số hiển thị đều lấy từ response của backend; không có số viết tay.
 
@@ -24,7 +24,7 @@ Mọi số hiển thị đều lấy từ response của backend; không có s�
 ### 1.1. Cột trái — bảng điều khiển
 
 - Chế độ: **Tìm đường hai điểm** (mặc định) / **Tour**.
-- Case demo chọn sẵn: "Hai điểm qua trung tâm", "Không còn đường", "Kho + 5 điểm giao"; R1 thêm "Tour không còn khả thi".
+- Case demo chọn sẵn: "Hai điểm qua trung tâm", "Không còn đường", "Kho + 5 điểm giao", "Tour không còn khả thi" (R1).
 - Kịch bản: Bình thường / Cao điểm mô phỏng — trung tâm (`peak-center`).
 - Nút **Tìm đường** (chạy cả Dijkstra và A*), nút **Mở lại các đoạn đã đóng**.
 
@@ -44,7 +44,7 @@ Bấm vào một đoạn **trên tuyến** để đóng (đóng cả cạnh đ�
 
 **Khối Dijkstra / A\*** (trả lời RQ1): thời gian di chuyển ước tính, quãng đường, số node mở rộng, thời gian tính toán, và dòng "Chi phí trùng khớp: có/không".
 
-**Thẻ so sánh tour** (chế độ tour, RQ2): Thứ tự nhập / Nearest Neighbor / NN + 2-opt; mỗi thẻ có thời gian di chuyển ước tính, quãng đường, mức cải thiện so với thứ tự nhập. Marker điểm giao đánh số theo thẻ đang chọn.
+**Thẻ so sánh tour** (chế độ tour, RQ2): Thứ tự nhập / Nearest Neighbor / NN + 2-opt; mỗi thẻ có thời gian di chuyển ước tính, quãng đường, mức cải thiện so với thứ tự nhập. Marker điểm giao đánh số theo thẻ đang chọn. Sau khi bấm đóng một đoạn trên tour có thêm thẻ **Giữ thứ tự cũ** (R1).
 
 **Dòng kịch bản**: "Kịch bản: <tên kịch bản>", thêm "; đóng thêm N cạnh" khi đang đóng cạnh. (Nhật ký snapshot đã bỏ ngày 14/11, D18.)
 
@@ -74,8 +74,8 @@ Giữ đúng số bước của [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 7; bư�
 | 7 | Chọn case "Không còn đường" | Thông báo không có đường; không vẽ đường thẳng | Hệ thống báo đúng giới hạn (RQ3) |
 | 8 | Chuyển sang slide biểu đồ tăng quy mô | `expanded` và thời gian theo `|V|` (4 kích thước, fixed trips) | Số đo thật (RQ1b) |
 | 9 | Chuyển sang chế độ tour, case "Kho + 5 điểm giao"; chọn lần lượt 3 thẻ | Thứ tự giao đổi; chi phí trước/sau | Tầng thứ hai của bài toán (RQ2) |
-| 10 *(R1, chưa làm)* | Bấm đóng một đoạn trên tour đang vẽ | Tour lập lại trên snapshot mới; so "giữ thứ tự cũ" với "sắp lại" | Đóng đường làm đổi cả tuyến lẫn thứ tự; tách công của thuật toán tìm đường khỏi công của việc sắp lại (RQ3) |
-| 11 *(R1, chưa làm)* | Chọn case "Tour không còn khả thi" | Báo tên điểm giao không tới được; không vẽ tour một phần | Hệ thống không bỏ điểm giao âm thầm (RQ3) |
+| 10 | Ở case "Kho + 5 điểm giao", thu nhỏ bản đồ một mức, bấm đoạn gần Bến Bạch Đằng (cạnh 1666) trên tour NN + 2-opt | Đoạn đỏ; thẻ "Giữ thứ tự cũ" 962,7 s; NN + 2-opt sắp lại 692,5 s, thứ tự mới | Đóng đường làm đổi cả tuyến lẫn thứ tự; tách công của thuật toán tìm đường khỏi công của việc sắp lại (RQ3). Nói rõ: sắp lại rẻ hơn tour cũ vì tour cũ là cực trị địa phương kém, không phải vì đóng đường có lợi |
+| 11 | Chọn case "Tour không còn khả thi" | "Không tới được từ kho: Nhà hát Thành phố"; không vẽ tour một phần | Hệ thống không bỏ điểm giao âm thầm (RQ3) |
 
 Khoản cắt 4 của đề xuất phạm vi 26/10 (đóng đường qua API/CLI thay vì bản đồ) không còn cần: đóng đoạn trên bản đồ đã có (T54, T56).
 

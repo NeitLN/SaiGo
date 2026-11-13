@@ -27,10 +27,14 @@ type Mode = 'route' | 'tour'
 
 // Mỗi lần gửi request là một query mới (n tăng); effect hủy request cũ nên chỉ kết quả mới nhất được hiện.
 interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; n: number }
-interface TourQuery { depot: TourPoint; stops: TourPoint[]; scenarioId: string; n: number }
+// keepOrder (R1): thứ tự điểm giao trước khi đóng đường, để API trả thêm phương án "Giữ thứ tự cũ".
+interface TourQuery { depot: TourPoint; stops: TourPoint[]; scenarioId: string; blocked: number[]; keepOrder?: string[]; n: number }
 
 const fmt = (p: LatLon | null) => (p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—')
 const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i])
+// Đóng đoạn = cạnh được bấm và cạnh đối của nó (DATA_MODEL 4.2); bỏ trùng, giữ thứ tự để so sánh được.
+const blockedIds = (preset: number[], segs: RouteSegment[]) =>
+  [...new Set([...preset, ...segs.flatMap((s) => (s.twinId === null ? [s.edgeId] : [s.edgeId, s.twinId]))])]
 
 export default function App() {
   const layersRef = useRef<MapLayers | null>(null)
@@ -66,13 +70,16 @@ export default function App() {
   const [tourQuery, setTourQuery] = useState<TourQuery | null>(null)
   const [tour, setTour] = useState<TourResponse | null>(null)
   const [tourMethod, setTourMethod] = useState<TourMethod | null>(null)
+  const [tourClosed, setTourClosed] = useState<RouteSegment[]>([])          // đoạn bấm đóng trên tour (R1 C5)
+  const [tourCaseBlocked, setTourCaseBlocked] = useState<number[]>([])      // cạnh đóng sẵn của case tour (R1 C7)
 
   const scenario = scenarios.find((s) => s.id === scenarioId) ?? BASELINE
-  // Đóng đoạn = cạnh được bấm và cạnh đối của nó (DATA_MODEL 4.2); bỏ trùng, giữ thứ tự để so sánh được.
-  const blocked = useMemo(() => {
-    const ids = [...caseBlocked, ...closed.flatMap((s) => (s.twinId === null ? [s.edgeId] : [s.edgeId, s.twinId]))]
-    return [...new Set(ids)]
-  }, [closed, caseBlocked])
+  const blocked = useMemo(() => blockedIds(caseBlocked, closed), [closed, caseBlocked])
+  const tourBlocked = useMemo(() => blockedIds(tourCaseBlocked, tourClosed), [tourClosed, tourCaseBlocked])
+  // Thứ tự của phương án đang xem; lúc người dùng bấm đóng một đoạn thì đây là "thứ tự cũ" gửi lên API.
+  const shownTourOrder = useRef<string[] | undefined>(undefined)
+  shownTourOrder.current = tour && tourMethod ? tour.candidates[tourMethod]?.stop_order : undefined
+  const keepOrderOnClose = useRef<string[] | undefined>(undefined)
 
   // Kiểm lúc mở trang và mỗi khi một request lỗi, để badge không báo "sẵn sàng" khi backend đã tắt.
   const checkServer = useCallback(() => {
@@ -145,6 +152,8 @@ export default function App() {
       depot: { lat: tourQuery.depot.lat, lon: tourQuery.depot.lon },
       stops: tourQuery.stops.map(({ id, lat, lon }) => ({ id, lat, lon })),
       scenario_id: tourQuery.scenarioId,
+      blocked_edge_ids: tourQuery.blocked,
+      ...(tourQuery.keepOrder ? { keep_order: tourQuery.keepOrder } : {}),
       include_optimal: tourQuery.stops.length + 1 <= 11,   // Held–Karp tối đa 11 điểm kể cả kho
     }, ctl.signal)
       .then((res) => {
@@ -170,10 +179,25 @@ export default function App() {
     setRouteQuery((q) => (q && !sameIds(q.blocked, blocked) ? { ...q, blocked, n: q.n + 1 } : q))
   }, [blocked])
 
+  // R1 C5: tour cũng vậy. Đóng thêm đoạn thì gửi kèm thứ tự đang xem lúc bấm (giữ thứ tự cũ); mở lại hết thì
+  // lập lại tour ban đầu, không còn phương án giữ thứ tự cũ.
+  useEffect(() => {
+    setTourQuery((q) => {
+      if (!q || sameIds(q.blocked, tourBlocked)) return q
+      const keepOrder = tourBlocked.length ? (keepOrderOnClose.current ?? q.keepOrder) : undefined
+      return { ...q, blocked: tourBlocked, keepOrder, n: q.n + 1 }
+    })
+  }, [tourBlocked])
+
   // --- Vẽ bản đồ từ state ---
 
   const closeSegment = useCallback((seg: RouteSegment) => {
     setClosed((prev) => (prev.some((s) => s.edgeId === seg.edgeId) ? prev : [...prev, seg]))
+  }, [])
+
+  const closeTourSegment = useCallback((seg: RouteSegment) => {
+    keepOrderOnClose.current = shownTourOrder.current
+    setTourClosed((prev) => (prev.some((s) => s.edgeId === seg.edgeId) ? prev : [...prev, seg]))
   }, [])
 
   useEffect(() => {
@@ -190,13 +214,14 @@ export default function App() {
         layers.setPoints(source, target)
       }
     } else {
-      layers.setClosed([])
+      layers.setClosed(tourClosed)
       const cand = tour && tourMethod ? tour.candidates[tourMethod] : undefined
       layers.setTourPoints(depot, stops, cand?.stop_order)
-      if (cand) layers.drawTour(cand.geometry.coordinates)
+      if (cand) layers.drawTour(cand, closeTourSegment)
       else layers.clearRoutes()
     }
-  }, [mapReady, mode, scenario, route, source, target, closed, closeSegment, tour, tourMethod, depot, stops])
+  }, [mapReady, mode, scenario, route, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
+    tourClosed, closeTourSegment])
 
   // --- Thao tác ---
 
@@ -255,12 +280,19 @@ export default function App() {
       resetTour()
       setDepot(null)
       setStops([])
+      setTourClosed([])
+      setTourCaseBlocked([])
     }
   }
 
   const reopenAll = () => {
-    setClosed([])
-    setCaseBlocked([])
+    if (mode === 'route') {
+      setClosed([])
+      setCaseBlocked([])
+    } else {
+      setTourClosed([])
+      setTourCaseBlocked([])
+    }
   }
 
   const changeScenario = (id: string) => {
@@ -289,11 +321,15 @@ export default function App() {
     } else if (c.mode === 'tour' && c.depot && c.stops) {
       const d: TourPoint = { id: 'depot', label: c.depot.name, lat: c.depot.lat, lon: c.depot.lon }
       const st = c.stops.map((s, i) => ({ id: `p${i + 1}`, label: s.name, lat: s.lat, lon: s.lon }))
+      const bl = c.blocked_edge_ids ?? []
       setMode('tour')
       setTour(null)
       setDepot(d)
       setStops(st)
-      setTourQuery({ depot: d, stops: st, scenarioId: sid, n: Date.now() })
+      setTourClosed([])
+      setTourCaseBlocked(bl)
+      keepOrderOnClose.current = undefined
+      setTourQuery({ depot: d, stops: st, scenarioId: sid, blocked: bl, n: Date.now() })
     }
   }
 
@@ -311,7 +347,9 @@ export default function App() {
         : route ? 'Bấm vào một đoạn trên tuyến để đóng đoạn đó. Bấm lên bản đồ để chọn lại từ đầu.'
           : 'Bấm Tìm đường. Bấm lên bản đồ lần nữa để chọn lại từ đầu.')
     : (!depot ? 'Bấm lên bản đồ để đặt kho.'
-      : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`)
+      : tour?.status === 'ok' ? 'Bấm vào một đoạn trên tour để đóng đoạn đó; tour được lập lại. Bấm lên bản đồ để thêm điểm giao.'
+        : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`
+          + (tourBlocked.length ? ' Các đoạn đang đóng vẫn giữ khi lập tour mới; bấm Mở lại tất cả để bỏ.' : ''))
 
   const controls = (
     <VStack gap={4}>
@@ -357,9 +395,15 @@ export default function App() {
           <Text type="supporting">Kho: {depot ? depot.label : '—'} · {stops.length} điểm giao</Text>
           <HStack gap={2}>
             <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0}
-              onClick={() => depot && setTourQuery({ depot, stops, scenarioId, n: Date.now() })} />
+              onClick={() => depot && setTourQuery({ depot, stops, scenarioId, blocked: tourBlocked, n: Date.now() })} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
+          {tourBlocked.length > 0 && (
+            <HStack gap={2} vAlign="center" hAlign="between">
+              <Text type="supporting">Đang đóng {tourBlocked.length} cạnh</Text>
+              <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
+            </HStack>
+          )}
         </VStack>
       )}
       {busy && <Spinner label="Đang tính…" />}

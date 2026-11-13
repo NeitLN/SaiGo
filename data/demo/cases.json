@@ -49,7 +49,31 @@
         {"name": "Bến Bạch Đằng", "lat": 10.774716, "lon": 106.706182},
         {"name": "Công viên Tao Đàn", "lat": 10.777484, "lon": 106.693042}
       ],
-      "scenario_id": "baseline"
+      "scenario_id": "baseline",
+      "expected": {
+        "baseline": {"input": 1066.0, "nearest_neighbor": 1003.3, "nearest_neighbor_2opt": 898.1, "nn_2opt_order": ["p1", "p2", "p4", "p3", "p5"]},
+        "close_edge_1666": {"_comment": "R1 bước 10: đóng cạnh 1666 (cạnh thứ 28, chỉ số 27 trong edge_ids của tour NN + 2-opt, một chiều), giữ thứ tự cũ so với sắp lại. Sắp lại rẻ hơn cả tour trước khi đóng vì tour cũ của 2-opt là cực trị địa phương kém (tối ưu 627,8 s), không phải vì đóng đường có lợi.",
+                            "blocked_edge_ids": [1666], "kept_order": 962.7, "chosen": "nearest_neighbor_2opt", "nearest_neighbor_2opt": 692.5,
+                            "nn_2opt_order": ["p5", "p1", "p2", "p4", "p3"]}
+      }
+    },
+    {
+      "id": "tour-khong-kha-thi",
+      "label": "Tour không còn khả thi",
+      "mode": "tour",
+      "demo_steps": [11],
+      "_comment": "R1 C7: cùng kho và 5 điểm của kho-5-diem; đóng cạnh 1340, cạnh duy nhất đi vào node 528 (Nhà hát Thành phố, một chiều). Đã kiểm qua plan_tour: infeasible_under_model, mọi chặng tới p2 không đi được.",
+      "depot": {"name": "Chợ Bến Thành", "lat": 10.772193, "lon": 106.697556},
+      "stops": [
+        {"name": "Nhà thờ Đức Bà", "lat": 10.779612, "lon": 106.698826},
+        {"name": "Nhà hát Thành phố", "lat": 10.776389, "lon": 106.702729},
+        {"name": "Bảo tàng Mỹ thuật", "lat": 10.76942, "lon": 106.699924},
+        {"name": "Bến Bạch Đằng", "lat": 10.774716, "lon": 106.706182},
+        {"name": "Công viên Tao Đàn", "lat": 10.777484, "lon": 106.693042}
+      ],
+      "scenario_id": "baseline",
+      "blocked_edge_ids": [1340],
+      "expected": {"status": "infeasible_under_model", "unreachable_to": ["p2"]}
     }
   ]
 }

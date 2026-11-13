@@ -7,7 +7,9 @@ thứ tự nhập B, A, T cho 50 + 90 + 40 + 100 = 280 s.
 
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 import pytest
@@ -180,3 +182,140 @@ def test_empty_scenario_id_rejected(client, path):
             else {"depot": P["S"], "stops": [stop("A")]})
     res = client.post(path, json={**body, "scenario_id": ""})
     assert res.status_code == 422
+
+
+# --- R1 (docs/tasks/R1-tour-closure.md): lập lại tour sau khi đóng đường ---
+
+def test_kept_order_absent_without_keep_order(client):
+    """Không gửi trường mới thì response như trước: đúng ba ứng viên (phải giữ nguyên)."""
+    r = tour(client, ["B", "A", "T"], blocked_edge_ids=[1]).json()
+    assert set(r["candidates"]) == {"input", "nearest_neighbor", "nearest_neighbor_2opt"}
+
+
+def test_keep_order_recomputed_on_new_snapshot(client, mini):
+    """C2: đóng S→B (một chiều). Thứ tự cũ B, A, T: S→B đi vòng S→A→T→B 130 s, B→A = B→S→A 90 s,
+    A→T 40 s, T→S = T→B→S 100 s → 360 s (trước khi đóng 280 s). NN vẫn 180 s và vẫn được chọn."""
+    graph, meta = mini
+    s_b = edge_id(graph, meta, "S->B")
+    r = tour(client, ["B", "A", "T"], blocked_edge_ids=[s_b], keep_order=["b", "a", "t"]).json()
+    assert r["status"] == "ok"
+    kept = r["candidates"]["kept_order"]
+    assert kept["stop_order"] == ["b", "a", "t"]
+    assert kept["cost_s"] == pytest.approx(360.0)
+    assert kept["improvement_pct"] == pytest.approx(0.0)      # cùng thứ tự với thứ tự nhập ở ví dụ này
+    assert r["chosen"] == "nearest_neighbor" and r["candidates"]["nearest_neighbor"]["cost_s"] == pytest.approx(180.0)
+    weights = build_snapshot(graph, meta, load_scenarios("tests/fixtures/scenarios_mini.json")["baseline"],
+                             blocked={s_b}).weights
+    for cand in r["candidates"].values():
+        check_closed_route(graph, weights, cand, depot=0)
+        assert s_b not in cand["edge_ids"]
+
+
+def test_kept_order_not_counted_in_chosen_or_gap(client, mini):
+    """C2: phương án giữ thứ tự cũ không được chọn và không tính vào gap, kể cả khi nó rẻ nhất."""
+    graph, meta = mini
+    r = tour(client, ["B", "A", "T"], blocked_edge_ids=[edge_id(graph, meta, "S->B")],
+             keep_order=["a", "t", "b"], include_optimal=True).json()
+    assert r["candidates"]["kept_order"]["cost_s"] == pytest.approx(180.0)
+    assert r["chosen"] in {"input", "nearest_neighbor", "nearest_neighbor_2opt"}
+    chosen_cost = r["candidates"][r["chosen"]]["cost_s"]
+    assert r["optimal"]["gap_pct"] == pytest.approx(100 * (chosen_cost - 180.0) / 180.0)
+
+
+@pytest.mark.parametrize("keep", [["a", "t"], ["a", "t", "b", "b"], ["a", "t", "x"], ["a", "a", "t"], []])
+def test_keep_order_must_be_permutation_of_stops(client, keep):
+    """C1: thiếu, thừa, trùng, id lạ → 422 tiếng Việt."""
+    res = tour(client, ["B", "A", "T"], keep_order=keep)
+    assert res.status_code == 422
+    assert "keep_order" in str(res.json()["detail"])
+
+
+def test_keep_order_on_infeasible_tour(client, mini):
+    """C4: không khả thi thì vẫn infeasible, không có ứng viên nào (kể cả giữ thứ tự cũ)."""
+    graph, meta = mini
+    r = tour(client, ["A", "T", "B"], blocked_edge_ids=[edge_id(graph, meta, "A->T")],
+             keep_order=["a", "t", "b"]).json()
+    assert r["status"] == "infeasible_under_model" and r["candidates"] == {}
+
+
+def test_candidate_edge_geometries_and_twins(client, mini):
+    """C3: hình học từng cạnh nối lại ra đúng geometry; cạnh đối như /api/route."""
+    graph, meta = mini
+    r = tour(client, ["B", "A", "T"]).json()
+    s_b, b_s = edge_id(graph, meta, "S->B"), edge_id(graph, meta, "B->S")
+    for cand in r["candidates"].values():
+        assert len(cand["edge_geometries"]) == len(cand["edge_ids"]) == len(cand["edge_twin_ids"])
+        joined = []
+        for g in cand["edge_geometries"]:
+            joined.extend(g if not joined or joined[-1] != g[0] else g[1:])
+        assert joined == cand["geometry"]["coordinates"]
+    inp = r["candidates"]["input"]                               # S→B là cạnh đầu của thứ tự B, A, T
+    assert inp["edge_ids"][0] == s_b and inp["edge_twin_ids"][0] == b_s
+
+
+# --- R1 trên đồ thị thật vùng demo (tự bỏ qua nếu chưa dựng dữ liệu) ---
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture
+def demo_client(monkeypatch):
+    manifest = ROOT / "data" / "processed" / "manifest.json"
+    if not manifest.exists():
+        pytest.skip("Chưa có data/processed/manifest.json")
+    graph_path = ROOT / json.loads(manifest.read_text(encoding="utf-8"))["file"]
+    if not graph_path.exists():
+        pytest.skip(f"Chưa có file đồ thị {graph_path}")
+    monkeypatch.setenv("SAIGO_GRAPH", str(graph_path))
+    monkeypatch.setenv("SAIGO_SCENARIOS", str(ROOT / "data" / "config" / "scenarios.json"))
+    with TestClient(app) as c:
+        yield c
+
+
+def demo_case(case_id):
+    cases = json.loads((ROOT / "data" / "demo" / "cases.json").read_text(encoding="utf-8"))["cases"]
+    c = next(x for x in cases if x["id"] == case_id)
+    return {"depot": {"lat": c["depot"]["lat"], "lon": c["depot"]["lon"]},
+            "stops": [{"id": f"p{i + 1}", "lat": s["lat"], "lon": s["lon"]} for i, s in enumerate(c["stops"])],
+            "scenario_id": c.get("scenario_id", "baseline"), "blocked_edge_ids": c.get("blocked_edge_ids", [])}, c
+
+
+def test_real_close_mid_edge_of_tour_keeps_and_reorders(demo_client):
+    """Ví dụ chấp nhận R1: đóng cạnh giữa của tour NN + 2-opt (kèm cạnh đối), giữ thứ tự cũ và sắp lại."""
+    body, _ = demo_case("kho-5-diem")
+    before = demo_client.post("/api/tour", json=body).json()
+    old = before["candidates"]["nearest_neighbor_2opt"]
+    assert old["cost_s"] == pytest.approx(898.07, abs=0.1)          # số đã kiểm ở T72/T56
+    k = len(old["edge_ids"]) // 2
+    blocked = [e for e in (old["edge_ids"][k], old["edge_twin_ids"][k]) if e is not None]
+    after = demo_client.post("/api/tour", json={**body, "blocked_edge_ids": blocked,
+                                                "keep_order": old["stop_order"]}).json()
+    assert after["status"] == "ok"
+    kept = after["candidates"]["kept_order"]
+    assert kept["stop_order"] == old["stop_order"]
+    assert kept["cost_s"] >= old["cost_s"] - 1e-6                    # đóng cạnh chỉ làm đường dài ra
+    assert after["chosen"] in {"input", "nearest_neighbor", "nearest_neighbor_2opt"}
+    for cand in after["candidates"].values():
+        assert not set(blocked) & set(cand["edge_ids"])
+
+
+def test_real_demo_closure_edge_1666_matches_case(demo_client):
+    """Bước 10 của demo: số ghi trong cases.json (expected.close_edge_1666) đúng với API."""
+    body, case = demo_case("kho-5-diem")
+    exp = case["expected"]["close_edge_1666"]
+    r = demo_client.post("/api/tour", json={**body, "blocked_edge_ids": exp["blocked_edge_ids"],
+                                            "keep_order": case["expected"]["baseline"]["nn_2opt_order"]}).json()
+    c = r["candidates"]
+    assert c["kept_order"]["cost_s"] == pytest.approx(exp["kept_order"], abs=0.05)
+    assert r["chosen"] == exp["chosen"]
+    assert c["nearest_neighbor_2opt"]["cost_s"] == pytest.approx(exp["nearest_neighbor_2opt"], abs=0.05)
+    assert c["nearest_neighbor_2opt"]["stop_order"] == exp["nn_2opt_order"]
+
+
+def test_real_infeasible_case_names_unreachable_stop(demo_client):
+    """C7: case 'tour-khong-kha-thi' đóng cạnh duy nhất vào Nhà hát Thành phố (p2)."""
+    body, case = demo_case("tour-khong-kha-thi")
+    r = demo_client.post("/api/tour", json=body).json()
+    assert r["status"] == case["expected"]["status"] == "infeasible_under_model"
+    assert r["candidates"] == {}
+    assert {p["to_id"] for p in r["unreachable"]} == set(case["expected"]["unreachable_to"])
