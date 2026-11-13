@@ -97,9 +97,9 @@ Cặp có chi phí **giảm** khi vùng lớn hơn: 48/250 (19,2%) từ 1 km lê
 
 | Kịch bản | Cặp đổi tuyến | % tăng chi phí (median / p90) | median expanded Dijkstra | median expanded A* | median r = A*/Dijkstra |
 |---|---:|---:|---:|---:|---:|
-| `baseline` | — | — | 586 | 189 | 0,403 |
-| `peak-center` | 56/300 (18,7%) | 0,0% / 15,7% | 584 | 200 | 0,422 |
-| `peak-ben-thanh` | 47/300 (15,7%) | 0,0% / 10,6% | 589 | 196 | 0,413 |
+| `baseline` | — | — | 585,5 | 189 | 0,403 |
+| `peak-center` | 56/300 (18,7%) | 0,0% / 15,7% | 584,5 | 199,5 | 0,422 |
+| `peak-ben-thanh` | 47/300 (15,7%) | 0,0% / 10,6% | 589 | 195,5 | 0,413 |
 
 ### Đóng đoạn giữa tuyến (C3): 100 cặp có tuyến cơ sở ≥ 3 cạnh
 

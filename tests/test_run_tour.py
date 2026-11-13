@@ -84,6 +84,14 @@ def test_sample_sets_are_separated_and_deterministic(rand_graph):
                                    graph.node_lat[nodes[j]], graph.node_lon[nodes[j]]) >= 150
 
 
+def test_sample_sets_counts_tries_per_set(rand_graph):
+    """Review #109: `max_tries` là giới hạn cho từng bộ, không dồn qua các bộ trước."""
+    graph, meta = load_graph(rand_graph)
+    # min_sep_m = 0: mỗi bộ 5 điểm chỉ cần khoảng 5 lần thử, nhưng 10 bộ cộng dồn thì vượt xa 10.
+    sets = sample_sets(graph, meta, n_stops=4, count=10, seed=42, min_sep_m=0, max_tries=10)
+    assert len(sets) == 10
+
+
 def test_run_tour_end_to_end_and_readers(tmp_path, rand_graph):
     out = tmp_path / "results"
     assert main(["--graph", str(rand_graph), "--sizes", "4", "6", "--sets", "3", "--seed", "42",

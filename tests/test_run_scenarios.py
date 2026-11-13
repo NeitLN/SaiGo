@@ -116,6 +116,22 @@ def test_run_scenarios_end_to_end(tmp_path, graph_file):
     assert not (run / "violations.csv").exists()
 
 
+def test_run_scenarios_error_midway_leaves_no_run_dir(tmp_path, graph_file, monkeypatch):
+    """Review #109: lỗi giữa chừng (ở đây khi dựng bộ C4) không được để lại thư mục run dở dang."""
+    import run_scenarios
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("lỗi giả lập")
+
+    monkeypatch.setattr(run_scenarios, "nopath_edges", boom)
+    out = tmp_path / "results"
+    with pytest.raises(RuntimeError):
+        main(["--graph", str(graph_file), "--scenario-file", "tests/fixtures/scenarios_mini.json",
+              "--pairs", "10", "--closure", "2", "--nopath", "2", "--seed", "42", "--repeats", "1", "--warmup", "0",
+              "--out", str(out), "--run-id", "dang-do"])
+    assert not (out / "dang-do").exists()
+
+
 def test_main_survives_windows_cp1252_console(tmp_path, graph_file, monkeypatch):
     """Console Windows mặc định cp1252: in tiếng Việt không được làm script thoát mã 1 (review #108)."""
     import io

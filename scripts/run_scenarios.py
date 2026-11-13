@@ -151,7 +151,6 @@ def main(argv: list[str] | None = None) -> int:
     commit, _, dirty = _get_git_info()
     run_id = args.run_id or f"{time.strftime('%Y%m%d-%H%M')}-scenario-{commit[:7]}"
     run_dir = Path(args.out) / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
     if dirty:
         sys.stderr.write("Cảnh báo: repo đang có thay đổi chưa commit, run sẽ ghi git_dirty = true\n")
 
@@ -205,6 +204,8 @@ def main(argv: list[str] | None = None) -> int:
         nopath_ids.add(str(q["query_id"]))
         query_rows.append({**q, "suite": "nopath", "blocked_edges": ";".join(map(str, blocked))})
 
+    # Tạo thư mục run khi đã đo xong: lỗi giữa chừng không để lại thư mục dở dang (review #109).
+    run_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(run_dir / "measurements.csv", MEASUREMENT_COLUMNS, rows)
     _write_csv(run_dir / "queries.csv", QUERY_COLUMNS + ["suite", "blocked_edges"], query_rows)
     (run_dir / "env.json").write_text(json.dumps(collect_env(_rel(graph_path)), indent=2, ensure_ascii=False),

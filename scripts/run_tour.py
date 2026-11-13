@@ -53,14 +53,14 @@ def sample_sets(graph: Graph, meta: GraphMeta, n_stops: int, count: int, seed: i
     rng = random.Random(seed * 1000 + n_stops)
     pool = [i for i in range(len(graph.node_lat)) if meta.node_in_scc[i]]
     sets: list[list[int]] = []
-    tries = 0
     while len(sets) < count:
         chosen: list[int] = []
+        tries = 0  # đếm riêng từng bộ: bộ sau không bị trừ phần lần thử của các bộ trước (review #109)
         while len(chosen) < n_stops + 1:
             tries += 1
             if tries > max_tries:
-                raise ValueError(f"không sinh đủ {count} bộ {n_stops} điểm cách nhau ≥ {min_sep_m} m "
-                                 f"sau {max_tries} lần thử")
+                raise ValueError(f"không sinh được bộ thứ {len(sets) + 1}/{count} gồm {n_stops} điểm cách nhau "
+                                 f"≥ {min_sep_m} m sau {max_tries} lần thử")
             v = rng.choice(pool)
             if all(v != u and haversine_m(graph.node_lat[v], graph.node_lon[v],
                                           graph.node_lat[u], graph.node_lon[u]) >= min_sep_m for u in chosen):
