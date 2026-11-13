@@ -21,6 +21,30 @@ Cắt bằng `python scripts/make_crops.py` từ `outer.graphml` đã đóng bă
 
 **Đã chốt (Q3, 28/10):** giữ cả **4 kích thước 1 / 2 / 3 / 4,5 km** cho E3. Pilot cho thấy vùng lớn nhất chỉ 13–25 ms/truy vấn và script đã cắt sẵn cả 4, nên thêm một điểm trên biểu đồ gần như không tốn thêm thời gian chạy.
 
+## E3 — Kết quả: tăng quy mô, fixed trips (T62)
+
+**Run:** `20261113-0438-scaling-cb16bc0` (thư mục `results/20261113-0438-scaling-cb16bc0/`) · lệnh `python scripts/run_scaling.py --pairs 250 --seed 42 --repeats 5 --warmup 20` · commit `cb16bc0`, `git_dirty: false` · máy: laptop Windows 11 của Tiến, Intel (Family 6 Model 197), RAM 31,4 GB, Python 3.11.9 · 4 vùng đúng sha256 trong `crop_manifest.json`.
+
+**Cách đo:** 250 cặp sinh trong SCC vùng 1 km (seed 42, phân tầng ngắn / trung bình / dài = 83 / 84 / 83), dùng **y hệt** trên cả 4 vùng: mỗi vùng đánh số node lại nên cặp được đổi qua `osmid`. Quy trình đo mục 3.1 (warm-up 20, lặp 5, lấy median, đảo thứ tự thuật toán theo cặp). Thời gian nạp đồ thị và bộ nhớ đỉnh đo riêng (`load.csv`, bộ nhớ bằng `tracemalloc`).
+
+**Kiểm tính đúng (đạt hết):** 2.000 dòng, mọi dòng `ok`; chi phí Dijkstra = A* ở mọi cặp, mọi vùng; 0 lệch `osmid`; chi phí của mỗi cặp **không tăng** khi vùng lớn dần (vùng lớn chứa mọi cạnh của vùng nhỏ); chạy lại với seed 42 ra `queries.csv` cùng sha256 (`f1d8e20f…`).
+
+| Vùng | \|V\| | median expanded Dijkstra | median expanded A* | median r = A*/Dijkstra | median thời gian Dijkstra (ms) | median thời gian A* (ms) | Nạp đồ thị (ms) | Bộ nhớ đỉnh khi nạp (MB) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 km | 565 | 186 | 60 | 0,448 | 0,101 | 0,085 | 4,5 | 1,7 |
+| 2 km | 1.889 | 236 | 66 | 0,327 | 0,142 | 0,110 | 26,1 | 6,3 |
+| 3 km | 4.411 | 236 | 66 | 0,316 | 0,176 | 0,137 | 67,3 | 15,3 |
+| 4,5 km | 10.143 | 236 | 66 | 0,316 | 0,200 | 0,138 | 303,4 | 35,3 |
+
+Cặp có chi phí **giảm** khi vùng lớn hơn: 48/250 (19,2%) từ 1 km lên 2 km, và vẫn đúng 48/250 từ 1 km lên 4,5 km (không cặp nào giảm thêm sau 2 km). Hình: `fig_e3_expanded_runtime.png`, `fig_e3_ratio_by_size.png` trong thư mục run (chú thích hình ghi "số cặp: 1000" là 250 cặp × 4 vùng).
+
+**Diễn giải (không phải số đo):**
+
+- **H2 đúng ở median:** từ 2 km trở lên, median `expanded` của cả hai thuật toán đứng yên (235,5 và 65,5; bảng làm tròn thành 236 và 66). Phần đuôi thì vẫn tăng: `expanded` lớn nhất của Dijkstra 1.310 → 2.554 → 3.459 từ 2 km lên 4,5 km dù không cặp nào đổi chi phí sau 2 km, tức một số cặp vẫn chạm tới vùng ngoài. Bước nhảy 1 km → 2 km đi cùng 48 cặp tìm được đường vòng mới qua vùng ngoài (chi phí giảm), tức là phần đồ thị thêm vào thật sự được dùng.
+- **Thời gian vẫn tăng dù median `expanded` không đổi:** từ 2 km lên 4,5 km, Dijkstra ×1,41 (0,142 → 0,200 ms), A* ×1,25 (0,110 → 0,138 ms). Một phần giải thích được: mỗi truy vấn khởi tạo hai mảng dài \|V\| (`g`, `pred_edge`). Đo riêng trên cùng máy bằng `python -c "import timeit, math; n = 10143; print(min(timeit.repeat(lambda: ([math.inf] * n, [-1] * n), number=2000, repeat=5)) / 2000 * 1e6)"` (đổi `n` theo vùng, kết quả là µs), hai mảng này tốn ~1,6 µs ở 2 km và ~27 µs ở 4,5 km, tức khoảng 25 µs trong ~58 µs chênh của Dijkstra. Phần còn lại **chưa đo được nguyên nhân** (có thể do bộ nhớ đệm khi dữ liệu đồ thị lớn hơn); không kết luận thêm.
+- Lợi thế của A* lớn hơn từ 2 km trở lên (median `r` 0,448 ở 1 km, 0,327 ở 2 km, 0,316 ở 3 và 4,5 km). **Chưa rõ nguyên nhân:** `r` giảm ở cả 48 cặp có đổi chi phí (0,530 → 0,346) lẫn 202 cặp còn lại (0,412 → 0,323), nên không chỉ do đường vòng mới.
+- Chỉ kết luận cho fixed trips (bản đồ lớn hơn, chuyến đi giữ nguyên); growing trips đã cắt (D11).
+
 ## E4 — Kết quả: ùn tắc và đóng đường (T63)
 
 **Run:** `20261113-0444-scenario-c1cd80b` (thư mục `results/20261113-0444-scenario-c1cd80b/`) · lệnh `python scripts/run_scenarios.py --seed 42` (mặc định 300 cặp, 100 cặp đóng đoạn, 30 cặp không còn đường, lặp 5, warm-up 20) · commit `c1cd80b`, `git_dirty: false` · đồ thị demo `hcm-benthanh-r2000-20261024` (sha256 `928c1f8b…`) · kịch bản `data/config/scenarios.json` · máy: laptop Windows 11 của Tiến, Python 3.11.9.
