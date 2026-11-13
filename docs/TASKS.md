@@ -495,6 +495,7 @@ Sáng 26/10 cắt, chiều 26/10 giữ lại (D10): T70, T71 đã xong; T72–T7
 
 ### T73 — UI tour tối giản
 - 👤 Tiến (Minh review) · ⏱ 3 h · ⛓ T72
+- **Ghi công:** UI tour trên giao diện cũ do Minh làm (#101, #104); Tiến gộp vào giao diện React ở T56 (#103).
 - **13/11:** UI tour đã viết xong, chỉ còn chờ `/api/tour` (T72, #102). Tour cũng có trong giao diện React (T56).
 - **Việc cần làm:** preset kho + 5 điểm từ `cases.json`; 3 thẻ Thứ tự nhập / NN / NN + 2-opt; marker đánh số theo thẻ được chọn.
 - 📁 `frontend/src/*.ts` · 📦 Demo tour · ✅ Bước 9 của kịch bản demo chạy được · ▶ Thủ công
