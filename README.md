@@ -5,7 +5,7 @@ Lập kế hoạch lộ trình giao hàng trên mạng đường TP.HCM bằng t
 
 Đồ án môn Introduction to AI (261_72ITSE30303_01) — Nhóm 4: Võ Việt Tiến, Bùi Duy Anh, Đỗ Quốc Bảo, Võ Hoàng Minh.
 
-> **Trạng thái (26/10):** đã có bộ nạp đồ thị, Dijkstra, A*, đối chứng NetworkX, snapshot ùn tắc, đóng đường, thuật toán tour và khung benchmark, kiểm trên đồ thị mẫu và đồ thị ngẫu nhiên. Chưa có dữ liệu thật đã nạp, API tìm đường hay kết quả thực nghiệm. Chi tiết: [docs/STATUS.md](docs/STATUS.md).
+> **Trạng thái (14/11):** chạy trên đồ thị thật vùng trung tâm (1.889 node): Dijkstra, A* (khớp NetworkX), ùn tắc theo vùng, đóng đoạn đường, tour NN / 2-opt có hướng / Held–Karp, API và giao diện React; kết quả thực nghiệm E2–E5 ở [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md). Đang làm: lập lại tour sau khi đóng đường (R1). Chi tiết: [docs/STATUS.md](docs/STATUS.md).
 
 SaiGo dùng **mạng đường thực** từ OpenStreetMap, nhưng **thời gian di chuyển và giao thông là mô phỏng**.
 Không cung cấp ETA giao thông trực tiếp hay điều hướng thương mại.
@@ -40,7 +40,7 @@ Kế hoạch triển khai: [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md) · **t
 | `backend/app/services/` | Điều phối route/tour/snapshot |
 | `backend/app/algorithms/` | Dijkstra, A*, heuristic, NN, 2-opt, Held–Karp |
 | `backend/app/graph/` | Adapter, geometry, snap, manifest |
-| `frontend/` | TypeScript + Vite + Leaflet |
+| `frontend/` | React + Astryx + Vite + Leaflet |
 | `scripts/` | Chuẩn bị dữ liệu, benchmark, vẽ biểu đồ |
 | `tests/` | pytest |
 | `data/config/`, `data/demo/` | Cấu hình và case demo |

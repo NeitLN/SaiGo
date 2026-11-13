@@ -75,8 +75,8 @@ Không đặt trước kết luận "A* luôn nhanh hơn". Nếu kết quả kh�
 | 2 | Dijkstra và A* tự cài, khôi phục tuyến theo **cạnh** | Không dùng hàm shortest path của thư viện trong sản phẩm |
 | 3 | Kiểm thử đối chứng với NetworkX (chỉ trong test) | So chi phí và `no_path` |
 | 4 | Snapshot: kịch bản ùn tắc theo vùng + danh sách cạnh bị đóng | Đồ thị gốc không bị sửa |
-| 5 | API `/api/route`, `/api/dataset` | FastAPI. Không có `/api/network` (không vẽ toàn mạng đường, D12) |
-| 6 | Bản đồ: chọn 2 điểm, xem tuyến Dijkstra và A*, bảng so sánh, chọn kịch bản và vẽ vùng ùn tắc, bấm vào một đoạn trên tuyến để đóng (đóng cả cạnh đối nếu có) rồi tìm lại, nút mở lại, báo "không có đường" | Leaflet, TypeScript thuần; nền tile OSM, chỉ vẽ tuyến và các cạnh của tuyến (D12) |
+| 5 | API `/api/route`, `/api/dataset` | FastAPI. Không vẽ toàn mạng đường lên bản đồ (D12); từ 13/11 có `/api/network` chỉ làm nền dự phòng khi không tải được tile OSM (T56 R8) |
+| 6 | Bản đồ: chọn 2 điểm, xem tuyến Dijkstra và A*, bảng so sánh, chọn kịch bản và vẽ vùng ùn tắc, bấm vào một đoạn trên tuyến để đóng (đóng cả cạnh đối nếu có) rồi tìm lại, nút mở lại, báo "không có đường" | Leaflet; giao diện React 19 + Astryx từ 13/11 (D15); nền tile OSM, chỉ vẽ tuyến và các cạnh của tuyến (D12) |
 | 7 | Benchmark offline: 1.000 truy vấn trên vùng demo + thí nghiệm tăng quy mô 4 kích thước, chỉ "fixed trips" | CSV/JSON + biểu đồ |
 | 8 | Tour nhiều điểm: NN, 2-opt có hướng, Held–Karp (n ≤ 10) trên ma trận chi phí tính từ đồ thị; `/api/tour`; UI kho + 5 điểm với 3 thẻ so sánh; benchmark tour | T70–T74; trở lại phạm vi chiều 26/10 (D10) |
 
@@ -92,7 +92,7 @@ Không đặt trước kết luận "A* luôn nhanh hơn". Nếu kết quả kh�
 
 ### 3.3. Ngoài phạm vi
 
-ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window, giao thông/GPS thật, cấm rẽ, đóng gói `.exe`, deploy web, editor kéo thả điểm giao, cache kết quả. Từ 26/10 thêm: vẽ toàn bộ mạng đường (T32), lớp chấm node đã mở rộng trên bản đồ, đóng đường hai chế độ, animation trace, workload "growing trips".
+Simulated Annealing, nhiều shipper, time window, giao thông/GPS thật, cấm rẽ, đóng gói `.exe`, deploy web, editor kéo thả điểm giao, cache kết quả. Từ 26/10 thêm: vẽ toàn bộ mạng đường (T32), lớp chấm node đã mở rộng trên bản đồ, đóng đường hai chế độ, animation trace, workload "growing trips". ALT và tìm kiếm hai chiều từng nằm ở đây; từ 13/11 có trên main như phần mở rộng (D17), đo ở EXPERIMENTS mục E2b.
 
 ## 4. Quyết định so với TOPIC.md / proposal
 
@@ -115,6 +115,7 @@ ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window,
 | D15 | Frontend chuyển sang **React 19 + Astryx** (T56, gộp T54 và T73); bản đồ vẫn dùng Leaflet trực tiếp *(13/11, Tiến chốt)* | T54, T73 chưa làm, nên làm luôn trên giao diện mới thay vì vá giao diện TS thuần. Có hạn chót riêng: chỉ merge nếu mọi ví dụ chấp nhận đạt và Minh chạy lại được trước 17/11, không thì demo 19/11 bằng giao diện cũ |
 | D16 | Đóng băng tính năng dời từ 09/11 (D13) sang **17/11** *(13/11, Tiến chốt)* | 09–13/11 vẫn phải thêm giao diện React (T56) và nền dự phòng khi tile OSM bị chặn; 17/11 là hạn chót T56. Sau 17/11 chỉ sửa lỗi, chạy thí nghiệm, viết essay |
 | D17 | Giữ 6 PR Duy Anh đã merge ngày 13/11 (ALT #115, Dijkstra hai chiều #119, vùng demo-large #116, so sánh 4 thuật toán #121, Or-opt cho tour #122, CLI check-heuristic và route --scenario/--block #110); từ đây Tiến chịu trách nhiệm phần này như phần mở rộng. PR đang mở của thành viên khác đóng lại, giữ branch *(13/11, Tiến chốt)* | Các tính năng đã qua CI và đã có trên main; revert tốn công hơn giữ. Phần mở rộng không thay câu hỏi nghiên cứu (RQ1–RQ3), chỉ bổ sung so sánh; essay ghi rõ đây là phần thêm sau kế hoạch |
+| D18 | Rà lại proposal 02/10 với trạng thái 14/11 (có ý kiến phản biện độc lập), thay lịch M9 bằng kế hoạch **R0–R4** ([ROADMAP](ROADMAP.md) mục 7). Không còn nộp chính thức nhưng làm trọn như bản cuối (essay, thuyết trình 15 phút, demo). Ưu tiên khoảng trống lớn nhất so với proposal: **lập lại tour sau khi đóng đường** (slide 3, 7, 12), gồm so sánh giữ thứ tự cũ và sắp lại (R1). Bỏ khỏi DEMO: nhật ký snapshot, so Dijkstra/A* trên một chặng của tour *(14/11, Tiến ủy quyền quyết định)* | Lịch 12/11–19/11 đã qua; tài liệu trạng thái dừng ở 26/10. Hai mục bỏ khỏi DEMO không thêm bằng chứng cho RQ nào, còn tour sau khi đóng đường là câu chuyện chính của proposal |
 
 Không gửi thư riêng cho giảng viên (giảng viên xem repo khi nộp cuối kỳ). Các thay đổi so với proposal (D1, D11–D13) được giải thích ở mục này và ở phần giới hạn của essay.
 
@@ -154,7 +155,7 @@ Mọi case được chạy thử trước trên đúng snapshot dùng để demo
 | ~~3~~ | *Đã cắt 26/10 (D12): lớp "Node đã mở rộng". Số node mở rộng vẫn có trong bảng ở bước 2* | | | |
 | 4 | Đảo chiều đi/đến | Tuyến và chi phí khác chiều ban đầu | Đường một chiều: A→B ≠ B→A | — |
 | 5 | Chọn kịch bản "Cao điểm mô phỏng — trung tâm" | Vùng ùn tắc tô màu; tuyến đổi sang đường vòng; chi phí tăng | Ùn tắc theo vùng làm đổi lựa chọn | RQ3 |
-| 6 | Bấm vào một đoạn trên tuyến → **Đóng đoạn đường** | Đoạn đỏ; tuyến mới; nhật ký "Đóng cạnh …"; nút mở lại | Lập lại tuyến, không dùng cạnh bị đóng | RQ3 |
+| 6 | Bấm vào một đoạn trên tuyến → **Đóng đoạn đường** | Đoạn đỏ; tuyến mới; dòng kịch bản ghi "đóng thêm … cạnh"; nút mở lại | Lập lại tuyến, không dùng cạnh bị đóng | RQ3 |
 | 7 | Chọn case "Không còn đường" | Thông báo không có đường; không vẽ đường thẳng | Hệ thống báo đúng giới hạn | RQ3 |
 | 8 | Chuyển sang slide biểu đồ tăng quy mô | Node mở rộng / thời gian theo số node đồ thị | Lợi thế của A* khi bản đồ lớn — số đo thật | RQ1b |
 | 9 | Chuyển sang chế độ tour, case "Kho + 5 điểm": thẻ Thứ tự nhập / NN / NN + 2-opt | Thứ tự giao đổi, chi phí trước/sau | Tầng thứ hai của bài toán | RQ2 |

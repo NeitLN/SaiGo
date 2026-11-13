@@ -4,6 +4,8 @@ Lập ngày 23/10/2026. Mốc của giảng viên (tentative, theo Project_Intru
 
 > **26/10: đổi phạm vi đã duyệt** ([đề xuất](proposals/2026-10-26-pham-vi.md); D10–D13 ở [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 4): bỏ vẽ toàn mạng đường (T32), RQ1b chỉ fixed trips (4 kích thước, chốt 28/10), **điểm kiểm bằng chứng 05/11** thay cổng G1, **MVP tích hợp 08/11**. Tour bị cắt sáng 26/10 rồi **giữ lại chiều 26/10** khi Duy Anh quay lại (D10). Mục 1–5 dưới đây đã sửa theo; bản trước nằm trong lịch sử git.
 
+> **14/11: kế hoạch phần còn lại là mục 7 (R0–R4, D18).** Mục 1–6 giữ làm lịch sử: các mốc tới 12/11 đã qua, trạng thái thật ở [PROGRESS](PROGRESS.md) mục 1. Dự án không còn nộp chính thức nhưng làm trọn như bản cuối.
+
 Nguyên tắc:
 
 - Mỗi mốc kết thúc bằng **một kết quả chạy được** và một lệnh/thao tác để chứng minh.
@@ -44,7 +46,7 @@ Tour (M8): thuật toán trên ma trận đã xong 26/10; T72–T74 (ma trận t
 | **M4** Tìm đường trên dữ liệu thật | 02–03/11 | Dijkstra/A* trên đồ thị thật; 200 cặp khớp NetworkX; `c`, `v_max` ghi vào manifest | `pytest -m realdata`; CLI `--from-latlon ... --to-latlon ...` | T33 |
 | **M5** Ùn tắc & đóng đường | 02–04/11 | Snapshot với vùng ùn tắc và cạnh đóng; tuyến đổi, `no_path` khi cần | `pytest tests/test_scenario.py tests/test_closures.py -q`; CLI `--scenario peak-center --block 123` | T40–T42 |
 | **M6** Bản đồ tương tác (rút gọn) | 02–07/11 | Bấm 2 điểm → tuyến + bảng Dijkstra/A*; chọn kịch bản, vẽ vùng ùn tắc; bấm đoạn trên tuyến để đóng, mở lại; báo không có đường | Checklist UI trong [PROGRESS.md](PROGRESS.md); `pytest tests/test_api_route.py` | T50–T55 |
-| **M7** Benchmark & tăng quy mô | 02–08/11 | CSV đo thật + biểu đồ: 1.000 cặp vùng demo, 4 kích thước đồ thị (fixed trips), thí nghiệm ùn tắc/đóng đường | `python scripts/run_benchmarks.py --suite all`; `python scripts/plot_results.py results/<run_id>` | T60–T65 |
+| **M7** Benchmark & tăng quy mô | 02–08/11 | CSV đo thật + biểu đồ: 1.000 cặp vùng demo, 4 kích thước đồ thị (fixed trips), thí nghiệm ùn tắc/đóng đường | E2 `python scripts/run_benchmarks.py --suite demo`; E3 `python scripts/run_scaling.py`; E4 `python scripts/run_scenarios.py`; E5 `python scripts/run_tour.py`; rồi `python scripts/plot_results.py results/<run_id>`, `python scripts/summarize_results.py results/<run_id>` | T60–T65 |
 | **G1** Điểm kiểm bằng chứng | **05/11** | Biết chắc MVP có kịp 08/11 không; nếu không thì cắt theo thứ tự đã duyệt | Điều kiện ở mục 3 | G1 |
 | **MVP** tích hợp | **08/11** | Demo rút gọn chạy trọn ([DEMO.md](DEMO.md)) + bằng chứng thực nghiệm đã chốt | Chạy kịch bản demo; mọi số trong EXPERIMENTS.md có `run_id` | — |
 | **M8** Tour (E1) | 26/10 · 05–08/11 | NN, 2-opt có hướng, Held–Karp trên ma trận (xong 26/10); ma trận chi phí từ đồ thị, `/api/tour`, UI kho + 5 điểm, benchmark tour | `pytest tests/test_tour.py`; `python scripts/run_benchmarks.py --suite tour`; bước 9 của demo | T70–T74 |
@@ -193,3 +195,24 @@ Hai task song song không sửa cùng một file. Khi cần sửa file của ng�
 3. Mô tả milestone trong `scripts/tracking/create_backlog.py` và `tracking/schedule.csv`; thêm T34.
 4. Đóng T32 với lý do *not planned*; rồi chạy `create_backlog.py --sync` và `setup_project.py --sync`.
 5. Không gửi thư riêng cho giảng viên (quyết định chiều 26/10); lý do đổi phạm vi ghi trong PROJECT_BRIEF mục 4 và essay.
+
+## 7. Kế hoạch phần còn lại (14/11, D18)
+
+Lập sau khi rà proposal trình bày 02/10 (slide và kịch bản nói, không nằm trong repo) với trạng thái 14/11, có ý kiến phản biện độc lập. Tiến ủy quyền quyết định. Mỗi mốc kết thúc bằng một lệnh hoặc thao tác chứng minh được. Người làm: Tiến; review: Minh (D14).
+
+| Mốc | Mức | Ước lượng | Kết quả chạy được | Kiểm chấp nhận |
+|---|---|---:|---|---|
+| **R0** Tài liệu khớp thực tế | Mini | 3 h | EXPERIMENTS sửa cách viết, thêm E2b (#127); PROGRESS, STATUS, DEMO, ARCHITECTURE khớp main; ghi G1 | Mọi lệnh trong STATUS chạy được; trạng thái task đối chiếu `gh pr list --state merged`; không còn dòng "chờ review" cho PR đã merge |
+| **R1** Lập lại tour sau khi đóng đường | Standard (phiếu `docs/tasks/R1-tour-closure.md`, tạo cùng PR của R1) | 6–10 h | Chế độ tour nhận cạnh đóng; bấm đóng một đoạn trên tour; so **giữ thứ tự cũ** với **sắp lại**; báo đúng điểm không tới được | Test API + Playwright trên case "Kho + 5 điểm giao": tour mới không dùng cạnh đóng; cô lập một điểm thì báo tên điểm, không vẽ tour; số trên trang khớp response |
+| **R2** Khóa bằng chứng | Mini | 3–5 h | E5 thêm n = 5 (cùng cỡ case demo), báo max và p90; Or-opt đo trong E5 hoặc ghi "chỉ minh họa"; thí nghiệm nhỏ cho R1 (giữ thứ tự cũ / sắp lại sau khi đóng) | `python scripts/run_tour.py --sizes 5 ...` ra `git_dirty: false`; Minh chạy lại một bảng trên máy mình, cùng bậc |
+| **R3** Máy thứ hai (T80) | Mini | 2 h | Clone sạch → tải dữ liệu từ Release → kiểm hash → chạy demo theo README | Biên bản ghi mọi bước vướng; UI-1 (tile OSM thật) kiểm ở một mạng không chặn tile |
+| **R4** Essay và trình bày (T82, T83) | — | 10–14 h | Essay 10 trang double spaced (introduction / discussion / conclusion, bìa có tên và MSSV); slide 15 phút; video demo dự phòng | Ba lượt demo ≤ 4 phút có bấm giờ; bài nói ≤ 15 phút; mọi số trong essay có `run_id` |
+
+Thứ tự: R0 → R1 → R2 → R3 → R4. R2 phần E5 n = 5 làm song song với R1 được (không đụng cùng file).
+
+**Thứ tự cắt khi thiếu giờ:** benchmark Or-opt → slide ALT và Dijkstra hai chiều (để trong Q&A) → trau chuốt UI → thí nghiệm của R1 (giữ phần UI và test). **Không cắt:** tour sau khi đóng đường trên UI, `no_path`, phần giới hạn và đối chứng.
+
+**Quyết định đã chốt cho R1 (Tiến ủy quyền, 14/11):**
+1. "Giữ thứ tự cũ" = đi lại đúng thứ tự giao trước khi đóng, mỗi chặng tìm lại trên snapshot mới; "sắp lại" = chạy lại NN, NN + 2-opt trên ma trận mới. Báo cả hai, cùng snapshot, để thuật toán tìm đường không được tính công của việc sắp lại (proposal slide 12).
+2. Cho bấm đóng đoạn ngay trên tour đang vẽ (giống chế độ tìm đường, kèm cạnh đối); case demo có thể kèm cạnh đóng sẵn.
+3. Thêm case demo "tour không còn khả thi": đóng các cạnh làm một điểm giao không tới được; UI báo tên điểm, không vẽ tour một phần.
