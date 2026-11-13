@@ -324,22 +324,23 @@ def test_e5_table_cells_hand_computed(tmp_path):
     section = summary.e5_section(summary.read_tour_rows(run), [summary.read_meta(run)])
     assert section.table is not None, section.skipped
     # median/Tứ phân vị tính từng bộ rồi mới gom; sắp theo n_stops rồi theo phương án
+    # p90 Gap nội suy tuyến tính như `percentile` (n=4, NN: 60 và 70 → 60 + 0,9·10 = 69); Max Gap là lớn nhất.
     assert section.table.rows == (
-        ("4", "thứ tự nhập", "—", "—", "100", "[100; 100]", "2", "2/2"),
-        ("4", "NN", "17,5", "[16,25; 18,75]", "65", "[62,5; 67,5]", "4", "2/2"),
-        ("4", "NN + 2-opt", "40", "[40; 40]", "20", "[20; 20]", "12", "2/2"),
-        ("4", "Held–Karp", "—", "—", "—", "—", "200", "2/2"),
-        ("6", "thứ tự nhập", "—", "—", "66,67", "—", "2", "1/2"),
-        ("6", "NN", "40", "—", "0", "—", "4", "1/2"),
-        ("6", "NN + 2-opt", "40", "—", "0", "—", "12", "1/2"),
-        ("6", "Held–Karp", "—", "—", "—", "—", "200", "1/2"),
-        ("8", "thứ tự nhập", "—", "—", "—", "—", "2", "1/1"),
-        ("8", "NN", "20", "—", "—", "—", "4", "1/1"),
-        ("8", "NN + 2-opt", "30", "—", "—", "—", "12", "1/1"),
+        ("4", "thứ tự nhập", "—", "—", "100", "[100; 100]", "100", "100", "2", "2/2"),
+        ("4", "NN", "17,5", "[16,25; 18,75]", "65", "[62,5; 67,5]", "69", "70", "4", "2/2"),
+        ("4", "NN + 2-opt", "40", "[40; 40]", "20", "[20; 20]", "20", "20", "12", "2/2"),
+        ("4", "Held–Karp", "—", "—", "—", "—", "—", "—", "200", "2/2"),
+        ("6", "thứ tự nhập", "—", "—", "66,67", "—", "66,67", "66,67", "2", "1/2"),
+        ("6", "NN", "40", "—", "0", "—", "0", "0", "4", "1/2"),
+        ("6", "NN + 2-opt", "40", "—", "0", "—", "0", "0", "12", "1/2"),
+        ("6", "Held–Karp", "—", "—", "—", "—", "—", "—", "200", "1/2"),
+        ("8", "thứ tự nhập", "—", "—", "—", "—", "—", "—", "2", "1/1"),
+        ("8", "NN", "20", "—", "—", "—", "—", "—", "4", "1/1"),
+        ("8", "NN + 2-opt", "30", "—", "—", "—", "—", "—", "12", "1/1"),
     )
     assert section.table.headers == ("Điểm giao", "Phương án", "Median Improvement %",
                                      "IQR Improvement %", "Median Gap %", "IQR Gap %",
-                                     "Median order_ms", "Bộ khả thi")
+                                     "p90 Gap %", "Max Gap %", "Median order_ms", "Bộ khả thi")
     assert "run_id `20261105-0800-tour-abc9999`" in section.source
     assert "· 5 bộ ·" in section.source
     assert "Python 3.11.9" in section.source and "git def5678" in section.source
@@ -368,8 +369,8 @@ def test_e5_missing_input_is_excluded_and_counted(tmp_path):
     ])
     section = summary.e5_section(summary.read_tour_rows(run), [summary.read_meta(run)])
     assert section.table.rows == (
-        ("4", "NN", "—", "—", "60", "—", "4", "1/1"),
-        ("4", "Held–Karp", "—", "—", "—", "—", "200", "1/1"),
+        ("4", "NN", "—", "—", "60", "—", "60", "60", "4", "1/1"),
+        ("4", "Held–Karp", "—", "—", "—", "—", "—", "—", "200", "1/1"),
     )
     assert any("1 bộ–phương án bị bỏ khỏi Improvement vì thiếu dòng `input`" in note
                for note in section.table.notes)
