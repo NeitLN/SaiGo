@@ -113,6 +113,7 @@ ALT, Simulated Annealing, tìm kiếm hai chiều, nhiều shipper, time window,
 | D13 | Mốc: **điểm kiểm bằng chứng 05/11**, **MVP tích hợp 08/11**, 09–12/11 không thêm tính năng; essay bắt đầu từ tuần 3 *(26/10)* | Thay cổng G1 "có tích hợp tour không", vì tour đã nằm trong phạm vi |
 | D14 | Phân công từ 13/11: Tiến làm toàn bộ việc còn lại, Minh review chính, Duy Anh và Bảo làm khi được Tiến gán *(Tiến chốt)* | 07–13/11 main không có commit mới vì việc kẹt ở chờ approve/merge giữa bốn người; còn 6 ngày tới demo 19/11 |
 | D15 | Frontend chuyển sang **React 19 + Astryx** (T56, gộp T54 và T73); bản đồ vẫn dùng Leaflet trực tiếp *(13/11, Tiến chốt)* | T54, T73 chưa làm, nên làm luôn trên giao diện mới thay vì vá giao diện TS thuần. Có hạn chót riêng: chỉ merge nếu mọi ví dụ chấp nhận đạt và Minh chạy lại được trước 17/11, không thì demo 19/11 bằng giao diện cũ |
+| D16 | Đóng băng tính năng dời từ 09/11 (D13) sang **17/11** *(13/11, Tiến chốt)* | 09–13/11 vẫn phải thêm giao diện React (T56) và nền dự phòng khi tile OSM bị chặn; 17/11 là hạn chót T56. Sau 17/11 chỉ sửa lỗi, chạy thí nghiệm, viết essay |
 
 Không gửi thư riêng cho giảng viên (giảng viên xem repo khi nộp cuối kỳ). Các thay đổi so với proposal (D1, D11–D13) được giải thích ở mục này và ở phần giới hạn của essay.
 

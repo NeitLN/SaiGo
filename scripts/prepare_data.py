@@ -118,7 +118,8 @@ def download(force: bool) -> None:
         "attribution": ATTRIBUTION,
     }
     PROCESSED.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
+                             newline="\n")
     print(f"nodes={manifest['node_count']} edges={manifest['edge_count']} oneway_edges={manifest['oneway_edge_count']}")
     print(f"đã lưu {manifest['file']} ({manifest['file_bytes'] / 1e6:.1f} MB, sha256 {manifest['sha256'][:12]}…)")
     print(f"đã ghi {manifest_path.relative_to(ROOT).as_posix()}")
@@ -287,7 +288,8 @@ def build(area: str) -> None:
         "dependencies": {"python": platform.python_version(), "osmnx": ox.__version__, "networkx": nx.__version__},
         "attribution": ATTRIBUTION,
     }
-    (PROCESSED / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (PROCESSED / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                                         encoding="utf-8", newline="\n")
 
     pct = 100 * report["oneway_edge_count"] / max(1, report["edge_count"])
     print(f"dataset {dataset_id}: vùng {area}, nửa cạnh {half} m")
