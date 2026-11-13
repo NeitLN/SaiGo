@@ -127,3 +127,37 @@ def test_main_survives_windows_cp1252_console(tmp_path, graph_file, monkeypatch)
                  "--pairs", "6", "--closure", "2", "--nopath", "1", "--seed", "42", "--repeats", "1", "--warmup", "0",
                  "--out", str(tmp_path / "r"), "--run-id", "cp1252"])
     assert code == 0
+
+
+def test_scenario_config_paths_use_forward_slashes(tmp_path, graph_file):
+    out = tmp_path / "results"
+    assert main(["--graph", str(graph_file), "--scenario-file", "tests/fixtures/scenarios_mini.json",
+                 "--pairs", "6", "--closure", "2", "--nopath", "1", "--seed", "42", "--repeats", "1", "--warmup", "0",
+                 "--out", str(out), "--run-id", "posix"]) == 0
+    assert "\\\\" not in (out / "posix" / "config.json").read_text(encoding="utf-8")
+
+
+@pytest.mark.realdata
+def test_t55_case_under_peak_center_through_measure_query():
+    """Review #109: case T55 (Dinh Độc Lập → Bitexco) qua cùng `measure_query` của E4: 186,1 → 246,1 s, đổi tuyến."""
+    graph_path = ROOT / "data" / "processed" / "hcm-benthanh-r2000-20261024.json"
+    if not graph_path.exists():
+        pytest.skip("chưa có đồ thị demo trong data/processed/")
+    from app.graph.model import load_graph
+    from app.graph.scenario import build_snapshot, load_scenarios
+    from app.graph.snap import nearest_node
+    from run_benchmarks import measure_query
+    graph, meta = load_graph(graph_path)
+    scen = load_scenarios(ROOT / "data" / "config" / "scenarios.json")
+    s = nearest_node(graph, meta, 10.77871, 106.69593)
+    t = nearest_node(graph, meta, 10.77186, 106.70391)
+    q = {"query_id": 0, "workload": "demo", "stratum": "dai", "hav_m": 0.0,
+         "source": getattr(s, "node_id", s), "target": getattr(t, "node_id", t)}
+    out = {}
+    for sid in ("baseline", "peak-center"):
+        rows, _, _ = measure_query(graph, build_snapshot(graph, meta, scen[sid], blocked=set()), q, 0, 1,
+                                   run_id="t55", suite="scenario", size_label="demo", blocked_count=0)
+        out[sid] = rows[0]
+    assert round(float(out["baseline"]["cost_s"]), 1) == 186.1
+    assert round(float(out["peak-center"]["cost_s"]), 1) == 246.1
+    assert out["baseline"]["route_sig"] != out["peak-center"]["route_sig"]

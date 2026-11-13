@@ -163,3 +163,19 @@ def test_run_tour_survives_windows_cp1252_console(tmp_path, rand_graph, monkeypa
     monkeypatch.setattr(sys, "stderr", io.TextIOWrapper(io.BytesIO(), encoding="cp1252"))
     assert main(["--graph", str(rand_graph), "--sizes", "4", "--sets", "1", "--seed", "42",
                  "--out", str(tmp_path / "r"), "--run-id", "cp"]) == 0
+
+
+def test_unsatisfiable_sets_fail_without_leaving_empty_dir(tmp_path):
+    """Review #109: không sinh đủ bộ điểm → mã 2, không tạo thư mục run rỗng."""
+    out = tmp_path / "results"
+    code = main(["--graph", "tests/fixtures/mini.json", "--sizes", "10", "--sets", "2", "--seed", "42",
+                 "--out", str(out), "--run-id", "empty"])
+    assert code == 2
+    assert not (out / "empty").exists()
+
+
+def test_tour_config_paths_use_forward_slashes(tmp_path, rand_graph):
+    out = tmp_path / "results"
+    assert main(["--graph", str(rand_graph), "--sizes", "4", "--sets", "1", "--seed", "42",
+                 "--out", str(out), "--run-id", "posix"]) == 0
+    assert "\\\\" not in (out / "posix" / "config.json").read_text(encoding="utf-8")

@@ -168,31 +168,39 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"Lỗi: {err}\n")
         return 2
 
+    # S1: sinh cặp trên vùng nhỏ nhất; L = cạnh hình vuông của vùng đó.
+    smallest = sizes[0]
+    g0, m0 = load_graph(smallest["path"])
+    base_queries, sampling = generate_queries(g0, m0, args.pairs, args.seed, workload=WORKLOAD,
+                                              l_box_m=2 * smallest["half_side_m"], l_source="crop_manifest")
+    # S2: đổi cặp sang mọi vùng TRƯỚC khi ghi gì, để osmid sai không để lại run dở dang (review #109).
+    try:
+        with_osm = map_queries(base_queries, m0, g0, m0)
+        per_size = []
+        for size in sizes:
+            graph, meta = load_graph(size["path"])
+            per_size.append((size, graph, meta, map_queries(base_queries, m0, graph, meta)))
+    except ValueError as err:
+        sys.stderr.write(f"Lỗi: {err}\n")
+        return 2
+
     commit, _, dirty = _get_git_info()
     run_id = args.run_id or f"{time.strftime('%Y%m%d-%H%M')}-{SUITE}-{commit[:7]}"
     run_dir = Path(args.out) / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     if dirty:
         sys.stderr.write("Cảnh báo: repo đang có thay đổi chưa commit, run sẽ ghi git_dirty = true (T62 S5)\n")
-
-    # S1: sinh cặp trên vùng nhỏ nhất; L = cạnh hình vuông của vùng đó.
-    smallest = sizes[0]
-    g0, m0 = load_graph(smallest["path"])
-    base_queries, sampling = generate_queries(g0, m0, args.pairs, args.seed, workload=WORKLOAD,
-                                              l_box_m=2 * smallest["half_side_m"], l_source="crop_manifest")
-    with_osm = map_queries(base_queries, m0, g0, m0)
     _write_csv(run_dir / "queries.csv", QUERY_COLUMNS + ["source_osmid", "target_osmid"], with_osm)
 
     rows: list[dict] = []
     load_rows: list[dict] = []
-    for size in sizes:
-        graph, meta = load_graph(size["path"])
+    for size, graph, meta, mapped in per_size:
         # run_benchmark ghi queries.csv đúng cột của nó, nên bỏ cột osmid (đã ghi ở queries.csv chung của run).
-        queries = [{k: v for k, v in q.items() if k in QUERY_COLUMNS} for q in map_queries(base_queries, m0, graph, meta)]
+        queries = [{k: v for k, v in q.items() if k in QUERY_COLUMNS} for q in mapped]
         sub = run_dir / "sizes" / size["label"]
         run_benchmark(graph, meta, baseline_snapshot(graph), queries, run_id, SUITE, size["label"], sub,
                       repeats=args.repeats, warmup=args.warmup, dataset_path=_rel(size["path"]),
-                      cli_config={**vars(args), "manifest": str(_rel(args.manifest)), "out": str(_rel(args.out))},
+                      cli_config={**vars(args), "manifest": _rel(args.manifest).as_posix(), "out": _rel(args.out).as_posix()},
                       sampling_info=sampling)
         with (sub / "measurements.csv").open(encoding="utf-8") as f:
             rows.extend(csv.DictReader(f))
@@ -209,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
                                       encoding="utf-8", newline="\n")
     config = {"run_id": run_id, "suite": SUITE, "workload": WORKLOAD, "pairs": args.pairs, "seed": args.seed,
               "repeats": args.repeats, "warmup": args.warmup, "n_queries": len(base_queries),
-              "sizes": [{k: (str(_rel(v)) if isinstance(v, Path) else v) for k, v in s.items()} for s in sizes],
+              "sizes": [{k: (_rel(v).as_posix() if isinstance(v, Path) else v) for k, v in s.items()} for s in sizes],
               "sampling": sampling}
     (run_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8",
                                          newline="\n")

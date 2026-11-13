@@ -148,6 +148,13 @@ def main(argv: list[str] | None = None) -> int:
     graph_path = args.graph if args.graph.is_absolute() or args.graph.exists() else ROOT / args.graph
     graph, meta = load_graph(graph_path)
     snap = baseline_snapshot(graph)
+    # Sinh bộ điểm trước khi tạo thư mục run: không đủ bộ thì báo lỗi, không để lại thư mục rỗng (review #109).
+    try:
+        all_sets = [(n, sample_sets(graph, meta, n, args.sets, args.seed, args.min_sep)) for n in args.sizes]
+    except ValueError as err:
+        sys.stderr.write(f"Lỗi: {err}\n")
+        return 2
+
     commit, _, dirty = _get_git_info()
     run_id = args.run_id or f"{time.strftime('%Y%m%d-%H%M')}-tour-{commit[:7]}"
     run_dir = Path(args.out) / run_id
@@ -158,8 +165,8 @@ def main(argv: list[str] | None = None) -> int:
     rows: list[dict] = []
     set_id = 0
     infeasible = 0
-    for n in args.sizes:
-        for nodes in sample_sets(graph, meta, n, args.sets, args.seed, args.min_sep):
+    for n, sets in all_sets:
+        for nodes in sets:
             res = plan_set(graph, snap, nodes)
             infeasible += 0 if res["feasible"] else 1
             for m in METHODS:
@@ -181,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         w.writerows(rows)
     (run_dir / "env.json").write_text(json.dumps(collect_env(_rel(graph_path)), indent=2, ensure_ascii=False),
                                       encoding="utf-8", newline="\n")
-    config = {"run_id": run_id, "suite": "tour", "graph": str(_rel(graph_path)), "sizes": args.sizes,
+    config = {"run_id": run_id, "suite": "tour", "graph": _rel(graph_path).as_posix(), "sizes": args.sizes,
               "sets": args.sets, "seed": args.seed, "min_sep_m": args.min_sep, "infeasible_sets": infeasible,
               "held_karp_max_points": HELD_KARP_MAX_POINTS}
     (run_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8",

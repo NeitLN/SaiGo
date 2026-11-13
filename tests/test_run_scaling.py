@@ -139,3 +139,24 @@ def test_run_scaling_end_to_end(nested):
     assert [x["size_label"] for x in load] == ["r1000", "r2000"]
     assert [int(x["n_nodes"]) for x in load] == [9, 16]
     assert all(float(x["load_ms"]) >= 0 and float(x["peak_mb"]) > 0 for x in load)
+
+
+def test_missing_osmid_fails_before_writing_anything(nested):
+    """Review #109: osmid sai phải báo lỗi gọn (mã 2) và không để lại queries.csv hay sizes/ dở dang."""
+    tmp, small, _ = nested
+    holed = _grid(tmp / "grid_hole.json", 4, "grid_hole", reverse_ids=True, drop=11)
+    manifest = _manifest(tmp, [(1000, small), (2000, holed)])
+    out = tmp / "results"
+    code = main(["--manifest", str(manifest), "--pairs", "30", "--seed", "1", "--repeats", "1", "--warmup", "0",
+                 "--out", str(out), "--run-id", "bad"])
+    assert code == 2
+    assert not (out / "bad").exists()
+
+
+def test_config_paths_use_forward_slashes(nested):
+    tmp, small, large = nested
+    manifest = _manifest(tmp, [(1000, small), (2000, large)])
+    out = tmp / "results"
+    assert main(["--manifest", str(manifest), "--pairs", "6", "--seed", "42", "--repeats", "1", "--warmup", "0",
+                 "--out", str(out), "--run-id", "posix"]) == 0
+    assert "\\\\" not in (out / "posix" / "config.json").read_text(encoding="utf-8")

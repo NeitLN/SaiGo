@@ -209,7 +209,8 @@ def main(argv: list[str] | None = None) -> int:
     _write_csv(run_dir / "queries.csv", QUERY_COLUMNS + ["suite", "blocked_edges"], query_rows)
     (run_dir / "env.json").write_text(json.dumps(collect_env(_rel(graph_path)), indent=2, ensure_ascii=False),
                                       encoding="utf-8", newline="\n")
-    config = {"run_id": run_id, "graph": str(_rel(graph_path)), "scenario_file": str(_rel(_resolve(args.scenario_file))),
+    config = {"run_id": run_id, "graph": _rel(graph_path).as_posix(),
+              "scenario_file": _rel(_resolve(args.scenario_file)).as_posix(),
               "scenarios": list(scenarios), "pairs": args.pairs, "closure": args.closure, "nopath": args.nopath,
               "closure_picked": len(picked), "seed": args.seed, "repeats": args.repeats, "warmup": args.warmup,
               "sampling": sampling}
