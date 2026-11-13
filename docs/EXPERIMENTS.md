@@ -1,7 +1,7 @@
 # Thực nghiệm
 
 Cấu hình, bộ truy vấn, môi trường đo và phân tích kết quả. Thiết kế: [TOPIC.md](TOPIC.md) mục 18.
-Kết quả benchmark đã có: E4 (mục "E4 — Kết quả"). Mục E3 đầu tiên là số đo kích thước đồ thị và pilot kiểm tính khả thi.
+Kết quả benchmark ghi ở các mục "… — Kết quả" bên dưới; mỗi mục kèm `run_id`, lệnh chạy và máy đo. Mục E3 đầu tiên là số đo kích thước đồ thị và pilot kiểm tính khả thi.
 
 ## E3 — Đồ thị cho thí nghiệm tăng quy mô (T61)
 
@@ -32,12 +32,12 @@ Cắt bằng `python scripts/make_crops.py` từ `outer.graphml` đã đóng bă
 | Kịch bản | Cặp đổi tuyến | % tăng chi phí (median / p90) | median expanded Dijkstra | median expanded A* | median r = A*/Dijkstra |
 |---|---:|---:|---:|---:|---:|
 | `baseline` | — | — | 586 | 189 | 0,403 |
-| `peak-center` | 56/300 (18,7%) | 0,0% / 15,6% | 584 | 200 | 0,422 |
-| `peak-ben-thanh` | 47/300 (15,7%) | 0,0% / 10,5% | 589 | 196 | 0,413 |
+| `peak-center` | 56/300 (18,7%) | 0,0% / 15,7% | 584 | 200 | 0,422 |
+| `peak-ben-thanh` | 47/300 (15,7%) | 0,0% / 10,6% | 589 | 196 | 0,413 |
 
 ### Đóng đoạn giữa tuyến (C3): 100 cặp có tuyến cơ sở ≥ 3 cạnh
 
-Còn đường 100/100. Chi phí tăng median 4,3%, p90 21,8%. Thời gian lập lại tách hai phần: dựng snapshot median 0,451 ms; tìm lại median 0,785 ms (Dijkstra), 0,640 ms (A*).
+p90 tính bằng nội suy tuyến tính giữa hai giá trị kề (như mặc định của `numpy.percentile`). Còn đường 100/100. Chi phí tăng median 4,3%, p90 21,9%. Thời gian lập lại tách hai phần: dựng snapshot median 0,451 ms; tìm lại median 0,785 ms (Dijkstra), 0,640 ms (A*).
 
 ### Không còn đường (C4): 30 cặp, đóng mọi cạnh đi vào đích
 
@@ -50,4 +50,4 @@ Hình: `fig_e4_ratio_by_scenario.png` trong thư mục run.
 - **H3 đúng về chiều, yếu về mức:** dưới ùn tắc, median `r` tăng từ 0,403 lên 0,422 (`peak-center`) và 0,413 (`peak-ben-thanh`), tức A* mất một ít lợi thế. Lý do dự kiến: heuristic dùng `v_max` cơ sở nên cận dưới lỏng hơn khi trọng số trong vùng bị nhân α. Mức tăng nhỏ vì phần lớn cặp không đi qua vùng ùn tắc (median % tăng chi phí là 0).
 - Ùn tắc đổi tuyến ở 16–19% số cặp, nhưng chỉ cặp nào đi qua vùng mới bị ảnh hưởng: median tăng chi phí 0%, p90 10–16%.
 - **Không còn đường: A* không có lợi thế, còn chậm hơn ~2,2 lần** dù mở đúng cùng số node. Khi không có đường, cả hai phải duyệt hết phần tới được (DATA_MODEL mục 7); A* tốn thêm chi phí tính heuristic cho từng node mà không thu lại được gì.
-- Đóng một đoạn giữa tuyến hầu như luôn còn đường vòng trong lõi đô thị dày (100/100), nhưng một phần cặp phải đi vòng xa (p90 +21,8%).
+- Đóng một đoạn giữa tuyến hầu như luôn còn đường vòng trong lõi đô thị dày (100/100), nhưng một phần cặp phải đi vòng xa (p90 +21,9%).

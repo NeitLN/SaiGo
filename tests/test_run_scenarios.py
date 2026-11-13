@@ -114,3 +114,16 @@ def test_run_scenarios_end_to_end(tmp_path, graph_file):
     assert all(q["blocked_edges"] for q in queries if q["suite"] in ("closure", "nopath"))
     assert all(r["route_sig"] for r in rows if r["status"] == "ok")
     assert not (run / "violations.csv").exists()
+
+
+def test_main_survives_windows_cp1252_console(tmp_path, graph_file, monkeypatch):
+    """Console Windows mặc định cp1252: in tiếng Việt không được làm script thoát mã 1 (review #108)."""
+    import io
+    out = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    err = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", err)
+    code = main(["--graph", str(graph_file), "--scenario-file", "tests/fixtures/scenarios_mini.json",
+                 "--pairs", "6", "--closure", "2", "--nopath", "1", "--seed", "42", "--repeats", "1", "--warmup", "0",
+                 "--out", str(tmp_path / "r"), "--run-id", "cp1252"])
+    assert code == 0

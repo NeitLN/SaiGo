@@ -121,6 +121,12 @@ def _timed_snapshot(graph, meta, scenario, blocked: set, repeats: int):
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Console Windows mặc định cp1252: in tiếng Việt sẽ lỗi và thoát mã 1 (review #108).
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--graph", type=Path, default=Path("data/processed/hcm-benthanh-r2000-20261024.json"))
     ap.add_argument("--scenario-file", type=Path, default=Path("data/config/scenarios.json"))
