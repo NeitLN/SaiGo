@@ -1,12 +1,12 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 11:26 13/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 03:51 14/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=43365544269)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=43505363374)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
-- **Đã đóng:** 103 giờ — có bằng chứng (PR/commit) 103 giờ · **Còn lại:** 33 giờ, 10 task mở
-- **Đường lý tưởng hôm nay:** 0 giờ → **chậm** hơn kế hoạch 33.0 giờ
+- **Đã đóng:** 112 giờ — có bằng chứng (PR/commit) 112 giờ · **Còn lại:** 24 giờ, 7 task mở
+- **Đường lý tưởng hôm nay:** 0 giờ → **chậm** hơn kế hoạch 24.0 giờ
 - Mốc: cổng G1 05/11 · final ready 12/11 · thuyết trình 19/11 · nộp 22/11
 
 ### Theo tuần
@@ -14,21 +14,24 @@ _Tự động cập nhật 11:26 13/11/2026 (giờ VN) bởi workflow `tracking.
 | Tuần | Giờ đến hạn | Giờ hoàn thành | Task xong | Còn lại cuối tuần | PR merge | Lượt review |
 |---|---:|---:|---:|---:|---:|---:|
 | Tuần 1 · 19–25/10 | 27 | 10 | 3 | 129 | 2 | 3 |
-| Tuần 2 · 26/10–01/11 | 30 | 69 | 24 | 57 | 36 | 57 |
+| Tuần 2 · 26/10–01/11 | 30 | 69 | 24 | 57 | 36 | 55 |
 | Tuần 3 · 02–08/11 | 62 | 4 | 2 | 53 | 4 | 3 |
-| Tuần 4 · 09–15/11 | 17 | 20 | 7 | 33 | 9 | 15 |
+| Tuần 4 · 09–15/11 | 17 | 29 | 10 | 24 | 17 | 26 |
 
 ### Theo thành viên
 
 | Thành viên | Giờ được giao | Giờ hoàn thành có bằng chứng | Task xong | Đóng tay | Task mở | PR đã merge | PR đã review (có nội dung) |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Bảo (@dobaovlu) | 18.2 | 11.0 | 5 | 0 | 4 | 5 | 15 |
-| Duy Anh (@anh7032) | 34.8 | 31.5 | 11 | 0 | 2 | 20 | 20 |
-| Minh (@Jayson135724) | 28.8 | 21.5 | 9 | 0 | 4 | 10 | 35 |
-| Tiến (@NeitLN) | 54.2 | 39.0 | 14 | 0 | 7 | 16 | 8 |
+| Bảo (@dobaovlu) | 11.0 | 11.0 | 5 | 0 | 0 | 5 | 15 |
+| Duy Anh (@anh7032) | 31.5 | 31.5 | 11 | 0 | 0 | 25 | 16 |
+| Minh (@Jayson135724) | 21.5 | 21.5 | 9 | 0 | 0 | 10 | 48 |
+| Tiến (@NeitLN) | 72.0 | 48.0 | 17 | 0 | 7 | 19 | 8 |
 
 ### Đóng trong 7 ngày qua
 
+- 14/11 · #36 T74 · Benchmark tour (3 h, qua commit)
+- 14/11 · #28 T63 · Thí nghiệm ùn tắc và đóng đường (3 h, qua commit)
+- 14/11 · #27 T62 · Chạy thí nghiệm tăng quy mô (3 h, qua PR)
 - 13/11 · #78 T34 · Đưa dữ liệu thô lên Release và kiểm hash trên 2 máy (2 h, qua commit)
 - 13/11 · #34 T72 · Ma trận chi phí từ đồ thị và `/api/tour` (4 h, qua commit)
 - 13/11 · #26 T61 · Cắt lồng nhau cho thí nghiệm tăng quy mô (3 h, qua commit)
