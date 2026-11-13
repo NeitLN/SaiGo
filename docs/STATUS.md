@@ -54,6 +54,6 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 - Burndown: `python scripts/tracking/burndown.py --out build/tracking`
 
 ## Tài liệu lệch với code / với quyết định
-- README còn ghi trạng thái 26/10 ("chưa có kết quả thực nghiệm") và phạm vi cũ; sửa ở R0/R4 cùng phần kết quả.
+- README: dòng trạng thái đã cập nhật 14/11; phần phạm vi và kết quả chính viết lại ở R4 cùng essay.
 - `docs/ALGORITHMS.md` chưa có ALT, Dijkstra hai chiều, Or-opt (T81, R4).
 - TOPIC.md là đặc tả gốc 01/10; khi khác PROJECT_BRIEF thì PROJECT_BRIEF được ưu tiên.
