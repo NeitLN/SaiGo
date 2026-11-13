@@ -1,7 +1,7 @@
 # Thực nghiệm
 
 Cấu hình, bộ truy vấn, môi trường đo và phân tích kết quả. Thiết kế: [TOPIC.md](TOPIC.md) mục 18.
-Kết quả benchmark đã có: E3 (mục "E3 — Kết quả"). Mục E3 đầu tiên là số đo kích thước đồ thị và pilot kiểm tính khả thi.
+Kết quả benchmark ghi ở các mục "… — Kết quả" bên dưới; mỗi mục kèm `run_id`, lệnh chạy và máy đo. Mục E3 đầu tiên là số đo kích thước đồ thị và pilot kiểm tính khả thi.
 
 ## E3 — Đồ thị cho thí nghiệm tăng quy mô (T61)
 
@@ -40,7 +40,7 @@ Cặp có chi phí **giảm** khi vùng lớn hơn: 48/250 (19,2%) từ 1 km lê
 
 **Diễn giải (không phải số đo):**
 
-- **H2 đúng với workload này:** từ 2 km trở lên, median `expanded` của cả hai thuật toán đứng yên (236 và 66). Dijkstra chỉ mở các node có chi phí nhỏ hơn chi phí tới đích, nên vùng ngoài xa không được chạm tới. Bước nhảy 1 km → 2 km đi cùng 48 cặp tìm được đường vòng mới qua vùng ngoài (chi phí giảm), tức là phần đồ thị thêm vào thật sự được dùng.
-- **Thời gian vẫn tăng khoảng 1,4 lần từ 2 km lên 4,5 km dù `expanded` không đổi.** Một phần giải thích được: mỗi truy vấn khởi tạo hai mảng dài \|V\| (`g`, `pred_edge`); đo riêng trên cùng máy, hai mảng này tốn ~1,6 µs ở 2 km và ~27 µs ở 4,5 km, tức khoảng 25 µs trong ~58 µs chênh của Dijkstra. Phần còn lại **chưa đo được nguyên nhân** (có thể do bộ nhớ đệm khi dữ liệu đồ thị lớn hơn); không kết luận thêm.
-- Lợi thế của A* (`r`) lớn hơn ở vùng 2 km trở lên (0,33 → 0,32) so với 1 km (0,45), vì các cặp tìm được đường vòng chủ yếu là cặp dài, nơi heuristic có tác dụng rõ hơn.
+- **H2 đúng ở median:** từ 2 km trở lên, median `expanded` của cả hai thuật toán đứng yên (235,5 và 65,5; bảng làm tròn thành 236 và 66). Phần đuôi thì vẫn tăng: `expanded` lớn nhất của Dijkstra 1.310 → 2.554 → 3.459 từ 2 km lên 4,5 km dù không cặp nào đổi chi phí sau 2 km, tức một số cặp vẫn chạm tới vùng ngoài. Bước nhảy 1 km → 2 km đi cùng 48 cặp tìm được đường vòng mới qua vùng ngoài (chi phí giảm), tức là phần đồ thị thêm vào thật sự được dùng.
+- **Thời gian vẫn tăng dù median `expanded` không đổi:** từ 2 km lên 4,5 km, Dijkstra ×1,41 (0,142 → 0,200 ms), A* ×1,25 (0,110 → 0,138 ms). Một phần giải thích được: mỗi truy vấn khởi tạo hai mảng dài \|V\| (`g`, `pred_edge`). Đo riêng trên cùng máy bằng `python -c "import timeit, math; n = 10143; print(min(timeit.repeat(lambda: ([math.inf] * n, [-1] * n), number=2000, repeat=5)) / 2000 * 1e6)"` (đổi `n` theo vùng, kết quả là µs), hai mảng này tốn ~1,6 µs ở 2 km và ~27 µs ở 4,5 km, tức khoảng 25 µs trong ~58 µs chênh của Dijkstra. Phần còn lại **chưa đo được nguyên nhân** (có thể do bộ nhớ đệm khi dữ liệu đồ thị lớn hơn); không kết luận thêm.
+- Lợi thế của A* lớn hơn từ 2 km trở lên (median `r` 0,448 ở 1 km, 0,327 ở 2 km, 0,316 ở 3 và 4,5 km). **Chưa rõ nguyên nhân:** `r` giảm ở cả 48 cặp có đổi chi phí (0,530 → 0,346) lẫn 202 cặp còn lại (0,412 → 0,323), nên không chỉ do đường vòng mới.
 - Chỉ kết luận cho fixed trips (bản đồ lớn hơn, chuyến đi giữ nguyên); growing trips đã cắt (D11).

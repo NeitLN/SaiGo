@@ -146,6 +146,12 @@ def _write_csv(path: Path, columns: list[str], rows: list[dict]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Console Windows mặc định cp1252: in tiếng Việt sẽ lỗi và thoát mã 1 (review #108).
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--manifest", type=Path, default=ROOT / "data" / "processed" / "crop_manifest.json")
     ap.add_argument("--pairs", type=int, default=250)
