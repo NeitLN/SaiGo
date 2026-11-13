@@ -9,7 +9,7 @@ type Palette = {
   road: string
 }
 
-function readPalette(el: HTMLElement): Palette {
+export function readPalette(el: HTMLElement): Palette {
   // Token có thể là `light-dark(#.., #..)`: SVG/canvas không hiểu hàm này (canvas rơi về màu đen), nên đổi ra
   // màu cụ thể bằng cách gán vào `color` của một phần tử thử rồi đọc lại giá trị đã tính.
   const probe = document.createElement('i')

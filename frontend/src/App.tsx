@@ -11,6 +11,7 @@ import { Layout, LayoutContent, LayoutHeader, LayoutPanel } from '@astryxdesign/
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Spinner } from '@astryxdesign/core/Spinner'
+import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import {
@@ -26,7 +27,7 @@ import TourResults from './TourResults'
 type Mode = 'route' | 'tour'
 
 // Mỗi lần gửi request là một query mới (n tăng); effect hủy request cũ nên chỉ kết quả mới nhất được hiện.
-interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; n: number }
+interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; showExpanded: boolean; n: number }
 interface TourQuery { depot: TourPoint; stops: TourPoint[]; scenarioId: string; n: number }
 
 const fmt = (p: LatLon | null) => (p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—')
@@ -53,6 +54,7 @@ export default function App() {
   // Tìm đường hai điểm
   const [source, setSource] = useState<LatLon | null>(null)
   const [target, setTarget] = useState<LatLon | null>(null)
+  const [showExpanded, setShowExpanded] = useState(false)
   const [closed, setClosed] = useState<RouteSegment[]>([])          // đoạn người dùng bấm đóng (T54)
   const [caseBlocked, setCaseBlocked] = useState<number[]>([])      // cạnh đóng sẵn của case demo
   const [routeQuery, setRouteQuery] = useState<RouteQuery | null>(null)
@@ -120,6 +122,7 @@ export default function App() {
     postRoute({
       source: routeQuery.source, target: routeQuery.target, algorithms: ['dijkstra', 'astar'],
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked,
+      ...(routeQuery.showExpanded ? { trace_limit: 5000 } : {}),
     }, ctl.signal)
       .then((res) => {
         setRoute({ res, scenarioLabel: label })
@@ -236,15 +239,20 @@ export default function App() {
     else setStops([...stops, { ...p, id: `p${stops.length + 1}`, label: `Điểm ${stops.length + 1}` }])
   }
 
+  const toggleExpanded = (val: boolean) => {
+    setShowExpanded(val)
+    setRouteQuery((q) => (q ? { ...q, showExpanded: val, n: q.n + 1 } : q))
+  }
+
   const findRoute = () => {
-    if (source && target) setRouteQuery({ source, target, scenarioId, blocked, n: Date.now() })
+    if (source && target) setRouteQuery({ source, target, scenarioId, blocked, showExpanded, n: Date.now() })
   }
 
   const swap = () => {
     if (!source || !target) return
     setSource(target)
     setTarget(source)
-    if (route) setRouteQuery({ source: target, target: source, scenarioId, blocked, n: Date.now() })
+    if (route) setRouteQuery({ source: target, target: source, scenarioId, blocked, showExpanded, n: Date.now() })
     else resetRoute()
   }
 
@@ -286,7 +294,7 @@ export default function App() {
       setCaseBlocked(bl)
       setSource(c.source)
       setTarget(c.target)
-      setRouteQuery({ source: c.source, target: c.target, scenarioId: sid, blocked: bl, n: Date.now() })
+      setRouteQuery({ source: c.source, target: c.target, scenarioId: sid, blocked: bl, showExpanded, n: Date.now() })
     } else if (c.mode === 'tour' && c.depot && c.stops) {
       const d: TourPoint = { id: 'depot', label: c.depot.name, lat: c.depot.lat, lon: c.depot.lon }
       const st = c.stops.map((s, i) => ({ id: `p${i + 1}`, label: s.name, lat: s.lat, lon: s.lon }))
@@ -342,6 +350,11 @@ export default function App() {
             <Button label="Đảo chiều" isDisabled={!(source && target)} onClick={swap} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
+          <Switch
+            label="Hiện node đã mở rộng"
+            value={showExpanded}
+            onChange={toggleExpanded}
+          />
           {blocked.length > 0 && (
             <HStack gap={2} vAlign="center" hAlign="between">
               <Text type="supporting">Đang đóng {blocked.length} cạnh</Text>
@@ -389,7 +402,18 @@ export default function App() {
         start={<LayoutPanel width={320} hasDivider padding={4} label="Bảng điều khiển">{controls}</LayoutPanel>}
         content={
           <LayoutContent padding={0} isScrollable={false} label="Bản đồ">
-            <MapView onReady={onMapReady} onClick={onMapClick} />
+            <MapView
+              onReady={onMapReady}
+              onClick={onMapClick}
+              expandedNodes={
+                showExpanded && mode === 'route' && route
+                  ? {
+                      dijkstra: route.res.results.dijkstra,
+                      astar: route.res.results.astar,
+                    }
+                  : null
+              }
+            />
           </LayoutContent>
         }
         end={

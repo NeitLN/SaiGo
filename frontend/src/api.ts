@@ -19,6 +19,7 @@ export interface RouteRequest {
   algorithms?: Algorithm[]
   scenario_id?: string
   blocked_edge_ids?: number[]
+  trace_limit?: number
 }
 
 export interface SnappedPoint {
@@ -43,6 +44,8 @@ export interface AlgorithmResult {
   geometry: LineString
   expanded: number
   runtime_ms: number
+  trace?: [number, number][] // toạ độ [lon, lat] các node đã duyệt (T56/A13)
+  trace_truncated?: boolean
 }
 
 export interface RouteResponse {
