@@ -7,9 +7,14 @@ import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { ALGORITHM_LABEL, type Algorithm, type AlgorithmResult, type RouteResponse } from './api'
 
-const ALGOS: Algorithm[] = ['dijkstra', 'astar', 'alt']
-// Cùng màu với tuyến trên bản đồ (layers.ts: categorical blue / orange / teal).
-const LEGEND: Record<Algorithm, 'blue' | 'orange' | 'teal'> = { dijkstra: 'blue', astar: 'orange', alt: 'teal' }
+const ALGOS: Algorithm[] = ['dijkstra', 'astar', 'alt', 'bidijkstra']
+// Cùng màu với tuyến trên bản đồ (layers.ts: categorical blue / orange / teal / pink).
+const LEGEND: Record<Algorithm, 'blue' | 'orange' | 'teal' | 'pink'> = {
+  dijkstra: 'blue',
+  astar: 'orange',
+  alt: 'teal',
+  bidijkstra: 'pink',
+}
 
 export function num(x: number, digits = 1): string {
   return x.toLocaleString('vi-VN', { maximumFractionDigits: digits, minimumFractionDigits: digits })

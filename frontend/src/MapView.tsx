@@ -12,6 +12,7 @@ export interface ExpandedNodes {
   dijkstra?: AlgorithmResult
   astar?: AlgorithmResult
   alt?: AlgorithmResult
+  bidijkstra?: AlgorithmResult
 }
 
 export interface ReplayProps {
@@ -34,6 +35,7 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
   const dLayerRef = useRef<L.LayerGroup | null>(null)
   const aLayerRef = useRef<L.LayerGroup | null>(null)
   const altLayerRef = useRef<L.LayerGroup | null>(null)
+  const biLayerRef = useRef<L.LayerGroup | null>(null)
   // Một canvas cho mọi lần vẽ node mở rộng; tạo mới mỗi lần effect chạy sẽ để lại canvas cũ trên pane.
   const rendererRef = useRef<L.Canvas | null>(null)
   const legendControlRef = useRef<L.Control | null>(null)
@@ -56,13 +58,15 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
     pane.style.zIndex = '350'
     pane.style.pointerEvents = 'none'
 
-    // Ba layer riêng cho Dijkstra, A* và ALT (vẽ theo thứ tự để các node nổi rõ)
+    // Bốn layer riêng cho Dijkstra, A*, ALT và Dijkstra hai chiều (vẽ theo thứ tự để các node nổi rõ)
     const dLayer = L.layerGroup().addTo(map)
     const aLayer = L.layerGroup().addTo(map)
     const altLayer = L.layerGroup().addTo(map)
+    const biLayer = L.layerGroup().addTo(map)
     dLayerRef.current = dLayer
     aLayerRef.current = aLayer
     altLayerRef.current = altLayer
+    biLayerRef.current = biLayer
     rendererRef.current = L.canvas({ pane: 'expanded-nodes' })
 
     const layers = new MapLayers(map)
@@ -108,13 +112,14 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
     }
   }, [onReady])
 
-  // Lớp vẽ node đã mở rộng, phát lại animation và chú thích (T56 / A13, A14, A15)
+  // Lớp vẽ node đã mở rộng, phát lại animation và chú thích (T56 / A13, A14, A15, A17)
   useEffect(() => {
     const map = mapRef.current
     const dLayer = dLayerRef.current
     const aLayer = aLayerRef.current
     const altLayer = altLayerRef.current
-    if (!map || !dLayer || !aLayer || !altLayer) return
+    const biLayer = biLayerRef.current
+    if (!map || !dLayer || !aLayer || !altLayer || !biLayer) return
 
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current)
@@ -125,6 +130,7 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
       dLayer.clearLayers()
       aLayer.clearLayers()
       altLayer.clearLayers()
+      biLayer.clearLayers()
       if (legendControlRef.current) {
         legendControlRef.current.remove()
         legendControlRef.current = null
@@ -137,15 +143,18 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
     const d = expandedNodes.dijkstra
     const a = expandedNodes.astar
     const alt = expandedNodes.alt
+    const bi = expandedNodes.bidijkstra
     const dTrace = d?.trace ?? []
     const aTrace = a?.trace ?? []
     const altTrace = alt?.trace ?? []
-    const totalSteps = Math.max(dTrace.length, aTrace.length, altTrace.length)
+    const biTrace = bi?.trace ?? []
+    const totalSteps = Math.max(dTrace.length, aTrace.length, altTrace.length, biTrace.length)
 
     if (totalSteps === 0) {
       dLayer.clearLayers()
       aLayer.clearLayers()
       altLayer.clearLayers()
+      biLayer.clearLayers()
       if (legendControlRef.current) {
         legendControlRef.current.remove()
         legendControlRef.current = null
@@ -185,7 +194,7 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
       if (!div) return
 
       if (step >= totalSteps) {
-        // Kết thúc: hiện đủ như lớp tĩnh của #112 / A15
+        // Kết thúc: hiện đủ như lớp tĩnh của #112 / A15 / A17
         const dText = d && d.expanded !== undefined
           ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-blue);opacity:0.6;margin-right:5px;vertical-align:middle;"></span>Dijkstra mở ${d.expanded} node${d.trace_truncated && d.trace ? ` (hiện ${d.trace.length} đầu tiên)` : ''}`
           : ''
@@ -195,24 +204,32 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
         const altText = alt && alt.expanded !== undefined
           ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-teal);margin-right:5px;vertical-align:middle;"></span>ALT mở ${alt.expanded} node${alt.trace_truncated && alt.trace ? ` (hiện ${alt.trace.length} đầu tiên)` : ''}`
           : ''
-        const items = [dText, aText, altText].filter(Boolean)
+        const biText = bi && bi.expanded !== undefined
+          ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-pink);margin-right:5px;vertical-align:middle;"></span>Dijkstra hai chiều mở ${bi.expanded} node${bi.trace_truncated && bi.trace ? ` (hiện ${bi.trace.length} đầu tiên)` : ''}`
+          : ''
+        const items = [dText, aText, altText, biText].filter(Boolean)
         div.innerHTML = items.join(' <span style="color: var(--color-text-secondary);">·</span> ')
       } else {
-        // Đang phát lại hoặc tạm dừng ở bước k: "bước k: Dijkstra x / N · A* y / M · ALT z / P"
+        // Đang phát lại hoặc tạm dừng ở bước k
         const dCount = Math.min(step, dTrace.length)
         const aCount = Math.min(step, aTrace.length)
         const altCount = Math.min(step, altTrace.length)
+        const biCount = Math.min(step, biTrace.length)
         const dTotal = d?.expanded ?? dTrace.length
         const aTotal = a?.expanded ?? aTrace.length
         const altTotal = alt?.expanded ?? altTrace.length
+        const biTotal = bi?.expanded ?? biTrace.length
 
         const dText = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-blue);opacity:0.6;margin-right:5px;vertical-align:middle;"></span>Dijkstra ${dCount} / ${dTotal}`
         const aText = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-orange);margin-right:5px;vertical-align:middle;"></span>A* ${aCount} / ${aTotal}`
         const altText = alt
           ? ` <span style="color: var(--color-text-secondary);">·</span> <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-teal);margin-right:5px;vertical-align:middle;"></span>ALT ${altCount} / ${altTotal}`
           : ''
+        const biText = bi
+          ? ` <span style="color: var(--color-text-secondary);">·</span> <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-data-categorical-pink);margin-right:5px;vertical-align:middle;"></span>Dijkstra hai chiều ${biCount} / ${biTotal}`
+          : ''
 
-        div.innerHTML = `bước ${step}: ${dText} <span style="color: var(--color-text-secondary);">·</span> ${aText}${altText}`
+        div.innerHTML = `bước ${step}: ${dText} <span style="color: var(--color-text-secondary);">·</span> ${aText}${altText}${biText}`
       }
     }
 
@@ -269,6 +286,25 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
           }).addTo(altLayer)
         }
       }
+
+      // Dijkstra hai chiều: chấm nhỏ pink (loang từ cả 2 đầu s và t)
+      if (bi) {
+        const biStart = Math.min(fromStep, biTrace.length)
+        const biEnd = Math.min(toStep, biTrace.length)
+        for (let i = biStart; i < biEnd; i++) {
+          const [lon, lat] = biTrace[i]
+          L.circleMarker([lat, lon], {
+            pane: 'expanded-nodes',
+            renderer,
+            radius: 3.5,
+            color: palette.bidijkstra,
+            weight: 0.8,
+            fillColor: palette.bidijkstra,
+            fillOpacity: 0.85,
+            interactive: false,
+          }).addTo(biLayer)
+        }
+      }
     }
 
     const status = replay?.status ?? 'static'
@@ -278,12 +314,14 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
       dLayer.clearLayers()
       aLayer.clearLayers()
       altLayer.clearLayers()
+      biLayer.clearLayers()
       currentStepRef.current = 0
       updateLegend(0)
     } else if (status === 'static' || status === 'ended') {
       dLayer.clearLayers()
       aLayer.clearLayers()
       altLayer.clearLayers()
+      biLayer.clearLayers()
       renderRange(0, totalSteps)
       currentStepRef.current = totalSteps
       updateLegend(totalSteps)
@@ -294,6 +332,7 @@ export default function MapView({ onReady, onClick, expandedNodes, replay }: {
         dLayer.clearLayers()
         aLayer.clearLayers()
         altLayer.clearLayers()
+        biLayer.clearLayers()
         currentStepRef.current = 0
       }
 
