@@ -40,9 +40,38 @@ Các nhận xét dưới đây chỉ dựa trên những gì lặp lại ở **c
 
 - **A* mở ít node hơn nhiều:** median chỉ bằng khoảng 40% số node Dijkstra mở (r = 0,398), ổn định ở mọi tầng và giống hệt trên hai máy (expanded là số xác định, không phụ thuộc máy).
 - **Nhưng thời gian gần như không giảm:** median s chỉ 1,03–1,07, và ở 44–48% số cặp A* còn chậm hơn Dijkstra. Lợi ích rõ chỉ có ở tầng trung bình (s = 1,22–1,26). Giải thích hợp lý (giả thuyết, chưa đo riêng): mỗi lần đẩy một node vào hàng đợi, A* phải tính haversine (lượng giác), đắt hơn nhiều so với phép cộng của Dijkstra; trên đồ thị 1.889 node, mỗi truy vấn chỉ khoảng 1 ms, nên chi phí này ăn gần hết phần tiết kiệm từ việc mở ít node.
-- **Đuôi chậm của A* là thật:** p95 của A* cao hơn Dijkstra ở cả hai run (6,29 so với 5,51 ms; 2,09 so với 1,73 ms), rõ nhất ở tầng dài (10,12 so với 8,16 ms).
+- **Đuôi chậm của A*: thấy ở cả hai run.** p95 của A* cao hơn Dijkstra ở cả hai run (6,29 so với 5,51 ms; 2,09 so với 1,73 ms), rõ nhất ở tầng dài (10,12 so với 8,16 ms). Hai run khác cả máy lẫn phiên bản Python và mới chỉ có hai run, nên đây là quan sát lặp lại, chưa phải kết luận; nguyên nhân chưa được đo tách.
 - **Chưa kết luận:** median s của tầng ngắn và tầng dài dao động quanh 1 (0,91–1,00) giữa các run. Ở mức khoảng 0,1 ms mỗi truy vấn, sai số đo đủ để đổi chiều, nên không nói A* nhanh hay chậm hơn ở hai tầng này.
-- **Trường hợp A* không có lợi:** (1) truy vấn trên vùng nhỏ, nơi chi phí tính heuristic lớn hơn phần tiết kiệm; (2) khi không có đường đi, A* vẫn phải duyệt hết vùng tới được như Dijkstra nên không còn lợi thế (kiểm ở E4 khi có run kịch bản đóng đường, T63).
+- **Trường hợp A* không có lợi:** (1) truy vấn trên vùng nhỏ, nơi chi phí tính heuristic lớn hơn phần tiết kiệm; (2) khi không có đường đi, A* vẫn phải duyệt hết vùng tới được như Dijkstra nên không còn lợi thế (đã đo ở E4, bộ C4: cùng số node mở rộng ở 30/30 cặp, A* chậm hơn).
+
+## E2b — Mở rộng: Dijkstra, Dijkstra hai chiều, A*, ALT (D17)
+
+Ngoài phạm vi proposal (ALT là mở rộng tùy chọn; Dijkstra hai chiều có trong danh sách gợi ý của đề bài). Ghi để trả lời câu hỏi "heuristic mạnh hơn có giúp không", không thay cho E2.
+
+**Run:** `20261113-1327-compare-871bf02` (thư mục `results/20261113-1327-compare-871bf02/`, #121) · `scripts/compare_algorithms.py` · commit `871bf02`, `git_dirty: false` · Python 3.11.9, Windows, Intel Family 6 Model 186 (máy khác máy đo E3–E5) · đồ thị demo `hcm-benthanh-r2000-20261024` (sha256 `928c1f8b…`, 1.889 node) và `hcm-benthanh-r4500-20261024` (sha256 `7cb46484…`, 10.143 node, 22.953 cạnh; dựng bằng `prepare_data.py build --area demo-large` (#116) từ cùng Release dữ liệu thô, cùng kích thước với vùng 4,5 km của E3 nhưng là file khác) · 500 cặp mỗi đồ thị (seed 20261113, phân tầng theo δ = khoảng cách thẳng / cạnh vùng), warm-up 20, lặp 5 lấy median, mỗi cặp đo cả `baseline` và `peak-center` xen kẽ · ALT dùng 8 landmark; thời gian truy vấn **không** gồm tiền xử lý landmark.
+
+**Khác E3:** cặp được sinh **riêng cho từng đồ thị**, nên tầng "dài" ở vùng 4,5 km là chuyến đi dài hơn thật. Bảng này vì vậy trộn hai yếu tố (bản đồ lớn hơn và chuyến đi dài hơn), không so trực tiếp với E3 (fixed trips).
+
+**Kiểm tính đúng:** 2.000/2.000 nhóm (cặp × đồ thị × kịch bản) có 4 thuật toán cùng chi phí (sai số 1e-6); không có cặp `no_path`.
+
+Kịch bản `baseline`. Thời gian là median ms trên các cặp; s = thời gian Dijkstra / thời gian thuật toán đó, tính **theo từng cặp** rồi lấy median (s > 1 là nhanh hơn Dijkstra).
+
+| Đồ thị | Tầng | Dijkstra ms | Hai chiều ms (s) | A* ms (s) | ALT ms (s) | Median expanded D / hai chiều / A* / ALT |
+|---|---|---:|---:|---:|---:|---|
+| 2 km | ngắn | 0,110 | 0,104 (0,96) | 0,101 (0,99) | 0,236 (0,39) | 118 / 67,5 / 43 / 18 |
+| 2 km | trung bình | 0,679 | 0,523 (1,31) | 0,515 (1,42) | 0,443 (1,45) | 624 / 349 / 219 / 62 |
+| 2 km | dài | 1,285 | 1,288 (1,06) | 1,198 (1,06) | 0,626 (1,94) | 1.337 / 837 / 548 / 119 |
+| 4,5 km | ngắn | 0,736 | 0,492 (1,40) | 0,506 (1,43) | 1,618 (0,44) | 631 / 277 / 198 / 65 |
+| 4,5 km | trung bình | 4,092 | 2,540 (1,55) | 1,961 (1,94) | 2,255 (1,80) | 2.754 / 1.321 / 786 / 196 |
+| 4,5 km | dài | 11,182 | 10,130 (1,12) | 8,048 (1,27) | 3,942 (2,67) | 6.912 / 4.355 / 2.665 / 616 |
+
+Tiền xử lý ALT: 29,7 ms và 0,24 MB (2 km); 365,9 ms và 1,30 MB (4,5 km). Dưới `peak-center`, thứ tự số node mở rộng giữ nguyên (ALT < A* < hai chiều < Dijkstra ở mọi ô); thời gian xem `summary.csv` (có ô A* chậm hơn Dijkstra, ví dụ 2 km tầng dài 1,362 so với 1,169 ms).
+
+**Diễn giải (không phải số đo):**
+
+- Heuristic càng chặt thì mở càng ít node (ALT < A* < hai chiều < Dijkstra ở mọi ô), nhưng thời gian chỉ giảm khi phần tiết kiệm lớn hơn chi phí mỗi node: ở tầng ngắn ALT **chậm hơn** Dijkstra 2–2,5 lần (s = 0,39–0,44) dù mở ít node nhất.
+- ALT có lợi rõ nhất ở chuyến dài trên bản đồ lớn (s = 2,67 ở 4,5 km), đúng nơi E2 thấy A* gần như không giúp. Đây là một run trên một máy; không suy ra cho đồ thị khác.
+- Kết luận cho essay: số node mở rộng và thời gian truy vấn là hai thước đo khác nhau; chọn thuật toán phụ thuộc độ dài chuyến đi và việc có chấp nhận tiền xử lý hay không.
 
 ## E3 — Đồ thị cho thí nghiệm tăng quy mô (T61)
 
@@ -107,7 +136,7 @@ p90 tính bằng nội suy tuyến tính giữa hai giá trị kề (như mặc 
 
 ### Không còn đường (C4): 30 cặp, đóng mọi cạnh đi vào đích
 
-Cả hai thuật toán `no_path` ở 30/30 cặp, cùng median 1.763 node mở rộng (toàn bộ phần đồ thị tới được). Thời gian kết luận `no_path`: median 1,53 ms (Dijkstra), 3,40 ms (A*).
+Bộ này cô lập đích **có chủ ý** để kiểm hành vi khi không có đường; nó không ước lượng khả năng mất đường khi đóng đường ngoài thực tế. Cả hai thuật toán `no_path` ở 30/30 cặp, cùng median 1.763 node mở rộng (toàn bộ phần đồ thị tới được). Thời gian kết luận `no_path`: median 1,53 ms (Dijkstra), 3,40 ms (A*).
 
 Hình: `fig_e4_ratio_by_scenario.png` trong thư mục run.
 
@@ -149,7 +178,7 @@ Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms v
 
 **Diễn giải (không phải số đo):**
 
-- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). 2-opt thêm 2–9 điểm phần trăm so với NN. Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
+- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). Phần 2-opt cải thiện thêm so với NN, tính trên **từng bộ** (Improvement của NN + 2-opt trừ Improvement của NN cùng bộ) rồi lấy median: 0,36 / 4,40 / 4,87 / 6,01 điểm phần trăm với n = 4 / 6 / 8 / 10. (Hiệu giữa hai median trong bảng là 2,05 / 3,27 / 6,37 / 8,67 điểm, lớn hơn vì median của hiệu khác hiệu của median.) Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
 - NN + 2-opt gần tối ưu: median gap 0–1,8%, p75 ≤ 5,1%. NN một mình kém hơn hẳn (median gap 1,7–14,1%).
-- Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) gấp khoảng 128 lần (n = 4) đến 53 lần (n = 10) thời gian sắp thứ tự bằng NN + 2-opt (dưới 0,15 ms). Held–Karp tăng nhanh theo n (0,019 → 0,106 → 0,616 → 3,814 ms): từ 8 lên 10 điểm tăng ×6,2, khớp bậc 2ⁿ·n² (×6,25); ở n nhỏ phần chi phí cố định chiếm nhiều nên tăng chậm hơn lý thuyết (4 → 6 điểm ×5,6 so với ×9). Vì vậy Held–Karp chỉ dùng làm đối chứng tới 10 điểm giao.
+- Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) gấp khoảng 128 lần (n = 4) đến 53 lần (n = 10) thời gian sắp thứ tự bằng NN + 2-opt (dưới 0,15 ms). Held–Karp tăng nhanh theo n (median 0,019 → 0,106 → 0,616 → 3,814 ms), cùng chiều với độ phức tạp lý thuyết O(2ⁿ·n²). Mỗi phương án chỉ đo một lần mỗi bộ, theo thứ tự cố định, không warm-up riêng, nên bốn điểm đo này không đủ để xác nhận bậc tăng; chỉ dùng chúng để nói Held–Karp đắt dần và vì vậy chỉ làm đối chứng tới 10 điểm giao.
 - **Case demo không đại diện được bằng E5:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). E5 không có bộ 5 điểm giao, nên chỉ nói được: trong 80 bộ ngẫu nhiên (n = 4–10) không gặp gap lớn như vậy; gap lớn nhất của NN + 2-opt là 14,1%, của NN một mình là 34,5%. Sau run này, #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; Or-opt không nằm trong 4 phương án đo ở E5.
