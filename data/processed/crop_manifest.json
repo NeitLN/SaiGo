@@ -178,9 +178,9 @@
     }
   },
   "dependencies": {
-    "python": "3.14.4",
+    "python": "3.11.9",
     "osmnx": "2.1.1",
-    "networkx": "3.7"
+    "networkx": "3.6.1"
   },
   "attribution": "© OpenStreetMap contributors, dữ liệu theo giấy phép ODbL (https://www.openstreetmap.org/copyright)"
 }

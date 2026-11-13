@@ -1,0 +1,56 @@
+{
+  "run_id": "20261113-0444-scenario-c1cd80b",
+  "graph": "data\\processed\\hcm-benthanh-r2000-20261024.json",
+  "scenario_file": "data\\config\\scenarios.json",
+  "scenarios": [
+    "baseline",
+    "peak-center",
+    "peak-ben-thanh"
+  ],
+  "pairs": 300,
+  "closure": 100,
+  "nopath": 30,
+  "closure_picked": 100,
+  "seed": 42,
+  "repeats": 5,
+  "warmup": 20,
+  "sampling": {
+    "L_m": 4000.0,
+    "L_source": "manifest",
+    "target_per_stratum": {
+      "ngan": 100,
+      "trung_binh": 100,
+      "dai": 100
+    },
+    "actual_per_stratum": {
+      "ngan": 100,
+      "trung_binh": 100,
+      "dai": 100
+    },
+    "rejected": {
+      "same_node": 0,
+      "stratum_full": 489
+    },
+    "fallback_used": false,
+    "strata_stats": {
+      "ngan": {
+        "count": 100,
+        "delta_min": 0.0244,
+        "delta_median": 0.1409,
+        "delta_max": 0.1983
+      },
+      "trung_binh": {
+        "count": 100,
+        "delta_min": 0.2006,
+        "delta_median": 0.3656,
+        "delta_max": 0.4941
+      },
+      "dai": {
+        "count": 100,
+        "delta_min": 0.501,
+        "delta_median": 0.6654,
+        "delta_max": 1.2182
+      }
+    }
+  }
+}
