@@ -3,5 +3,6 @@
   "center": {"name": "Chợ Bến Thành", "lat": 10.7725, "lon": 106.698},
   "download": {"half_side_m": 4500, "buffer_m": 500},
   "demo": {"half_side_m": 2000},
+  "demo-large": {"half_side_m": 4500},
   "network_type": "drive"
 }
