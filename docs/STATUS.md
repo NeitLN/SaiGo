@@ -62,5 +62,5 @@ Bộ nhớ dự án: mục tiêu/phạm vi/deadline ở [PROJECT_BRIEF.md](PROJE
 - Đồng bộ backlog: `create_backlog.py --sync`, `setup_project.py --sync`
 
 ## Tài liệu lệch với code / với quyết định
-- [ARCHITECTURE.md](ARCHITECTURE.md) mục 3 và 4 mô tả file/API **dự kiến**. API có `/api/health` và `/api/route` (skeleton, `services/routing.py`, vẫn dùng `nearest_node_naive`); `graph/snap.py` đã có nhưng chưa nối vào API (T51); chưa có `cli.py`.
+- [ARCHITECTURE.md](ARCHITECTURE.md) mục 3 và 4 viết từ kế hoạch. Trên `main` (14/11): API có `/api/health`, `/api/dataset`, `/api/route`, `/api/tour`; `/api/route` snap bằng `graph/snap.nearest_node` (ngưỡng 150 m, T51); đã có `cli.py`. Phần còn lại của file này dừng ở 28/10, viết lại ở T81.
 - Issue trên GitHub (người làm, mô tả T32/T53/T54/T61/T62/G1) còn theo kế hoạch cũ cho tới khi chạy `--sync` sau PR đồng bộ. Khi lệch, TASKS.md được ưu tiên.
