@@ -1,7 +1,7 @@
 # Thực nghiệm
 
 Cấu hình, bộ truy vấn, môi trường đo và phân tích kết quả. Thiết kế: [TOPIC.md](TOPIC.md) mục 18.
-Kết quả benchmark đã có: E5 (mục "E5 — Kết quả"). Mục E3 đầu tiên là số đo kích thước đồ thị và pilot kiểm tính khả thi.
+Kết quả benchmark ghi ở các mục "… — Kết quả" bên dưới; mỗi mục kèm `run_id`, lệnh chạy và máy đo. Mục E3 đầu tiên là số đo kích thước đồ thị và pilot kiểm tính khả thi.
 
 ## E3 — Đồ thị cho thí nghiệm tăng quy mô (T61)
 
@@ -48,11 +48,11 @@ Cắt bằng `python scripts/make_crops.py` từ `outer.graphml` đã đóng bă
 | 10 | NN + 2-opt | 41,04 | [36,79; 42,46] | 1,76 | [0; 5,06] | 0,147 |
 | 10 | Held–Karp | — | — | — | — | 3,814 |
 
-Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms với n = 4 / 6 / 8 / 10. NN + 2-opt trùng tối ưu ở 45/80 bộ; gap lớn nhất 14,1%. Hình: `fig_e5_tour.png` trong thư mục run.
+Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms với n = 4 / 6 / 8 / 10. NN + 2-opt trùng tối ưu ở 45/80 bộ; gap lớn nhất của NN + 2-opt là 14,1%, của NN là 34,5%. Hình: `fig_e5_tour.png` trong thư mục run.
 
 **Diễn giải (không phải số đo):**
 
-- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). 2-opt thêm 2–9 điểm phần trăm so với NN.
+- Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). 2-opt thêm 2–9 điểm phần trăm so với NN. Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
 - NN + 2-opt gần tối ưu: median gap 0–1,8%, p75 ≤ 5,1%. NN một mình kém hơn hẳn (median gap 1,7–14,1%).
-- Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) đắt hơn sắp thứ tự bằng NN + 2-opt (dưới 0,15 ms) hàng chục lần. Held–Karp tăng nhanh theo n (0,02 → 3,8 ms, đúng bậc 2ⁿ·n²) nên chỉ dùng làm đối chứng tới 10 điểm giao.
-- **Case demo là trường hợp hiếm:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). Trên 80 bộ ngẫu nhiên, gap lớn nhất chỉ 14,1%. Demo dùng case này để minh họa giới hạn của 2-opt, không để nói 2-opt thường kém như vậy.
+- Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) gấp khoảng 128 lần (n = 4) đến 53 lần (n = 10) thời gian sắp thứ tự bằng NN + 2-opt (dưới 0,15 ms). Held–Karp tăng nhanh theo n (0,019 → 0,106 → 0,616 → 3,814 ms): từ 8 lên 10 điểm tăng ×6,2, khớp bậc 2ⁿ·n² (×6,25); ở n nhỏ phần chi phí cố định chiếm nhiều nên tăng chậm hơn lý thuyết (4 → 6 điểm ×5,6 so với ×9). Vì vậy Held–Karp chỉ dùng làm đối chứng tới 10 điểm giao.
+- **Case demo là trường hợp hiếm:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). Trên 80 bộ ngẫu nhiên, gap lớn nhất của NN + 2-opt chỉ 14,1%. Sau run này, #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; Or-opt không nằm trong 4 phương án đo ở E5. Demo dùng case này để minh họa giới hạn của 2-opt, không để nói 2-opt thường kém như vậy.

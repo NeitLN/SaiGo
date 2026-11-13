@@ -135,3 +135,31 @@ def test_demo_case_kho_5_diem_matches_api():
         nodes.append(getattr(s, "node_id", s))
     m = _by_method(plan_set(graph, baseline_snapshot(graph), nodes))
     assert [round(m[k]["cost_s"], 1) for k in METHODS] == [1066.0, 1003.3, 898.1, 627.8]
+
+
+def test_suite_tour_without_graph_uses_demo_graph(monkeypatch):
+    """`--suite tour --seed 42` (lệnh ở TASKS) không được rơi về mini.json mặc định của runner (review #109)."""
+    seen = {}
+
+    def fake_main(argv):
+        seen["argv"] = argv
+        return 0
+
+    import run_tour
+    monkeypatch.setattr(run_tour, "main", fake_main)
+    assert run_benchmarks.main(["--suite", "tour", "--seed", "42"]) == 0
+    graph = seen["argv"][seen["argv"].index("--graph") + 1]
+    assert graph.replace("\\", "/").endswith("data/processed/hcm-benthanh-r2000-20261024.json")
+
+
+def test_other_suites_still_default_to_mini():
+    args = run_benchmarks.parse_args(["--suite", "demo"])
+    assert str(args.graph).replace("\\", "/").endswith("tests/fixtures/mini.json")
+
+
+def test_run_tour_survives_windows_cp1252_console(tmp_path, rand_graph, monkeypatch):
+    import io
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(io.BytesIO(), encoding="cp1252"))
+    monkeypatch.setattr(sys, "stderr", io.TextIOWrapper(io.BytesIO(), encoding="cp1252"))
+    assert main(["--graph", str(rand_graph), "--sizes", "4", "--sets", "1", "--seed", "42",
+                 "--out", str(tmp_path / "r"), "--run-id", "cp"]) == 0

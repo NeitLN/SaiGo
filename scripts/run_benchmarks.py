@@ -587,8 +587,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Chạy bộ benchmark đo hiệu năng Dijkstra và A*")
     parser.add_argument("--suite", default="demo", choices=["demo", "scaling", "scenario", "test", "tour"],
                         help="Tên bộ benchmark (mặc định: demo)")
-    parser.add_argument("--graph", type=Path, default=Path("tests/fixtures/mini.json"),
-                        help="Đường dẫn file đồ thị json (mặc định: tests/fixtures/mini.json)")
+    parser.add_argument("--graph", type=Path, default=None,
+                        help="Đường dẫn file đồ thị json (mặc định: tests/fixtures/mini.json; "
+                             "--suite tour: đồ thị demo data/processed/hcm-benthanh-r2000-20261024.json)")
     parser.add_argument("--pairs", type=int, default=20,
                         help="Số lượng cặp truy vấn cần đo (mặc định: 20)")
     parser.add_argument("--seed", type=int, default=42,
@@ -618,7 +619,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tour-sizes", type=int, nargs="+", default=[4, 6, 8, 10],
                         help="--suite tour: số điểm giao mỗi bộ (EXPERIMENT_PLAN mục 8)")
     parser.add_argument("--tour-sets", type=int, default=20, help="--suite tour: số bộ mỗi n")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.graph is None:
+        # Tour cần đồ thị đủ lớn để sinh bộ điểm cách nhau ≥ 150 m; mini.json chỉ có 6 node (review #109).
+        args.graph = Path("data/processed/hcm-benthanh-r2000-20261024.json" if args.suite == "tour"
+                          else "tests/fixtures/mini.json")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
