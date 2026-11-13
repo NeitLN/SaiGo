@@ -1,5 +1,7 @@
-"""T12: CLI tìm đường (docs/tasks/T12-cli.md)."""
+"""T12, A18: CLI tìm đường và lập tour (docs/tasks/T12-cli.md, PLAN mục 17 A18)."""
 
+import json
+from pathlib import Path
 import re
 
 import pytest
@@ -170,3 +172,139 @@ def test_missing_scenario_file_is_error(capsys, tmp_path):
     err = capsys.readouterr().err
     assert code == 2
     assert err.startswith("Lỗi: không nạp được file kịch bản")
+
+
+# --- A18: route --algo alt, bidijkstra, all ---
+
+def test_route_algo_all_matches_costs(capsys):
+    code, out, _ = run(capsys, "--from", "S", "--to", "T", "--algo", "all")
+    assert code == 0
+    for label in ("Dijkstra", "A*", "ALT", "Dijkstra hai chiều"):
+        part = section(out, label)
+        assert "Chi phí: 80.0 s" in part
+        assert "Quãng đường: 800.0 m" in part
+        assert "Tuyến: S → A → T" in part
+    assert "Chi phí trùng khớp: có" in out
+    assert "Chi phí ALT khớp Dijkstra: có" in out
+    assert "Chi phí hai chiều khớp Dijkstra: có" in out
+
+
+@pytest.mark.parametrize("algo,label", [("alt", "ALT"), ("bidijkstra", "Dijkstra hai chiều")])
+def test_route_single_new_algos(capsys, algo, label):
+    code, out, _ = run(capsys, "--from", "S", "--to", "T", "--algo", algo)
+    assert code == 0
+    assert "Chi phí: 80.0 s" in section(out, label)
+    assert "[Dijkstra]" not in out
+    assert "[A*]" not in out
+    assert "trùng khớp" not in out
+
+
+# --- A18: tour trên fixture và đối chứng ---
+
+def test_tour_mini_manual_stops(capsys):
+    # S = depot (10.77251, 106.69801), stops: B, A, T
+    code = main([
+        "tour",
+        "--graph", str(MINI),
+        "--depot", "10.77251,106.69801",
+        "--stop", "10.77519,106.7016577", "10.77251,106.7016577", "10.77251,106.70532",
+        "--scenario-file", str(SCENARIOS_MINI),
+        "--optimal",
+        "--or-opt",
+    ])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "Đồ thị: mini (6 node, 8 cạnh)" in out
+    assert "Số điểm giao: 3" in out
+    for method in ("Thứ tự nhập", "Nearest Neighbor", "NN + 2-opt", "NN + 2-opt + Or-opt", "Held–Karp (tối ưu)"):
+        assert method in out
+    assert "280.0 s" in out
+    assert "180.0 s" in out
+    assert "* Phương án được chọn: Nearest Neighbor" in out
+    assert "Thời gian tính ma trận:" in out
+    assert "Sắp thứ tự:" in out
+
+
+@pytest.mark.realdata
+def test_tour_demo_case_kho_5_diem(capsys):
+    root = Path(__file__).resolve().parents[1]
+    manifest_p = root / "data" / "processed" / "manifest.json"
+    if not manifest_p.exists():
+        pytest.skip("Chưa có data/processed/manifest.json")
+    manifest = json.loads(manifest_p.read_text(encoding="utf-8"))
+    graph_p = root / manifest["file"]
+    if not graph_p.exists():
+        pytest.skip(f"Chưa có {manifest['file']}")
+
+    code = main([
+        "tour",
+        "--graph", str(graph_p),
+        "--case", "kho-5-diem",
+        "--optimal",
+        "--or-opt",
+    ])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "Kho: Chợ Bến Thành" in out
+    assert "Số điểm giao: 5" in out
+    assert "Nhà thờ Đức Bà" in out
+    assert "Công viên Tao Đàn" in out
+    assert "1066.0 s" in out
+    assert "627.8 s" in out
+    assert "* Phương án được chọn: NN + 2-opt" in out
+    assert "Thời gian tính ma trận:" in out
+    assert "Sắp thứ tự:" in out
+
+
+# --- A18: Lỗi rõ cho lệnh tour ---
+
+def test_tour_case_not_found(capsys):
+    code = main(["tour", "--case", "khong-ton-tai"])
+    err = capsys.readouterr().err
+    assert code == 2
+    assert "không tìm thấy case demo 'khong-ton-tai'" in err
+
+
+def test_tour_case_not_tour_mode(capsys):
+    code = main(["tour", "--case", "hai-diem-qua-trung-tam"])
+    err = capsys.readouterr().err
+    assert code == 2
+    assert "có mode 'route', không phải tour" in err
+
+
+def test_tour_missing_depot(capsys):
+    code = main(["tour", "--graph", str(MINI), "--stop", "10.1,106.1"])
+    err = capsys.readouterr().err
+    assert code == 2
+    assert "cần truyền --case <id> hoặc tọa độ kho qua --depot lat,lon" in err
+
+
+def test_tour_missing_stops(capsys):
+    code = main(["tour", "--graph", str(MINI), "--depot", "10.1,106.1"])
+    err = capsys.readouterr().err
+    assert code == 2
+    assert "cần ít nhất một điểm giao qua --stop lat,lon" in err
+
+
+def test_tour_missing_graph_when_no_case(capsys):
+    code = main(["tour", "--depot", "10.1,106.1", "--stop", "10.2,106.2"])
+    err = capsys.readouterr().err
+    assert code == 2
+    assert "cần truyền file đồ thị qua --graph" in err
+
+
+# --- A18: Trợ giúp tiếng Việt kèm ví dụ ---
+
+@pytest.mark.parametrize("subcmd,kw", [
+    (None, "Ví dụ sử dụng:"),
+    ("route", "Ví dụ sử dụng lệnh route:"),
+    ("check-heuristic", "Ví dụ sử dụng lệnh check-heuristic:"),
+    ("tour", "Ví dụ sử dụng lệnh tour:"),
+])
+def test_cli_help_includes_vietnamese_examples(capsys, subcmd, kw):
+    args = [subcmd, "--help"] if subcmd else ["--help"]
+    with pytest.raises(SystemExit) as exc:
+        main(args)
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert kw in out
