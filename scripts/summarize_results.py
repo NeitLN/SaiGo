@@ -6,7 +6,7 @@ Cách dùng::
 
 Đọc `measurements.csv` (27 cột mục 3.3), `env.json` và `config.json` của **mọi** thư mục rồi in ra
 các bảng mẫu mục 9: E2 (thuật toán × tầng), E3 (theo `|V|`), E4 (theo `scenario_id`), E5 (tour —
-đọc thêm `tour_measurements.csv` cùng thư mục, định dạng E5_proposal.md). Thư mục chỉ có
+đọc thêm `tour_measurements.csv` cùng thư mục, định dạng docs/tasks/T74-tour-benchmark.md). Thư mục chỉ có
 `measurements.csv` vẫn chạy như cũ, chỉ bảng E5 bị bỏ qua kèm lý do; thư mục nào cũng phải có ít
 nhất một trong hai file CSV. Chỉ in ra stdout, **không** ghi vào `docs/EXPERIMENTS.md` (người dẫn
 số vào tài liệu ở T65).
@@ -475,7 +475,7 @@ def e4_section(rows: Sequence[Row], metas: Sequence[RunMeta]) -> Section:
     return Section(title, table, source_line(scenario, metas, len(pairs)))
 
 
-# --- Bảng E5 (tour): tour_measurements.csv theo định dạng E5_proposal.md mục 2 ---
+# --- Bảng E5 (tour): tour_measurements.csv theo định dạng docs/tasks/T74-tour-benchmark.md ---
 
 TOUR_COLUMNS = (
     "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
@@ -529,7 +529,7 @@ def _boolean(path: Path, lineno: int, raw_value: str, name: str) -> bool:
 
 
 def read_tour_rows(run_dir: Path | str) -> list[TourRow]:
-    """Đọc `tour_measurements.csv` (E5_proposal.md mục 2); file vắng mặt → rỗng, không lỗi."""
+    """Đọc `tour_measurements.csv` (docs/tasks/T74-tour-benchmark.md); file vắng mặt → rỗng, không lỗi."""
     path = Path(run_dir) / "tour_measurements.csv"
     if not path.is_file():
         return []
@@ -538,7 +538,7 @@ def read_tour_rows(run_dir: Path | str) -> list[TourRow]:
         reader = csv.DictReader(fh)
         missing = [c for c in TOUR_COLUMNS if c not in (reader.fieldnames or [])]
         if missing:
-            raise ValueError(f"{path}: thiếu cột {', '.join(missing)} (E5_proposal.md mục 2)")
+            raise ValueError(f"{path}: thiếu cột {', '.join(missing)} (docs/tasks/T74-tour-benchmark.md)")
         for lineno, raw in enumerate(reader, start=2):
             cost = (raw["cost_s"] or "").strip()
             rows.append(TourRow(

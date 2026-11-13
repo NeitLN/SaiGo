@@ -33,7 +33,7 @@ needs_matplotlib = pytest.mark.skipif(
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
-# --- Dữ liệu giả cho E5 (tour): đúng định dạng tour_measurements.csv (E5_proposal.md mục 2) ---
+# --- Dữ liệu giả cho E5 (tour): đúng định dạng tour_measurements.csv (docs/tasks/T74-tour-benchmark.md) ---
 
 TOUR_COLUMNS = [
     "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
