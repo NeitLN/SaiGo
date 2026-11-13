@@ -1,0 +1,57 @@
+{
+  "run_id": "20261113-1206-altk-e1039bc",
+  "suite": "altk",
+  "dataset_id": "hcm-benthanh-r2000-20261024",
+  "graph_path": "D:\\SaiGGo-wt\\opencode\\data\\processed\\hcm-benthanh-r2000-20261024.json",
+  "n_nodes": 1889,
+  "n_edges": 4004,
+  "scc_nodes": 1745,
+  "k_values": [
+    1,
+    2,
+    4,
+    8,
+    16
+  ],
+  "scenarios": [
+    "baseline",
+    "peak-center"
+  ],
+  "n_pairs": 300,
+  "seed": 20261113,
+  "repeats": 5,
+  "warmup": 20,
+  "algorithms": [
+    "dijkstra",
+    "astar",
+    "alt"
+  ],
+  "cost_check": "mọi kết quả ALT/A* phải khớp Dijkstra (1e-6 · max(1, cost)) trước khi ghi",
+  "runtime_timing": "perf_counter_ns sát quanh lời gọi, gồm dựng heuristic (A*/ALT) và kiểm ensure_alt_compatible của ALT; warm-up ngoài phép đo",
+  "preprocess": "build_alt_index trên chi phí cơ sở, đo riêng một lần cho mỗi k",
+  "python_executable": "D:\\SaiGGo-wt\\venv311\\Scripts\\python.exe",
+  "python_version": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+  "command": "D:\\SaiGGo-wt\\venv311\\Scripts\\python.exe D:\\SaiGGo-wt\\opencode\\scripts\\alt_landmark_sweep.py",
+  "cli_args": {
+    "graph": "data\\processed\\hcm-benthanh-r2000-20261024.json",
+    "scenario_file": "data\\config\\scenarios.json",
+    "scenarios": [
+      "baseline",
+      "peak-center"
+    ],
+    "k": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "pairs": 300,
+    "seed": 20261113,
+    "repeats": 5,
+    "warmup": 20,
+    "run_id": null,
+    "out": null,
+    "no_figure": false
+  }
+}
