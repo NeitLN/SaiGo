@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Literal
 
-from pydantic import BaseModel, Field, StrictInt, field_validator
+from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 
 
 class HealthResponse(BaseModel):
@@ -177,6 +177,8 @@ class TourRequest(BaseModel):
     include_optimal: bool = False      # Held–Karp làm đối chứng, chỉ khi tổng số điểm ≤ HELD_KARP_MAX_POINTS (11)
     include_or_opt: bool = False       # Or-opt xen kẽ 2-opt, thêm ứng viên nearest_neighbor_2opt_oropt
     return_to_depot: Literal[True] = True   # chưa hỗ trợ tour mở (TOPIC 15.3): gửi false → 422
+    # R1 C1: thứ tự id điểm giao của tour trước khi đóng đường; có thì thêm ứng viên kept_order.
+    keep_order: list[str] | None = None
 
     @field_validator("stops")
     @classmethod
@@ -185,6 +187,12 @@ class TourRequest(BaseModel):
         if len(set(ids)) != len(ids) or "depot" in ids:
             raise ValueError("id điểm giao phải khác nhau và khác 'depot'")
         return v
+
+    @model_validator(mode="after")
+    def keep_order_is_permutation(self) -> TourRequest:
+        if self.keep_order is not None and sorted(self.keep_order) != sorted(s.id for s in self.stops):
+            raise ValueError("keep_order phải gồm đúng mỗi id điểm giao một lần (không thiếu, không thừa, không trùng)")
+        return self
 
 
 class SnappedStop(SnappedPoint):
@@ -200,6 +208,9 @@ class TourCandidate(BaseModel):
     improvement_pct: float             # so với thứ tự nhập: 100 · (C_nhập − C) / C_nhập
     edge_ids: list[int]
     geometry: GeometryLineString
+    # R1 C3: cùng định nghĩa với /api/route, để UI biết người dùng bấm vào cạnh nào của tour.
+    edge_twin_ids: list[int | None] = Field(default_factory=list)
+    edge_geometries: list[list[list[float]]] = Field(default_factory=list)
 
 
 class TourOptimal(BaseModel):
