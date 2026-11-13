@@ -16,7 +16,8 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 
 ## Đang ở đâu
 - R0 xong (#127, #128).
-- R1 (lập lại tour sau khi đóng đường, proposal slide 3, 7, 12): PR đang review. `/api/tour` thêm `keep_order` → ứng viên `kept_order`; chế độ tour bấm đóng đoạn trên tour; case "Tour không còn khả thi". Bằng chứng ở [phiếu R1](tasks/R1-tour-closure.md).
+- R1 xong (#129): lập lại tour sau khi đóng đường, giữ thứ tự cũ / sắp lại, case "Tour không còn khả thi"; bằng chứng ở [phiếu R1](tasks/R1-tour-closure.md).
+- R2 (khóa bằng chứng): PR đang review. E5 thêm n = 5, cột p90 và max Gap; E5b thí nghiệm tour sau khi đóng đường; Or-opt ghi rõ chỉ minh họa. Phần "Minh chạy lại một bảng trên máy mình" chuyển sang R3 vì cần máy khác.
 
 ## Bị chặn / rủi ro
 - UI-1 chưa kiểm được trên máy này; nền dự phòng `/api/network` đã có (T56 R8). Kiểm ở R3 trên mạng khác; chuẩn bị video demo.
@@ -34,10 +35,9 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 | Ngưỡng snap 150 m | Giả định hiện hành, đã dùng trong mọi thí nghiệm | — |
 
 ## Bước tiếp theo
-1. Merge PR R1.
-2. R2: E5 thêm n = 5, báo max và p90; thí nghiệm nhỏ giữ thứ tự cũ / sắp lại sau khi đóng.
-3. R3: chạy trên máy thứ hai theo README; kiểm UI-1 ở mạng khác.
-4. R4: essay, slide, video demo.
+1. Merge PR R2.
+2. R3: chạy trên máy thứ hai theo README (Minh chạy lại một bảng EXPERIMENTS); kiểm UI-1 ở mạng khác.
+3. R4: essay, slide, video demo.
 
 ## Bộ kiểm nhanh (chạy đầu mỗi session)
 - `.venv\Scripts\python.exe -m pytest -q` → 14/11 trên main: 429 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; có đồ thị demo thì các test `realdata` khác vẫn chạy)
