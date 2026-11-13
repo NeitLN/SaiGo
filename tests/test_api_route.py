@@ -116,28 +116,30 @@ def test_route_both_algorithms_costs_match(client: TestClient):
     assert d_res["geometry"]["coordinates"] == a_res["geometry"]["coordinates"]
 
 
-def test_route_unsupported_scenario_returns_422(client: TestClient):
-    """Skeleton chưa hỗ trợ scenario_id khác baseline, phải trả về lỗi 422 (Review mục 2)."""
+def test_route_unknown_scenario_returns_422(client: TestClient):
+    """Kịch bản không có trong file kịch bản đang nạp → 422 (T51)."""
     req_data = {
         "source": NEAR_S,
         "target": NEAR_T,
-        "scenario_id": "peak-center",
+        "scenario_id": "khong-co-kich-ban-nay",
     }
     res = client.post("/api/route", json=req_data)
     assert res.status_code == 422
-    assert "chưa hỗ trợ ở skeleton" in res.text
+    assert "Không có kịch bản" in res.text
 
 
-def test_route_unsupported_blocked_edges_returns_422(client: TestClient):
-    """Skeleton chưa hỗ trợ blocked_edge_ids, phải trả về lỗi 422 (Review mục 2)."""
+def test_route_blocked_edge_is_avoided(client: TestClient):
+    """T51: đóng cạnh 4 (A→T) thì S→T đi vòng qua B, 100 s, không dùng cạnh đóng."""
     req_data = {
         "source": NEAR_S,
         "target": NEAR_T,
         "blocked_edge_ids": [4],
     }
     res = client.post("/api/route", json=req_data)
-    assert res.status_code == 422
-    assert "chưa hỗ trợ ở skeleton" in res.text
+    assert res.status_code == 200
+    d = res.json()["results"]["dijkstra"]
+    assert d["cost_s"] == pytest.approx(100.0)
+    assert 4 not in d["edge_ids"]
 
 
 def test_route_negative_trace_limit_returns_422(client: TestClient):

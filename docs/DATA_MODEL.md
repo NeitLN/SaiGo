@@ -155,7 +155,7 @@ Giới hạn cần nói rõ: dùng trung điểm thì cả cạnh được tính
 - API nhận `blocked_edge_ids: list[int]`, mỗi phần tử là một cạnh **có hướng**.
 - UI có hai lựa chọn khi người dùng bấm vào một đoạn:
   - **Đóng một chiều**: chỉ cạnh được bấm.
-  - **Đóng đoạn (hai chiều)**: cạnh được bấm và các "cạnh đối" của nó. Cạnh đối là cạnh `v → u` có cùng tập `way_ids` và hình học đảo ngược. Nhóm cạnh đối được tính trước khi nạp.
+  - **Đóng đoạn (hai chiều)**: cạnh được bấm và các "cạnh đối" của nó. Cạnh đối là cạnh `v → u` có cùng tập `way_ids` và hình học đảo ngược. Nhóm cạnh đối được tính một lần lúc server khởi động (`closures.reverse_twins`) và trả về trong `edge_twin_ids` của mỗi tuyến (T51); API không tự thêm cạnh đối vào `blocked_edge_ids`.
 - Đường có hai làn tách riêng (dual carriageway) trong OSM có thể không có cạnh đối. UI gọi thao tác này là "đóng đoạn", không gọi là "đóng cả con đường".
 - Mọi ID cạnh phải tồn tại trong đúng `dataset_id`; ID không hợp lệ → lỗi 422.
 

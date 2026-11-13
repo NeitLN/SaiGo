@@ -15,7 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Chuẩn bị dữ liệu OSM; không cần cho CI.
-data = ["osmnx"]
+data = ["osmnx>=2,<3"]  # 2.x: graph_from_bbox nhận bbox=(west, south, east, north); đã thử 2.1.1 (T02)
 dev = [
     "pytest",
     "httpx",
@@ -29,3 +29,4 @@ where = ["backend"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["backend"]
+markers = ["realdata: cần đồ thị thật trong data/processed/ (tự bỏ qua nếu chưa build)"]

@@ -1,6 +1,6 @@
 # SaiGo — Kế hoạch thực nghiệm
 
-Kết quả đo được ghi ở [EXPERIMENTS.md](EXPERIMENTS.md). Tài liệu này chỉ mô tả **cách đo**. Cập nhật 26/10 theo [đề xuất đổi phạm vi](proposals/2026-10-26-pham-vi.md) đã duyệt: E3 còn 3 kích thước, chỉ fixed trips. E5 (tour) giữ lại theo quyết định chiều 26/10. Mọi ô số liệu ở đây là **[Chưa đo]**; không điền số khi chưa chạy, không ước lượng thay cho số đo.
+Kết quả đo được ghi ở [EXPERIMENTS.md](EXPERIMENTS.md). Tài liệu này chỉ mô tả **cách đo**. Cập nhật 26/10 theo [đề xuất đổi phạm vi](proposals/2026-10-26-pham-vi.md) đã duyệt: E3 chỉ fixed trips; 28/10 chốt giữ đủ 4 kích thước sau pilot của T61. E5 (tour) giữ lại theo quyết định chiều 26/10. Mọi ô số liệu ở đây là **[Chưa đo]**; không điền số khi chưa chạy, không ước lượng thay cho số đo.
 
 ## 1. Các thực nghiệm
 
@@ -8,7 +8,7 @@ Kết quả đo được ghi ở [EXPERIMENTS.md](EXPERIMENTS.md). Tài liệu n
 |---|---|---|---|
 | E1 | Code có đúng không? | Fixture, đồ thị ngẫu nhiên, đồ thị thật | Có |
 | E2 | A* vs Dijkstra trên vùng demo (RQ1) | Vùng demo | Có |
-| E3 | Lợi thế của A* khi đồ thị lớn dần (RQ1b) | 3 vùng cắt lồng nhau, chỉ fixed trips | Có |
+| E3 | Lợi thế của A* khi đồ thị lớn dần (RQ1b) | 4 vùng cắt lồng nhau, chỉ fixed trips | Có |
 | E4 | Ảnh hưởng của ùn tắc và đóng đường (RQ3) | Vùng demo | Có |
 | E5 | Chất lượng tour (RQ2) | Vùng demo | Có (T74) |
 
@@ -88,7 +88,7 @@ Thư mục: `results/<run_id>/` với `run_id = YYYYMMDD-HHMM-<suite>-<git7>`. M
 
 ### 6.1. Đồ thị [Đề xuất]
 
-- Tải **một lần** vùng nửa cạnh 4,5 km + đệm 0,5 km quanh Bến Thành (T30), rồi cắt **3** hình vuông lồng nhau (T61), chọn trong các nửa cạnh ứng viên **1 / 2 / 3 / 4,5 km**. Ba kích thước cụ thể chốt sau pilot của T61 (Q3); không giảm xuống 2 kích thước nếu nhóm chưa đồng ý riêng.
+- Tải **một lần** vùng nửa cạnh 4,5 km + đệm 0,5 km quanh Bến Thành (T30), rồi cắt **4** hình vuông lồng nhau, nửa cạnh **1 / 2 / 3 / 4,5 km** (T61). Ngày 28/10 chốt giữ đủ 4 (Q3): pilot của T61 cho thấy Dijkstra ở vùng lớn nhất (10.143 node) chỉ khoảng 14 ms/truy vấn, nên thêm một kích thước gần như không tốn giờ chạy.
 - Chọn SCC lồng nhau (DATA_MODEL mục 8.4), nên SCC nhỏ luôn nằm trong SCC lớn.
 - Trục hoành của mọi biểu đồ là **`|V|` đo được**, không phải bán kính: tăng gấp đôi bán kính không bảo đảm số node tăng gấp bốn.
 - Pilot ở kích thước lớn nhất: nếu median Dijkstra > ~1 s/truy vấn thì giảm hoặc bỏ kích thước đó và ghi lý do. Một giây là trần thực tế cho thời gian chạy, không phải mục tiêu.

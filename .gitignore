@@ -14,7 +14,8 @@ frontend/dist/
 
 # Dữ liệu lớn: không commit graph thô; dùng manifest + hash để tái lập
 data/raw/
-data/processed/
+data/processed/*
+!data/processed/*manifest.json
 *.graphml
 cache/
 

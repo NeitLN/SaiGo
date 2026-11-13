@@ -4,7 +4,7 @@ Kho là chỉ số 0 và cố định ở đầu/cuối tour; `order = [0, …]`
 chặng quay về kho. Ma trận **bất đối xứng**: `D[i][j]` là chi phí có hướng, không dùng công thức
 delta của 2-opt đối xứng vì đảo một đoạn còn đảo chiều các chặng bên trong (mục 10.5).
 NN và 2-opt là heuristic: kết quả là "lộ trình được cải thiện", không phải tối ưu toàn cục;
-`held_karp` là đối chứng chính xác cho n ≤ 10 (O(2^n · n²)), chỉ dùng khi đo gap.
+`held_karp` là đối chứng chính xác cho n ≤ 11 (O(2^n · n²)), chỉ dùng khi đo gap.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from typing import Sequence
 Matrix = Sequence[Sequence[float]]
 
 COST_EPS = 1e-9   # giây; chênh lệch nhỏ hơn mức này coi như bằng nhau (sai số số thực)
-HELD_KARP_MAX_POINTS = 10   # 2^n · n²; quá mức này thì dùng heuristic
+HELD_KARP_MAX_POINTS = 11   # gồm cả kho, tức tối đa 10 điểm giao — EXPERIMENT_PLAN mục 8 (O(2^n · n²))
 
 
 @dataclass(frozen=True)
@@ -134,7 +134,7 @@ def choose_tour(D: Matrix, order: Sequence[int]) -> TourPlan:
 
 
 def held_karp(D: Matrix) -> list[int]:
-    """Tour tối ưu toàn cục bằng quy hoạch động Held–Karp cho n ≤ `HELD_KARP_MAX_POINTS`.
+    """Tour tối ưu toàn cục bằng quy hoạch động Held–Karp cho n ≤ `HELD_KARP_MAX_POINTS` (gồm cả kho, tức tối đa 10 điểm giao).
 
     `dp[S][j]` = chi phí nhỏ nhất đi từ kho (0), thăm đúng tập điểm giao `S` (bit của 1..n−1),
     kết thúc ở `j`; khởi tạo `dp[{j}][j] = D[0][j]`, truy hồi
@@ -192,3 +192,80 @@ def held_karp(D: Matrix) -> list[int]:
         j = prev
     stops.reverse()
     return [0] + stops
+
+
+def or_opt(D: Matrix, order: Sequence[int]) -> list[int]:
+    """Cải tiến tour bằng thuật toán Or-opt xen kẽ 2-opt cho ma trận có hướng (bất đối xứng).
+
+    Di chuyển một đoạn 1–3 điểm giao liên tiếp sang vị trí khác (thử cả giữ chiều và đảo chiều),
+    chỉ nhận khi chi phí giảm hơn `COST_EPS`, tính lại toàn bộ chi phí khép kín. Lặp tới khi
+    không còn cải thiện, sau đó xen kẽ với 2-opt cho đến khi cả hai phương pháp đều hội tụ
+    (cực tiểu địa phương đồng thời của 2-opt và Or-opt).
+    Kho (chỉ số 0) luôn cố định ở đầu tour. Không sửa `order` truyền vào.
+    """
+    n = _check_matrix(D)
+    best = _check_order(n, order)
+    best_cost = _closed_cost(D, best)
+    if n <= 2:
+        return best
+
+    while True:
+        outer_improved = False
+
+        # 1. Or-opt: di chuyển đoạn 1..3 điểm giao (cả giữ chiều và đảo chiều)
+        while True:
+            step_improved = False
+            for length in (3, 2, 1):
+                if length > n - 2:
+                    continue
+                for i in range(1, n - length + 1):
+                    seg = best[i:i + length]
+                    rem = best[:i] + best[i + length:]
+                    for k in range(1, len(rem) + 1):
+                        # Thử giữ nguyên chiều của đoạn
+                        cand = rem[:k] + seg + rem[k:]
+                        if cand != best:
+                            cost = _closed_cost(D, cand)
+                            if cost < best_cost - COST_EPS:
+                                best, best_cost = cand, cost
+                                step_improved = True
+                                outer_improved = True
+                                break
+                        # Thử đảo chiều của đoạn (chỉ cần khi length >= 2)
+                        if length >= 2:
+                            cand_rev = rem[:k] + seg[::-1] + rem[k:]
+                            if cand_rev != best:
+                                cost_rev = _closed_cost(D, cand_rev)
+                                if cost_rev < best_cost - COST_EPS:
+                                    best, best_cost = cand_rev, cost_rev
+                                    step_improved = True
+                                    outer_improved = True
+                                    break
+                    if step_improved:
+                        break
+                if step_improved:
+                    break
+            if not step_improved:
+                break
+
+        # 2. 2-opt: đảo đoạn điểm giao để thoát khỏi cực tiểu địa phương
+        while True:
+            step_improved = False
+            for i in range(1, n - 1):
+                for j in range(i + 1, n):
+                    candidate = best[:i] + best[i:j + 1][::-1] + best[j + 1:]
+                    cost = _closed_cost(D, candidate)
+                    if cost < best_cost - COST_EPS:
+                        best, best_cost = candidate, cost
+                        step_improved = True
+                        outer_improved = True
+                        break
+                if step_improved:
+                    break
+            if not step_improved:
+                break
+
+        if not outer_improved:
+            break
+
+    return best

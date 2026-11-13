@@ -1,0 +1,83 @@
+{
+  "format": "saigo-graph/1",
+  "dataset_id": "hcm-benthanh-r2000-20261024",
+  "file": "data/processed/hcm-benthanh-r2000-20261024.json",
+  "file_bytes": 1169528,
+  "sha256": "928c1f8bb372d7ee59fe1f427d18d9befdfa7a2b8e36aef6e5b7df177d3e479c",
+  "raw": {
+    "dataset_id": "hcmc-benthanh-20261024",
+    "downloaded_at": "2026-10-24T03:13:27+07:00",
+    "bbox": {
+      "west": 106.6522273349434,
+      "south": 10.727533983225356,
+      "east": 106.74377266505658,
+      "north": 10.817466016774645
+    },
+    "network_type": "drive",
+    "sha256": "24a283275b0f65836bd51d7efc7110a566b658ff3a6a5bccef1a0db576ed5398"
+  },
+  "crop": {
+    "area": "demo",
+    "center": {
+      "name": "Chợ Bến Thành",
+      "lat": 10.7725,
+      "lon": 106.698
+    },
+    "half_side_m": 2000,
+    "projected_crs": "EPSG:32648",
+    "rule": "giữ node trong hình vuông; giữ cạnh có cả hai đầu bên trong"
+  },
+  "simplification": {
+    "simplify": true,
+    "retain_all": true
+  },
+  "node_count": 1889,
+  "edge_count": 4004,
+  "oneway_edge_count": 1332,
+  "parallel_edge_count": 12,
+  "self_loop_count": 2,
+  "scc_node_count": 1745,
+  "nodes_outside_scc": 144,
+  "weak_components": 38,
+  "geometry_reversed": 0,
+  "heuristic_c": 0.9999999998420873,
+  "edges_length_below_haversine_1mm": 0,
+  "v_max_kmh": 40,
+  "highway": {
+    "residential": 1743,
+    "tertiary": 710,
+    "primary": 677,
+    "secondary": 468,
+    "primary_link": 305,
+    "secondary_link": 41,
+    "tertiary_link": 21,
+    "trunk": 14,
+    "living_street": 14,
+    "trunk_link": 11
+  },
+  "speed_config": {
+    "_comment": "Tốc độ theo loại đường (DATA_MODEL mục 3.2). [Giả định — số mô phỏng, không phải đo thực tế]. Bỏ qua thẻ maxspeed của OSM. Đổi bảng thì v_max và mọi kết quả benchmark phải tính lại.",
+    "unit": "km/h",
+    "default_kmh": 20,
+    "highway_kmh": {
+      "trunk": 40,
+      "trunk_link": 40,
+      "primary": 35,
+      "primary_link": 35,
+      "secondary": 30,
+      "secondary_link": 30,
+      "tertiary": 28,
+      "tertiary_link": 28,
+      "unclassified": 25,
+      "residential": 22,
+      "living_street": 15,
+      "service": 15
+    }
+  },
+  "dependencies": {
+    "python": "3.14.4",
+    "osmnx": "2.1.1",
+    "networkx": "3.7"
+  },
+  "attribution": "© OpenStreetMap contributors, dữ liệu theo giấy phép ODbL (https://www.openstreetmap.org/copyright)"
+}

@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 
 class HealthResponse(BaseModel):
@@ -48,7 +48,7 @@ class RouteRequest(BaseModel):
     target: LatLon
     algorithms: list[str] = Field(default_factory=lambda: ["dijkstra"])
     scenario_id: str | None = "baseline"
-    blocked_edge_ids: list[int] = Field(default_factory=list)
+    blocked_edge_ids: list[StrictInt] = Field(default_factory=list)   # StrictInt: không nhận true/false là id 1/0
     trace_limit: int = Field(0, ge=0, le=5000)
 
     @field_validator("algorithms")
@@ -56,19 +56,13 @@ class RouteRequest(BaseModel):
     def validate_algorithms(cls, v: list[str]) -> list[str]:
         if not v:
             raise ValueError("danh sách thuật toán không được rỗng")
-        allowed = {"dijkstra", "astar"}
+        allowed = {"dijkstra", "astar", "alt", "bidijkstra"}
         for algo in v:
             if algo not in allowed:
-                raise ValueError(f"thuật toán không hỗ trợ: {algo!r}, chỉ hỗ trợ 'dijkstra', 'astar'")
+                raise ValueError(
+                    f"thuật toán không hỗ trợ: {algo!r}, chỉ hỗ trợ 'dijkstra', 'astar', 'alt', "
+                    "'bidijkstra'")
         return v
-
-    @model_validator(mode="after")
-    def validate_skeleton_constraints(self) -> RouteRequest:
-        if self.scenario_id not in (None, "baseline"):
-            raise ValueError(f"kịch bản {self.scenario_id!r} chưa hỗ trợ ở skeleton (T51)")
-        if self.blocked_edge_ids:
-            raise ValueError("đóng đường (blocked_edge_ids) chưa hỗ trợ ở skeleton (T51)")
-        return self
 
 
 class SnappedPoint(BaseModel):
@@ -101,6 +95,11 @@ class AlgorithmRouteResult(BaseModel):
     cost_s: float | None = None         # Giây (None nếu no_path)
     distance_m: float | None = None     # Mét (None nếu no_path)
     edge_ids: list[int] = Field(default_factory=list)
+    # edge_twin_ids[i] = cạnh đối của edge_ids[i] (v → u, cùng đoạn đường) hoặc None nếu một chiều.
+    # UI "đóng đoạn" gửi cả hai id trong blocked_edge_ids (DATA_MODEL 4.2). Thêm ở T51.
+    edge_twin_ids: list[int | None] = Field(default_factory=list)
+    # edge_geometries[i] = hình học [lon, lat] của edge_ids[i], để UI biết người dùng bấm vào cạnh nào (T54).
+    edge_geometries: list[list[list[float]]] = Field(default_factory=list)
     geometry: GeometryLineString
     expanded: int
     runtime_ms: float
@@ -116,4 +115,104 @@ class RouteResponse(BaseModel):
     snapped: SnappedResponse
     results: dict[str, AlgorithmRouteResult]
     costs_match: bool | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ZoneOut(BaseModel):
+    type: str = "circle"
+    lat: float
+    lon: float
+    radius_m: float
+
+
+class RuleOut(BaseModel):
+    zone: ZoneOut
+    alpha: float
+    highway: list[str] | None = None
+
+
+class ScenarioOut(BaseModel):
+    id: str
+    label: str
+    rules: list[RuleOut]
+
+
+class DatasetResponse(BaseModel):
+    """Đồ thị đang nạp và các kịch bản dùng được (cùng cấu trúc `saigo-scenarios/1`)."""
+
+    dataset_id: str
+    node_count: int
+    edge_count: int
+    scenarios: list[ScenarioOut]
+
+
+# --- /api/tour (T72; TOPIC mục 15.3–15.4) ---
+
+MAX_TOUR_STOPS = 14   # TOPIC: 5–15 điểm kể cả kho; 2-opt tính lại toàn tour nên vẫn nhanh
+
+
+class TourStop(LatLon):
+    """Một điểm giao; `id` do UI đặt, dùng để đánh số và báo lỗi."""
+
+    id: str = Field(..., min_length=1, max_length=40)
+
+
+class TourRequest(BaseModel):
+    """Tour khép kín kho → các điểm giao → kho trên snapshot của kịch bản và cạnh đóng."""
+
+    depot: LatLon
+    stops: list[TourStop] = Field(..., min_length=1, max_length=MAX_TOUR_STOPS)
+    scenario_id: str | None = "baseline"
+    blocked_edge_ids: list[StrictInt] = Field(default_factory=list)   # StrictInt: không nhận true/false là id 1/0
+    include_optimal: bool = False      # Held–Karp làm đối chứng, chỉ khi tổng số điểm ≤ HELD_KARP_MAX_POINTS (11)
+    include_or_opt: bool = False       # Or-opt xen kẽ 2-opt, thêm ứng viên nearest_neighbor_2opt_oropt
+    return_to_depot: Literal[True] = True   # chưa hỗ trợ tour mở (TOPIC 15.3): gửi false → 422
+
+    @field_validator("stops")
+    @classmethod
+    def unique_ids(cls, v: list[TourStop]) -> list[TourStop]:
+        ids = [s.id for s in v]
+        if len(set(ids)) != len(ids) or "depot" in ids:
+            raise ValueError("id điểm giao phải khác nhau và khác 'depot'")
+        return v
+
+
+class SnappedStop(SnappedPoint):
+    id: str
+
+
+class TourCandidate(BaseModel):
+    """Một phương án thứ tự giao; chi phí = tổng trọng số các cạnh trong `edge_ids`."""
+
+    stop_order: list[str]              # id điểm giao theo thứ tự đi, không gồm kho
+    cost_s: float
+    distance_m: float
+    improvement_pct: float             # so với thứ tự nhập: 100 · (C_nhập − C) / C_nhập
+    edge_ids: list[int]
+    geometry: GeometryLineString
+
+
+class TourOptimal(BaseModel):
+    stop_order: list[str]
+    cost_s: float
+    gap_pct: float                     # của phương án được chọn: 100 · (C_chọn − C_opt) / C_opt
+    or_opt_gap_pct: float | None = None  # gap của phương án Or-opt so với tối ưu Held–Karp
+
+
+class UnreachablePair(BaseModel):
+    from_id: str
+    to_id: str
+
+
+class TourResponse(BaseModel):
+    dataset_id: str
+    snapshot_id: str
+    status: Literal["ok", "infeasible_under_model"]
+    snapped: dict[str, SnappedStop]    # "depot" và id của từng điểm giao
+    candidates: dict[str, TourCandidate] = Field(default_factory=dict)   # input | nearest_neighbor | nearest_neighbor_2opt
+    chosen: str | None = None
+    optimal: TourOptimal | None = None
+    unreachable: list[UnreachablePair] = Field(default_factory=list)
+    matrix_runtime_ms: float
+    order_runtime_ms: float | None = None
     warnings: list[str] = Field(default_factory=list)

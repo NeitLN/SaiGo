@@ -1,0 +1,19 @@
+{
+  "_comment": "Tốc độ theo loại đường (DATA_MODEL mục 3.2). [Giả định — số mô phỏng, không phải đo thực tế]. Bỏ qua thẻ maxspeed của OSM. Đổi bảng thì v_max và mọi kết quả benchmark phải tính lại.",
+  "unit": "km/h",
+  "default_kmh": 20,
+  "highway_kmh": {
+    "trunk": 40,
+    "trunk_link": 40,
+    "primary": 35,
+    "primary_link": 35,
+    "secondary": 30,
+    "secondary_link": 30,
+    "tertiary": 28,
+    "tertiary_link": 28,
+    "unclassified": 25,
+    "residential": 22,
+    "living_street": 15,
+    "service": 15
+  }
+}

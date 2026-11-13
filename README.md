@@ -14,7 +14,7 @@ Không cung cấp ETA giao thông trực tiếp hay điều hướng thương m�
 
 - Tìm đường: Dijkstra và A* (tự cài đặt)
 - Thứ tự giao: thứ tự nhập → Nearest Neighbor → 2-opt trên ma trận chi phí có hướng; Held–Karp làm đối chứng
-- Thí nghiệm tăng quy mô bản đồ: A* so với Dijkstra trên 3 kích thước đồ thị
+- Thí nghiệm tăng quy mô bản đồ: A* so với Dijkstra trên 4 kích thước đồ thị
 - Kịch bản giao thông mô phỏng và chặn đường, lập lại lộ trình
 - Benchmark offline có thể tái lập
 
