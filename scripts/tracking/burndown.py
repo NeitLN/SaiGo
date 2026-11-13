@@ -38,7 +38,7 @@ from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
-REPO = os.environ.get("GITHUB_REPOSITORY", "NeitLN/SaiGGo")
+REPO = os.environ.get("GITHUB_REPOSITORY", "NeitLN/SaiGo")
 VN = timezone(timedelta(hours=7))  # Việt Nam không có giờ mùa hè
 START = date(2026, 10, 23)          # ngày lập backlog
 END = date(2026, 11, 12)            # final ready (Project_Intructions_261.pdf)

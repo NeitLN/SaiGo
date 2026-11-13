@@ -1,8 +1,8 @@
 # T10 — Hàm địa lý
 
-**Trạng thái: ✅ đã merge 26/10 ([#58](https://github.com/NeitLN/SaiGGo/pull/58)).**
+**Trạng thái: ✅ đã merge 26/10 ([#58](https://github.com/NeitLN/SaiGo/pull/58)).**
 
-Tuần mục tiêu: 2 (26–27/10) · Giao cho: Tiến (thay Duy Anh; đã chuyển 26/10) · Nhánh: `t10-geo` · Issue: [#6](https://github.com/NeitLN/SaiGGo/issues/6)
+Tuần mục tiêu: 2 (26–27/10) · Giao cho: Tiến (thay Duy Anh; đã chuyển 26/10) · Nhánh: `t10-geo` · Issue: [#6](https://github.com/NeitLN/SaiGo/issues/6)
 Review: Bảo · Người tích hợp: Tiến
 Phụ thuộc: — (làm độc lập) · Ước lượng: 2 giờ
 

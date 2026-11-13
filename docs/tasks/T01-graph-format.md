@@ -1,8 +1,8 @@
 # T01 — Chốt định dạng đồ thị, fixture mẫu và `load_graph`
 
-**Trạng thái: ✅ đã merge 26/10 ([#57](https://github.com/NeitLN/SaiGGo/pull/57)).** Còn một tiêu chí chờ dữ liệu thật (T34).
+**Trạng thái: ✅ đã merge 26/10 ([#57](https://github.com/NeitLN/SaiGo/pull/57)).** Còn một tiêu chí chờ dữ liệu thật (T34).
 
-Tuần mục tiêu: 2 (26–27/10, **trễ từ 24/10**) · Giao cho: Tiến (thay Duy Anh, vắng tuần 2; đã chuyển 26/10) · Nhánh: `t01-graph-model` · Issue: [#3](https://github.com/NeitLN/SaiGGo/issues/3)
+Tuần mục tiêu: 2 (26–27/10, **trễ từ 24/10**) · Giao cho: Tiến (thay Duy Anh, vắng tuần 2; đã chuyển 26/10) · Nhánh: `t01-graph-model` · Issue: [#3](https://github.com/NeitLN/SaiGo/issues/3)
 Review: Bảo (đối chiếu fixture với bảng tính tay T03); Minh xác nhận `load_graph` đọc được file của T31 · Người tích hợp: Tiến
 Phụ thuộc: interface `Graph`/`GraphMeta` (chặn **bắt đầu**; đã chốt cùng #57) · Ước lượng: 3 giờ
 

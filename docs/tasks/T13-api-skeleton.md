@@ -1,8 +1,8 @@
 # T13 — Skeleton phía API: `/api/route` tối giản trên `mini.json`
 
-**Trạng thái: ✅ Duy Anh làm xong chiều 26/10 ([#73](https://github.com/NeitLN/SaiGGo/pull/73)), Minh review.** Phần còn lại của MW là T14 (Minh) và T15 (Bảo).
+**Trạng thái: ✅ Duy Anh làm xong chiều 26/10 ([#73](https://github.com/NeitLN/SaiGo/pull/73)), Minh review.** Phần còn lại của MW là T14 (Minh) và T15 (Bảo).
 
-Tuần mục tiêu: 2 (28–29/10; **đường mỏng chạy được trước tối 28/10**) · Giao cho: **Minh** (chuyển từ Tiến 26/10; Minh làm trọn lát dọc API + bản đồ) · Nhánh: `t13-api-skeleton` · Issue: [#49](https://github.com/NeitLN/SaiGGo/issues/49)
+Tuần mục tiêu: 2 (28–29/10; **đường mỏng chạy được trước tối 28/10**) · Giao cho: **Minh** (chuyển từ Tiến 26/10; Minh làm trọn lát dọc API + bản đồ) · Nhánh: `t13-api-skeleton` · Issue: [#49](https://github.com/NeitLN/SaiGo/issues/49)
 Review: Tiến (đối chiếu response với contract v1 và `frontend/src/api.ts`) · Người tích hợp: Tiến
 Phụ thuộc: T11, T10 (**đã merge** #59, #58): dùng trực tiếp `dijkstra()` và `geo.haversine_m`, không viết hàm khoảng cách riêng · Ước lượng: 3 giờ
 

@@ -35,7 +35,7 @@ if (-not $name -or -not $email) {
 Write-Host "Commit sẽ mang tên: $name <$email>"
 
 if ((Get-Location).Path -match '[^\x00-\x7F]') {
-    Write-Host "CHÚ Ý: đường dẫn repo có ký tự có dấu. Script vẫn chạy, nhưng một số công cụ (pip install -e, thư viện địa lý) dễ lỗi; nên clone vào thư mục không dấu, ví dụ C:\dev\SaiGGo." -ForegroundColor Yellow
+    Write-Host "CHÚ Ý: đường dẫn repo có ký tự có dấu. Script vẫn chạy, nhưng một số công cụ (pip install -e, thư viện địa lý) dễ lỗi; nên clone vào thư mục không dấu, ví dụ C:\dev\SaiGo." -ForegroundColor Yellow
 }
 
 Step "Môi trường Python (.venv)"

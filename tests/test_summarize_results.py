@@ -22,7 +22,7 @@ import summarize_results as summary
 
 RUN_ID = "20261029-1552-demo-abc1234"
 
-# --- Helper E5 (tour): tour_measurements.csv đúng định dạng E5_proposal.md mục 2 ---
+# --- Helper E5 (tour): tour_measurements.csv đúng định dạng docs/tasks/T74-tour-benchmark.md ---
 
 TOUR_COLUMNS = [
     "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",

@@ -1,8 +1,8 @@
 # T11 — Dijkstra và SearchResult
 
-**Trạng thái: ✅ đã merge 26/10 ([#59](https://github.com/NeitLN/SaiGGo/pull/59)).**
+**Trạng thái: ✅ đã merge 26/10 ([#59](https://github.com/NeitLN/SaiGo/pull/59)).**
 
-Tuần mục tiêu: 2 (27–28/10) · Giao cho: Tiến (thay Duy Anh) · Nhánh: `t11-dijkstra` · Issue: [#7](https://github.com/NeitLN/SaiGGo/issues/7)
+Tuần mục tiêu: 2 (27–28/10) · Giao cho: Tiến (thay Duy Anh) · Nhánh: `t11-dijkstra` · Issue: [#7](https://github.com/NeitLN/SaiGo/issues/7)
 Review: Bảo (đối chiếu với đáp án T03) · Người tích hợp: Tiến
 Phụ thuộc: T01 (**tích hợp**; đã merge #57) · T03/#54 (**chấp nhận**; đã merge) · Ước lượng: 4 giờ
 

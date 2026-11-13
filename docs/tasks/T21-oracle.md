@@ -1,8 +1,8 @@
 # T21 — Đối chứng NetworkX trên đồ thị ngẫu nhiên
 
-**Trạng thái: ✅ Duy Anh làm xong chiều 26/10 ([#64](https://github.com/NeitLN/SaiGGo/pull/64))**; Bảo không cần dùng giờ dự phòng cho task này.
+**Trạng thái: ✅ Duy Anh làm xong chiều 26/10 ([#64](https://github.com/NeitLN/SaiGo/pull/64))**; Bảo không cần dùng giờ dự phòng cho task này.
 
-Tuần mục tiêu: 2 **nếu còn dự phòng**, không thì 3 · Giao cho: Bảo (dùng 3 giờ dự phòng) · Nhánh: `t21-oracle` · Issue: [#10](https://github.com/NeitLN/SaiGGo/issues/10)
+Tuần mục tiêu: 2 **nếu còn dự phòng**, không thì 3 · Giao cho: Bảo (dùng 3 giờ dự phòng) · Nhánh: `t21-oracle` · Issue: [#10](https://github.com/NeitLN/SaiGo/issues/10)
 Review: Tiến · Người tích hợp: Tiến
 Phụ thuộc: T20 (**bắt đầu**: đã merge) · T15 (**bắt đầu**: MW đã đạt) · Ước lượng: 3 giờ
 **Chỉ bắt đầu khi:** MW đã đạt ở mốc 29/10 **và** T20 đã merge. Không thì dời sang tuần 3, giữ 3 giờ dự phòng để sửa lỗi.

@@ -16,23 +16,23 @@
 
 | Issue | Task | Dự kiến | Review bởi |
 |---|---|---|---|
-| [#42](https://github.com/NeitLN/SaiGGo/issues/42) | T04 · Sửa hệ thống theo dõi (PR #43) | 24/10 | Duy Anh |
-| [#2](https://github.com/NeitLN/SaiGGo/issues/2) | T00 · Môi trường và xác nhận khung chạy | 23–24/10 | Duy Anh |
-| [#8](https://github.com/NeitLN/SaiGGo/issues/8) | T12 · CLI tìm đường (sau T11) | 25–26/10 | Duy Anh |
-| [#13](https://github.com/NeitLN/SaiGGo/issues/13) | T31 · GraphML → JSON (cùng Minh) | 25–27/10 | Duy Anh |
-| [#15](https://github.com/NeitLN/SaiGGo/issues/15) | T33 · Dữ liệu thật + đối chứng (cùng Duy Anh) | 28–29/10 | Minh |
-| [#16](https://github.com/NeitLN/SaiGGo/issues/16) | T40 · Snapshot ùn tắc theo vùng | 29–30/10 | Duy Anh |
-| [#17](https://github.com/NeitLN/SaiGGo/issues/17) | T41 · Đóng đường | 30–31/10 | Duy Anh |
-| [#20](https://github.com/NeitLN/SaiGGo/issues/20) | T51 · API `/api/route` | 31/10–02/11 | Duy Anh |
-| [#25](https://github.com/NeitLN/SaiGGo/issues/25) | T60 · Benchmark 1.000 truy vấn | 02–03/11 | Duy Anh |
-| [#23](https://github.com/NeitLN/SaiGGo/issues/23) | T54 · UI đóng đường (cùng Minh) | 03–04/11 | Duy Anh |
-| [#27](https://github.com/NeitLN/SaiGGo/issues/27) | T62 · Thí nghiệm tăng quy mô | 03–05/11 | Duy Anh |
-| [#28](https://github.com/NeitLN/SaiGGo/issues/28) | T63 · Thí nghiệm ùn tắc/đóng đường | 04–05/11 | Duy Anh |
-| [#30](https://github.com/NeitLN/SaiGGo/issues/30) | G1 · Cổng MVP | 05/11 | cả nhóm |
-| [#34](https://github.com/NeitLN/SaiGGo/issues/34), [#36](https://github.com/NeitLN/SaiGGo/issues/36) | T72, T74 · Tour trên API + benchmark (chỉ khi qua G1) | 05–08/11 | Duy Anh |
-| [#38](https://github.com/NeitLN/SaiGGo/issues/38) | T81 · Đồng bộ tài liệu | 08–10/11 | Duy Anh |
+| [#42](https://github.com/NeitLN/SaiGo/issues/42) | T04 · Sửa hệ thống theo dõi (PR #43) | 24/10 | Duy Anh |
+| [#2](https://github.com/NeitLN/SaiGo/issues/2) | T00 · Môi trường và xác nhận khung chạy | 23–24/10 | Duy Anh |
+| [#8](https://github.com/NeitLN/SaiGo/issues/8) | T12 · CLI tìm đường (sau T11) | 25–26/10 | Duy Anh |
+| [#13](https://github.com/NeitLN/SaiGo/issues/13) | T31 · GraphML → JSON (cùng Minh) | 25–27/10 | Duy Anh |
+| [#15](https://github.com/NeitLN/SaiGo/issues/15) | T33 · Dữ liệu thật + đối chứng (cùng Duy Anh) | 28–29/10 | Minh |
+| [#16](https://github.com/NeitLN/SaiGo/issues/16) | T40 · Snapshot ùn tắc theo vùng | 29–30/10 | Duy Anh |
+| [#17](https://github.com/NeitLN/SaiGo/issues/17) | T41 · Đóng đường | 30–31/10 | Duy Anh |
+| [#20](https://github.com/NeitLN/SaiGo/issues/20) | T51 · API `/api/route` | 31/10–02/11 | Duy Anh |
+| [#25](https://github.com/NeitLN/SaiGo/issues/25) | T60 · Benchmark 1.000 truy vấn | 02–03/11 | Duy Anh |
+| [#23](https://github.com/NeitLN/SaiGo/issues/23) | T54 · UI đóng đường (cùng Minh) | 03–04/11 | Duy Anh |
+| [#27](https://github.com/NeitLN/SaiGo/issues/27) | T62 · Thí nghiệm tăng quy mô | 03–05/11 | Duy Anh |
+| [#28](https://github.com/NeitLN/SaiGo/issues/28) | T63 · Thí nghiệm ùn tắc/đóng đường | 04–05/11 | Duy Anh |
+| [#30](https://github.com/NeitLN/SaiGo/issues/30) | G1 · Cổng MVP | 05/11 | cả nhóm |
+| [#34](https://github.com/NeitLN/SaiGo/issues/34), [#36](https://github.com/NeitLN/SaiGo/issues/36) | T72, T74 · Tour trên API + benchmark (chỉ khi qua G1) | 05–08/11 | Duy Anh |
+| [#38](https://github.com/NeitLN/SaiGo/issues/38) | T81 · Đồng bộ tài liệu | 08–10/11 | Duy Anh |
 
-Thêm: điều phối [#31](https://github.com/NeitLN/SaiGGo/issues/31) (T65) và [#40](https://github.com/NeitLN/SaiGGo/issues/40) (T83).
+Thêm: điều phối [#31](https://github.com/NeitLN/SaiGo/issues/31) (T65) và [#40](https://github.com/NeitLN/SaiGo/issues/40) (T83).
 
 ## T00 (#2): phần còn lại
 
@@ -40,7 +40,7 @@ Thêm: điều phối [#31](https://github.com/NeitLN/SaiGGo/issues/31) (T65) v�
 
 1. Chạy backend + frontend (ONBOARDING mục 3), mở http://localhost:5173, xác nhận thấy "Server chạy, chưa nạp dataset".
 2. Ghi phiên bản và kết quả vào PROGRESS.md, mở PR `Closes #2`.
-3. Repo đang ở thư mục có dấu tiếng Việt. App vẫn chạy được nhờ script không dùng `pip install -e`. Nếu sau này OSMnx hoặc công cụ khác lỗi đường dẫn, clone lại vào `C:\dev\SaiGGo`.
+3. Repo đang ở thư mục có dấu tiếng Việt. App vẫn chạy được nhờ script không dùng `pip install -e`. Nếu sau này OSMnx hoặc công cụ khác lỗi đường dẫn, clone lại vào `C:\dev\SaiGo`.
 
 ## Hàng đợi review của bạn
 

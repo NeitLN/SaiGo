@@ -40,8 +40,9 @@ from app.graph.closures import validate_blocked
 from app.graph.geo import haversine_m
 from app.graph.model import Graph, GraphMeta, load_graph
 from app.graph.scenario import Snapshot, build_snapshot, load_scenarios
+from app.algorithms.result import SearchResult
 
-# 27 cột chuẩn của measurements.csv theo docs/EXPERIMENT_PLAN.md mục 3.3
+# Cột của measurements.csv: 27 cột theo docs/EXPERIMENT_PLAN.md mục 3.3, rồi 2 cột của T63 ở cuối
 MEASUREMENT_COLUMNS = [
     "run_id",
     "suite",
@@ -70,6 +71,9 @@ MEASUREMENT_COLUMNS = [
     "runtime_ns_median",
     "runtime_ns_min",
     "repeats",
+    # T63 (docs/tasks/T63-congestion-closure.md C2, C5): thêm ở cuối, 27 cột trên giữ nguyên thứ tự.
+    "route_sig",
+    "snapshot_ns",
 ]
 
 # Cột của queries.csv theo docs/EXPERIMENT_PLAN.md mục 2.1
@@ -376,6 +380,115 @@ def read_queries_csv(path: Path) -> list[dict]:
     return queries
 
 
+def route_sig(status: str, edge_ids: list[int]) -> str:
+    """12 ký tự đầu sha1 của danh sách cạnh của tuyến; rỗng khi không có đường (T63 C2)."""
+    if status != "ok":
+        return ""
+    return hashlib.sha1(",".join(map(str, edge_ids)).encode()).hexdigest()[:12]
+
+
+def measure_query(
+    graph: Graph,
+    snap: Snapshot,
+    q: dict,
+    q_idx: int,
+    repeats: int,
+    *,
+    run_id: str,
+    suite: str,
+    size_label: str,
+    blocked_count: int,
+    snapshot_ns: int = 0,
+) -> tuple[list[dict], SearchResult, SearchResult]:
+    """Đo một cặp theo mục 3.1 (bước 4–7) và trả hai dòng đo (Dijkstra, A*) cùng kết quả cuối của mỗi thuật toán.
+
+    Cặp chẵn chạy Dijkstra trước, cặp lẻ chạy A* trước; với A*, thời gian dựng heuristic tính vào (bước 5).
+    Lệch trạng thái hoặc lệch chi phí giữa hai thuật toán là lỗi, không ghi số.
+    """
+    source, target, query_id = q["source"], q["target"], q["query_id"]
+    times_d: list[int] = []
+    times_a: list[int] = []
+    last_res_d = None
+    last_res_a = None
+
+    def run_d() -> None:
+        nonlocal last_res_d
+        for _ in range(repeats):
+            t0 = time.perf_counter_ns()
+            last_res_d = dijkstra(graph, snap, source, target, trace_limit=0)
+            times_d.append(time.perf_counter_ns() - t0)
+
+    def run_a() -> None:
+        nonlocal last_res_a
+        for _ in range(repeats):
+            t0 = time.perf_counter_ns()
+            h = make_geo_heuristic(graph, target)
+            last_res_a = astar(graph, snap, source, target, h, trace_limit=0)
+            times_a.append(time.perf_counter_ns() - t0)
+
+    gc.collect()
+    gc.disable()
+    try:
+        if q_idx % 2 == 0:
+            run_d()
+            run_a()
+        else:
+            run_a()
+            run_d()
+    finally:
+        gc.enable()
+
+    assert last_res_d is not None and last_res_a is not None
+    if last_res_d.status != last_res_a.status:
+        raise RuntimeError(
+            f"Lỗi không khớp trạng thái tại query {query_id} ({source} -> {target}): "
+            f"Dijkstra={last_res_d.status}, A*={last_res_a.status}"
+        )
+    if last_res_d.status == "ok":
+        cost_d, cost_a = last_res_d.cost_s, last_res_a.cost_s
+        tol = 1e-6 * max(1.0, cost_d)
+        if abs(cost_a - cost_d) > tol:
+            raise RuntimeError(
+                f"Lỗi lệch chi phí tại query {query_id} ({source} -> {target}): "
+                f"Dijkstra={cost_d}, A*={cost_a}, tol={tol}"
+            )
+
+    rows = []
+    for algo, res, times in (("dijkstra", last_res_d, times_d), ("astar", last_res_a, times_a)):
+        rows.append({
+            "run_id": run_id,
+            "suite": suite,
+            "dataset_id": graph.dataset_id,
+            "size_label": size_label,
+            "n_nodes": len(graph.node_lat),
+            "n_edges": len(graph.edge_u),
+            "query_id": query_id,
+            "workload": q["workload"],
+            "stratum": q["stratum"],
+            "source": source,
+            "target": target,
+            "hav_m": q["hav_m"],
+            "algo": algo,
+            "scenario_id": snap.scenario_id,
+            "blocked_count": blocked_count,
+            "status": res.status,
+            "cost_s": round(res.cost_s, 6) if res.cost_s is not None else "",
+            "distance_m": round(res.distance_m, 2) if res.distance_m is not None else "",
+            "expanded": res.expanded,
+            "unique_expanded": res.unique_expanded,
+            "reopened": res.reopened,
+            "relaxations": res.relaxations,
+            "pushes": res.pushes,
+            "max_frontier": res.max_frontier,
+            "runtime_ns_median": int(statistics.median(times)),
+            "runtime_ns_min": min(times),
+            "repeats": repeats,
+            "route_sig": route_sig(res.status, res.edge_ids),
+            "snapshot_ns": snapshot_ns,
+        })
+    return rows, last_res_d, last_res_a
+
+
 def run_benchmark(
     graph: Graph,
     meta: GraphMeta,
@@ -410,141 +523,12 @@ def run_benchmark(
 
     # 3. Đo lường chính thức từng cặp
     measurements: list[dict] = []
-    n_nodes = len(graph.node_lat)
-    n_edges = len(graph.edge_u)
     blocked_count = len(snap.blocked)
 
     for q_idx, q in enumerate(queries):
-        source = q["source"]
-        target = q["target"]
-        hav_m = q["hav_m"]
-        workload = q["workload"]
-        stratum = q["stratum"]
-        query_id = q["query_id"]
-
-        times_d: list[int] = []
-        times_a: list[int] = []
-        last_res_d = None
-        last_res_a = None
-
-        gc.collect()
-        gc.disable()
-        try:
-            # Cặp chẵn chạy Dijkstra trước rồi A*, cặp lẻ chạy A* trước rồi Dijkstra (mục 3.1 bước 4)
-            if q_idx % 2 == 0:
-                for _ in range(repeats):
-                    t0 = time.perf_counter_ns()
-                    last_res_d = dijkstra(graph, snap, source, target, trace_limit=0)
-                    t1 = time.perf_counter_ns()
-                    times_d.append(t1 - t0)
-
-                for _ in range(repeats):
-                    t0 = time.perf_counter_ns()
-                    h = make_geo_heuristic(graph, target)
-                    last_res_a = astar(graph, snap, source, target, h, trace_limit=0)
-                    t1 = time.perf_counter_ns()
-                    times_a.append(t1 - t0)
-            else:
-                for _ in range(repeats):
-                    t0 = time.perf_counter_ns()
-                    h = make_geo_heuristic(graph, target)
-                    last_res_a = astar(graph, snap, source, target, h, trace_limit=0)
-                    t1 = time.perf_counter_ns()
-                    times_a.append(t1 - t0)
-
-                for _ in range(repeats):
-                    t0 = time.perf_counter_ns()
-                    last_res_d = dijkstra(graph, snap, source, target, trace_limit=0)
-                    t1 = time.perf_counter_ns()
-                    times_d.append(t1 - t0)
-        finally:
-            gc.enable()
-
-        assert last_res_d is not None and last_res_a is not None
-
-        # Kiểm tra tính đúng đắn nghiêm ngặt giữa Dijkstra và A* (mục 3.2: 100% khớp chi phí)
-        if last_res_d.status != last_res_a.status:
-            raise RuntimeError(
-                f"Lỗi không khớp trạng thái tại query {query_id} ({source} -> {target}): "
-                f"Dijkstra={last_res_d.status}, A*={last_res_a.status}"
-            )
-        if last_res_d.status == "ok":
-            cost_d = last_res_d.cost_s
-            cost_a = last_res_a.cost_s
-            tol = 1e-6 * max(1.0, cost_d)
-            if abs(cost_a - cost_d) > tol:
-                raise RuntimeError(
-                    f"Lỗi lệch chi phí tại query {query_id} ({source} -> {target}): "
-                    f"Dijkstra={cost_d}, A*={cost_a}, tol={tol}"
-                )
-
-        # Tính median và min theo EXPERIMENT_PLAN mục 3.1 bước 7
-        median_d = int(statistics.median(times_d))
-        min_d = min(times_d)
-        median_a = int(statistics.median(times_a))
-        min_a = min(times_a)
-
-        # Hàng đo cho Dijkstra
-        measurements.append({
-            "run_id": run_id,
-            "suite": suite,
-            "dataset_id": graph.dataset_id,
-            "size_label": size_label,
-            "n_nodes": n_nodes,
-            "n_edges": n_edges,
-            "query_id": query_id,
-            "workload": workload,
-            "stratum": stratum,
-            "source": source,
-            "target": target,
-            "hav_m": hav_m,
-            "algo": "dijkstra",
-            "scenario_id": snap.scenario_id,
-            "blocked_count": blocked_count,
-            "status": last_res_d.status,
-            "cost_s": round(last_res_d.cost_s, 6) if last_res_d.cost_s is not None else "",
-            "distance_m": round(last_res_d.distance_m, 2) if last_res_d.distance_m is not None else "",
-            "expanded": last_res_d.expanded,
-            "unique_expanded": last_res_d.unique_expanded,
-            "reopened": last_res_d.reopened,
-            "relaxations": last_res_d.relaxations,
-            "pushes": last_res_d.pushes,
-            "max_frontier": last_res_d.max_frontier,
-            "runtime_ns_median": median_d,
-            "runtime_ns_min": min_d,
-            "repeats": repeats,
-        })
-
-        # Hàng đo cho A*
-        measurements.append({
-            "run_id": run_id,
-            "suite": suite,
-            "dataset_id": graph.dataset_id,
-            "size_label": size_label,
-            "n_nodes": n_nodes,
-            "n_edges": n_edges,
-            "query_id": query_id,
-            "workload": workload,
-            "stratum": stratum,
-            "source": source,
-            "target": target,
-            "hav_m": hav_m,
-            "algo": "astar",
-            "scenario_id": snap.scenario_id,
-            "blocked_count": blocked_count,
-            "status": last_res_a.status,
-            "cost_s": round(last_res_a.cost_s, 6) if last_res_a.cost_s is not None else "",
-            "distance_m": round(last_res_a.distance_m, 2) if last_res_a.distance_m is not None else "",
-            "expanded": last_res_a.expanded,
-            "unique_expanded": last_res_a.unique_expanded,
-            "reopened": last_res_a.reopened,
-            "relaxations": last_res_a.relaxations,
-            "pushes": last_res_a.pushes,
-            "max_frontier": last_res_a.max_frontier,
-            "runtime_ns_median": median_a,
-            "runtime_ns_min": min_a,
-            "repeats": repeats,
-        })
+        q_rows, _, _ = measure_query(graph, snap, q, q_idx, repeats, run_id=run_id, suite=suite,
+                                     size_label=size_label, blocked_count=blocked_count)
+        measurements.extend(q_rows)
 
     # 4. Ghi measurements.csv
     meas_file = out_dir / "measurements.csv"
@@ -585,10 +569,11 @@ def run_benchmark(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Chạy bộ benchmark đo hiệu năng Dijkstra và A*")
-    parser.add_argument("--suite", default="demo", choices=["demo", "scaling", "scenario", "test"],
+    parser.add_argument("--suite", default="demo", choices=["demo", "scaling", "scenario", "test", "tour"],
                         help="Tên bộ benchmark (mặc định: demo)")
-    parser.add_argument("--graph", type=Path, default=Path("tests/fixtures/mini.json"),
-                        help="Đường dẫn file đồ thị json (mặc định: tests/fixtures/mini.json)")
+    parser.add_argument("--graph", type=Path, default=None,
+                        help="Đường dẫn file đồ thị json (mặc định: tests/fixtures/mini.json; "
+                             "--suite tour: đồ thị demo data/processed/hcm-benthanh-r2000-20261024.json)")
     parser.add_argument("--pairs", type=int, default=20,
                         help="Số lượng cặp truy vấn cần đo (mặc định: 20)")
     parser.add_argument("--seed", type=int, default=42,
@@ -615,7 +600,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         help="File scenarios.json kịch bản ùn tắc (mặc định: data/config/scenarios.json)")
     parser.add_argument("--blocked", type=int, nargs="*", default=[],
                         help="Danh sách id cạnh bị đóng")
-    return parser.parse_args(argv)
+    parser.add_argument("--tour-sizes", type=int, nargs="+", default=[4, 6, 8, 10],
+                        help="--suite tour: số điểm giao mỗi bộ (EXPERIMENT_PLAN mục 8)")
+    parser.add_argument("--tour-sets", type=int, default=20, help="--suite tour: số bộ mỗi n")
+    args = parser.parse_args(argv)
+    if args.graph is None:
+        # Tour cần đồ thị đủ lớn để sinh bộ điểm cách nhau ≥ 150 m; mini.json chỉ có 6 node (review #109).
+        args.graph = Path("data/processed/hcm-benthanh-r2000-20261024.json" if args.suite == "tour"
+                          else "tests/fixtures/mini.json")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -631,6 +624,17 @@ def main(argv: list[str] | None = None) -> int:
             pass
 
     args = parse_args(argv)
+
+    if args.suite == "tour":
+        # E5 có định dạng riêng (tour_measurements.csv), làm ở scripts/run_tour.py (docs/tasks/T74-tour-benchmark.md).
+        from run_tour import main as run_tour_main
+        tour_argv = ["--graph", str(args.graph), "--seed", str(args.seed), "--sets", str(args.tour_sets),
+                     "--sizes", *map(str, args.tour_sizes)]
+        if args.out is not None:
+            tour_argv += ["--out", str(args.out)]
+        if args.run_id:
+            tour_argv += ["--run-id", args.run_id]
+        return run_tour_main(tour_argv)
 
     # 1. Nạp đồ thị
     graph_path = args.graph

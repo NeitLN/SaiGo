@@ -1,0 +1,79 @@
+{
+  "run_id": "20261113-0438-scaling-cb16bc0",
+  "suite": "scaling",
+  "workload": "fixed_trips",
+  "pairs": 250,
+  "seed": 42,
+  "repeats": 5,
+  "warmup": 20,
+  "n_queries": 250,
+  "sizes": [
+    {
+      "label": "r1000",
+      "half_side_m": 1000.0,
+      "dataset_id": "crop_r1000_20261024",
+      "path": "data\\processed\\crop_r1000_20261024.json",
+      "sha256": "7af3acfb9aa78de3d1841d8034137b4cca4963e85145968ab91d7ceeb5e27f2f"
+    },
+    {
+      "label": "r2000",
+      "half_side_m": 2000.0,
+      "dataset_id": "crop_r2000_20261024",
+      "path": "data\\processed\\crop_r2000_20261024.json",
+      "sha256": "8c33ec4291eb613f5b8bc8b367d46f08062785597a445dfa6afa7d4fb936a2aa"
+    },
+    {
+      "label": "r3000",
+      "half_side_m": 3000.0,
+      "dataset_id": "crop_r3000_20261024",
+      "path": "data\\processed\\crop_r3000_20261024.json",
+      "sha256": "e1aed60ffd5c6feee61664605540c481fba150c00d3e4d8de410a2dbde1af57c"
+    },
+    {
+      "label": "r4500",
+      "half_side_m": 4500.0,
+      "dataset_id": "crop_r4500_20261024",
+      "path": "data\\processed\\crop_r4500_20261024.json",
+      "sha256": "b3ad87e2635bd39c95432e402dd05dbcc928a300f70f726fe0039b190a9bc69d"
+    }
+  ],
+  "sampling": {
+    "L_m": 2000.0,
+    "L_source": "crop_manifest",
+    "target_per_stratum": {
+      "ngan": 83,
+      "trung_binh": 83,
+      "dai": 83
+    },
+    "actual_per_stratum": {
+      "ngan": 83,
+      "trung_binh": 84,
+      "dai": 83
+    },
+    "rejected": {
+      "same_node": 2,
+      "stratum_full": 316
+    },
+    "fallback_used": false,
+    "strata_stats": {
+      "ngan": {
+        "count": 83,
+        "delta_min": 0.004,
+        "delta_median": 0.1329,
+        "delta_max": 0.1996
+      },
+      "trung_binh": {
+        "count": 84,
+        "delta_min": 0.2036,
+        "delta_median": 0.3636,
+        "delta_max": 0.4999
+      },
+      "dai": {
+        "count": 83,
+        "delta_min": 0.5003,
+        "delta_median": 0.6827,
+        "delta_max": 1.0836
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # T14 — Skeleton phía bản đồ: bấm 2 điểm, vẽ tuyến
 
-Tuần mục tiêu: 2 (27–28/10) · Giao cho: Minh · Nhánh: `t14-map-skeleton` · Issue: [#50](https://github.com/NeitLN/SaiGGo/issues/50)
+Tuần mục tiêu: 2 (27–28/10) · Giao cho: Minh · Nhánh: `t14-map-skeleton` · Issue: [#50](https://github.com/NeitLN/SaiGo/issues/50)
 Review: Tiến · Người tích hợp: Tiến
 Phụ thuộc: contract v1 (**bắt đầu**, đã chốt) · T13 (**tích hợp**: code trước với response mẫu, nối API thật khi T13 xong; Minh làm cả T13) · Ước lượng: 3 giờ
 

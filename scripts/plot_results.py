@@ -8,7 +8,7 @@ nên chạy được cả trên máy không có màn hình.
 
 Phạm vi: RQ1b workload **"fixed trips"**, **4 kích thước** — hình chọn theo cột `suite`
 (docs/TASKS.md): `demo` = E2, `scaling` = E3, `scenario` = E4. E5 (tour) đọc thêm
-`tour_measurements.csv` trong **cùng** các thư mục (định dạng E5_proposal.md); thư mục không có
+`tour_measurements.csv` trong **cùng** các thư mục (định dạng docs/tasks/T74-tour-benchmark.md); thư mục không có
 file này vẫn chạy như cũ, chỉ hình E5 bị bỏ qua. Thiếu dữ liệu cho hình nào thì hình đó bị bỏ qua
 kèm lý do in ra màn hình; các hình còn lại vẫn được vẽ, không làm hỏng cả lần chạy.
 
@@ -119,7 +119,7 @@ def read_measurements(run_dir: Path | str) -> list[Row]:
 
 # --- Tour (E5): đọc tour_measurements.csv và tính chỉ số từng bộ (EXPERIMENT_PLAN mục 8) ---
 
-# 15 cột của tour_measurements.csv (E5_proposal.md mục 2)
+# 15 cột của tour_measurements.csv (docs/tasks/T74-tour-benchmark.md)
 TOUR_COLUMNS = (
     "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
     "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
@@ -174,7 +174,7 @@ def _boolean(path: Path, lineno: int, raw_value: str, name: str) -> bool:
 
 
 def read_tour_measurements(run_dir: Path | str) -> list[TourRow]:
-    """Đọc `tour_measurements.csv` (E5_proposal.md mục 2); file vắng mặt → rỗng, không lỗi."""
+    """Đọc `tour_measurements.csv` (docs/tasks/T74-tour-benchmark.md); file vắng mặt → rỗng, không lỗi."""
     path = Path(run_dir) / "tour_measurements.csv"
     if not path.is_file():
         return []
@@ -183,7 +183,7 @@ def read_tour_measurements(run_dir: Path | str) -> list[TourRow]:
         reader = csv.DictReader(fh)
         missing = [c for c in TOUR_COLUMNS if c not in (reader.fieldnames or [])]
         if missing:
-            raise ValueError(f"{path}: thiếu cột {', '.join(missing)} (E5_proposal.md mục 2)")
+            raise ValueError(f"{path}: thiếu cột {', '.join(missing)} (docs/tasks/T74-tour-benchmark.md)")
         for lineno, raw in enumerate(reader, start=2):
             cost = (raw["cost_s"] or "").strip()
             rows.append(TourRow(
