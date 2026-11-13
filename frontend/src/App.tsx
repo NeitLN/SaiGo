@@ -56,7 +56,9 @@ export default function App() {
   const [closed, setClosed] = useState<RouteSegment[]>([])          // đoạn người dùng bấm đóng (T54)
   const [caseBlocked, setCaseBlocked] = useState<number[]>([])      // cạnh đóng sẵn của case demo
   const [routeQuery, setRouteQuery] = useState<RouteQuery | null>(null)
-  const [route, setRoute] = useState<{ res: RouteResponse; scenarioLabel: string } | null>(null)
+  // Giữ id kịch bản và số cạnh đóng của chính request đã trả về; nhãn tính lúc render từ danh sách kịch bản
+  // hiện có, nên nạp lại danh sách không làm gọi lại /api/route (review #103).
+  const [route, setRoute] = useState<{ res: RouteResponse; scenarioId: string; blockedCount: number } | null>(null)
 
   // Tour (T73)
   const [depot, setDepot] = useState<TourPoint | null>(null)
@@ -111,10 +113,6 @@ export default function App() {
   useEffect(() => {
     if (!routeQuery) return
     const ctl = new AbortController()
-    const base = scenarios.find((s) => s.id === routeQuery.scenarioId)?.label ?? routeQuery.scenarioId
-    // Nhãn kịch bản cơ sở ghi "không đóng đường", nên phải nói rõ khi người dùng hoặc case đã đóng thêm cạnh.
-    const n = routeQuery.blocked.length
-    const label = n > 0 ? `${base}; đóng thêm ${n} cạnh` : base
     setBusy(true)
     setError(null)
     postRoute({
@@ -122,7 +120,7 @@ export default function App() {
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked,
     }, ctl.signal)
       .then((res) => {
-        setRoute({ res, scenarioLabel: label })
+        setRoute({ res, scenarioId: routeQuery.scenarioId, blockedCount: routeQuery.blocked.length })
         markServerUp()
       })
       .catch((e: Error) => {
@@ -136,7 +134,7 @@ export default function App() {
       ctl.abort()
       setBusy(false)
     }
-  }, [routeQuery, scenarios, checkServer, markServerUp])
+  }, [routeQuery, checkServer, markServerUp])
 
   useEffect(() => {
     if (!tourQuery) return
@@ -276,7 +274,8 @@ export default function App() {
     if (!c) return
     setCaseId(id)
     setError(null)
-    const sid = c.scenario_id && scenarios.some((s) => s.id === c.scenario_id) ? c.scenario_id : 'baseline'
+    // Lấy thẳng kịch bản của case, kể cả khi danh sách kịch bản chưa về (review #103); backend vẫn kiểm id (422).
+    const sid = c.scenario_id ?? 'baseline'
     setScenarioId(sid)
     if (c.mode === 'route' && c.source && c.target) {
       const bl = c.blocked_edge_ids ?? []
@@ -301,6 +300,10 @@ export default function App() {
   const caseDisabled = datasetId !== null && datasetId !== DEMO_DATASET_ID
   const noPath = route && Object.values(route.res.results).some((r) => r?.status === 'no_path')
   const tourLabels = Object.fromEntries([...(depot ? [depot] : []), ...stops].map((p) => [p.id, p.label]))
+  // Nhãn kịch bản cơ sở ghi "không đóng đường", nên phải nói rõ khi người dùng hoặc case đã đóng thêm cạnh.
+  const routeScenarioBase = route ? (scenarios.find((s) => s.id === route.scenarioId)?.label ?? route.scenarioId) : ''
+  const routeScenarioLabel = route && route.blockedCount > 0
+    ? `${routeScenarioBase}; đóng thêm ${route.blockedCount} cạnh` : routeScenarioBase
 
   const hint = mode === 'route'
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
@@ -368,7 +371,7 @@ export default function App() {
   )
 
   const results = mode === 'route'
-    ? (route ? <RouteResults res={route.res} scenarioLabel={route.scenarioLabel} /> : <Text type="supporting">Chưa có kết quả.</Text>)
+    ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel} /> : <Text type="supporting">Chưa có kết quả.</Text>)
     : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} />
       : <Text type="supporting">Chưa có kết quả.</Text>)
 
