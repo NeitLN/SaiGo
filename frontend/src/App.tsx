@@ -401,7 +401,7 @@ export default function App() {
   const placePoint = (p: Pt) => {
     if (mode === 'route') {
       if (route) {
-        setNotice('Đang hiện kết quả nên cú bấm lên bản đồ được bỏ qua. Bấm Xóa để chọn điểm mới.')
+        setNotice('Đang hiện kết quả nên điểm mới không được đặt. Bấm Xóa để chọn điểm mới.')
         return
       }
       setCaseId('')
@@ -417,7 +417,7 @@ export default function App() {
       return
     }
     if (tour) {
-      setNotice('Đang hiện tour nên cú bấm lên bản đồ được bỏ qua. Bấm Xóa để lập tour mới.')
+      setNotice('Đang hiện tour nên điểm mới không được thêm. Bấm Xóa để lập tour mới.')
       return
     }
     setCaseId('')
@@ -425,6 +425,14 @@ export default function App() {
     // Kiểm giới hạn trước khi đổi gì (QA-12).
     if (depot && stops.length >= MAX_TOUR_STOPS) {
       setError(`Tối đa ${MAX_TOUR_STOPS} điểm giao.`)
+      return
+    }
+    // Chọn lại đúng một điểm đã có (thường là cùng địa danh) thì chặn ngay, thay vì để tới Lập tour mới báo
+    // "trùng node" (góp ý #145). Điểm chọn từ danh sách có toạ độ node chính xác nên so bằng toạ độ.
+    const same = [...(depot ? [depot] : []), ...stops]
+      .find((q) => Math.abs(q.lat - p.lat) < 1e-7 && Math.abs(q.lon - p.lon) < 1e-7)
+    if (same) {
+      setError(`"${same.label}" đã có trong tour.`)
       return
     }
     resetTour()
