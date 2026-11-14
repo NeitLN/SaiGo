@@ -79,6 +79,7 @@ export class MapLayers {
   private points = L.layerGroup()
   private network: L.Layer | null = null
   private previous = L.layerGroup()
+  private trace = L.layerGroup()
   private palette: Palette
   private map: L.Map
 
@@ -94,6 +95,11 @@ export class MapLayers {
     prevPane.style.zIndex = '390'
     prevPane.style.pointerEvents = 'none'
     this.previous.addTo(map)
+    // Node đã mở rộng: dưới tuyến (overlayPane z 400), trên tuyến lần trước; canvas vì có thể vài nghìn chấm.
+    const tracePane = map.createPane('trace')
+    tracePane.style.zIndex = '395'
+    tracePane.style.pointerEvents = 'none'
+    this.trace.addTo(map)
     this.zones.addTo(map)
     this.routes.addTo(map)
     this.closed.addTo(map)
@@ -294,6 +300,23 @@ export class MapLayers {
     L.polyline(toLatLngs(coords), {
       pane: 'previous', color: this.palette.road, weight: 9, opacity: 0.45, lineCap: 'round', interactive: false,
     }).addTo(this.previous)
+  }
+
+  /**
+   * Node Dijkstra và A* đã mở rộng (review 14/11 đợt 2, lớp tĩnh có công tắc): Dijkstra chấm xanh lớn hơn, A* chấm
+   * cam nhỏ vẽ đè lên, để thấy vùng Dijkstra lan rộng còn A* kéo dài về phía đích. Không animation (D12).
+   */
+  setTrace(dijkstra: [number, number][] | null, astar: [number, number][] | null) {
+    this.trace.clearLayers()
+    const renderer = L.canvas({ pane: 'trace' })
+    const dots = (coords: [number, number][] | null, color: string, radius: number) => {
+      for (const ll of toLatLngs(coords ?? [])) {
+        L.circleMarker(ll, { renderer, pane: 'trace', radius, stroke: false, fillColor: color, fillOpacity: 0.55, interactive: false })
+          .addTo(this.trace)
+      }
+    }
+    dots(dijkstra, this.palette.dijkstra, 4)
+    dots(astar, this.palette.astar, 2.5)
   }
 
   clearRoutes() {

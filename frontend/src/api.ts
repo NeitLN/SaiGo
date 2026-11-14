@@ -19,6 +19,7 @@ export interface RouteRequest {
   algorithms?: Algorithm[]
   scenario_id?: string
   blocked_edge_ids?: number[]
+  trace_limit?: number // > 0: trả thêm 	race (toạ độ node đã mở rộng, theo thứ tự). Chỉ dùng cho lớp node đã mở rộng
 }
 
 export interface SnappedPoint {
@@ -43,6 +44,8 @@ export interface AlgorithmResult {
   geometry: LineString
   expanded: number
   runtime_ms: number
+  trace?: [number, number][] // [lon, lat] của node đã mở rộng theo thứ tự; rỗng nếu request không xin trace_limit
+  trace_truncated?: boolean
 }
 
 // Thêm 14/11 (review UI, QA-3): cạnh đóng của request kèm hình học [lon, lat], để vẽ cả cạnh đóng sẵn của case.
