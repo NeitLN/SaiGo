@@ -6,6 +6,7 @@ import { Table } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { ALGORITHM_LABEL, type Algorithm, type AlgorithmResult, type RouteResponse } from './api'
+import { costDelta, deltaText } from './compare'
 
 const ALGOS: Algorithm[] = ['dijkstra', 'astar']
 // Cùng màu với tuyến trên bản đồ (layers.ts: categorical blue / orange).
@@ -51,7 +52,18 @@ function nodeLine(res: RouteResponse): string | null {
   return `Ở truy vấn này, A* mở ${num((100 * a.expanded) / d.expanded, 0)}% số node của Dijkstra.`
 }
 
-export default function RouteResults({ res, scenarioLabel }: { res: RouteResponse; scenarioLabel: string }) {
+/** Chi phí của tuyến (Dijkstra; A* luôn bằng khi cùng có đường) hoặc null nếu không có đường. */
+const routeCost = (r: RouteResponse): number | null => {
+  const d = r.results.dijkstra
+  return d && d.status === 'ok' && d.cost_s !== null ? d.cost_s : null
+}
+
+export default function RouteResults({ res, scenarioLabel, previous }: {
+  res: RouteResponse
+  scenarioLabel: string
+  // Lần trước cùng hai điểm, khác kịch bản hoặc cạnh đóng (review 14/11 đợt 2: PM-1, UX-5, AI-7).
+  previous?: { res: RouteResponse; label: string } | null
+}) {
   const algos = ALGOS.filter((a) => res.results[a])
   const data: Row[] = ROWS.map(([metric, f]) => {
     const row: Row = { metric }
@@ -59,11 +71,24 @@ export default function RouteResults({ res, scenarioLabel }: { res: RouteRespons
     return row
   })
   const nodes = nodeLine(res)
+  const before = previous?.res.results.dijkstra
+  const now = res.results.dijkstra
+  const moved = before?.status === 'ok' && now?.status === 'ok' && before.edge_ids?.join() !== now.edge_ids?.join()
   return (
     <VStack gap={3}>
       <HStack gap={2}>
         {algos.map((a) => <Badge key={a} variant={LEGEND[a]} label={ALGORITHM_LABEL[a]} />)}
       </HStack>
+      {previous && (
+        <VStack gap={0.5}>
+          <Text type="body" weight="semibold">
+            So với lần trước: {deltaText(costDelta(routeCost(previous.res), routeCost(res)))}
+          </Text>
+          <Text type="supporting">
+            Lần trước: {previous.label}.{moved ? ' Tuyến lần trước vẽ nét xám mờ trên bản đồ.' : ''}
+          </Text>
+        </VStack>
+      )}
       <Table<Row>
         data={data}
         idKey="metric"

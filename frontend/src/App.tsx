@@ -23,6 +23,7 @@ import MapView from './MapView'
 import RouteResults from './RouteResults'
 import TourResults from './TourResults'
 import { unreachableGroups } from './tourIssues'
+import { samePoints, sameIds as sameIdSet } from './compare'
 
 type Mode = 'route' | 'tour'
 
@@ -30,6 +31,20 @@ type Mode = 'route' | 'tour'
 interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; n: number }
 // keepOrder (R1): thứ tự điểm giao trước khi đóng đường, để API trả thêm phương án "Giữ thứ tự cũ".
 interface TourQuery { depot: TourPoint; stops: TourPoint[]; scenarioId: string; blocked: number[]; keepOrder?: string[]; n: number }
+
+// Lần chạy đã trả về: response kèm kịch bản và cạnh đóng của chính request đó (nhãn, so sánh trước/sau).
+type Run<T> = { res: T; scenarioId: string; blocked: number[] }
+const routePoints = (r: RouteResponse) => ({ source: r.snapped.source.node_id, target: r.snapped.target.node_id })
+const tourPoints = (r: TourResponse) => Object.fromEntries(Object.entries(r.snapped).map(([k, v]) => [k, v.node_id]))
+/**
+ * Lần trước để so (review 14/11 đợt 2, PM-1/UX-5/AI-7): chỉ khi cùng điểm mà khác kịch bản hoặc khác cạnh đóng.
+ * Cùng điểm, cùng tham số (bấm lại Tìm đường) thì giữ mốc cũ; khác điểm thì bỏ mốc.
+ */
+function nextPrevious<T>(prev: Run<T> | null, next: Run<T>, pts: (r: T) => Record<string, number>, kept: Run<T> | null): Run<T> | null {
+  if (!prev || !samePoints(pts(prev.res), pts(next.res))) return null
+  if (prev.scenarioId === next.scenarioId && sameIdSet(prev.blocked, next.blocked)) return kept
+  return prev
+}
 
 const fmt = (p: LatLon | null) => (p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—')
 const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i])
@@ -72,15 +87,17 @@ export default function App() {
   const [routeQuery, setRouteQuery] = useState<RouteQuery | null>(null)
   // Giữ id kịch bản và số cạnh đóng của chính request đã trả về; nhãn tính lúc render từ danh sách kịch bản
   // hiện có, nên nạp lại danh sách không làm gọi lại /api/route (review #103).
-  const [route, setRoute] = useState<{ res: RouteResponse; scenarioId: string; blockedCount: number } | null>(null)
+  const [route, setRoute] = useState<Run<RouteResponse> | null>(null)
+  const [prevRoute, setPrevRoute] = useState<Run<RouteResponse> | null>(null)   // mốc so trước/sau
 
   // Tour (T73)
   const [depot, setDepot] = useState<TourPoint | null>(null)
   const [stops, setStops] = useState<TourPoint[]>([])
   const [tourQuery, setTourQuery] = useState<TourQuery | null>(null)
   const [tour, setTour] = useState<TourResponse | null>(null)
-  // Kịch bản và số cạnh đóng của chính request tour đã trả về, để thẻ tour ghi đúng kịch bản (QA-5).
-  const [tourScenario, setTourScenario] = useState<{ scenarioId: string; blockedCount: number } | null>(null)
+  // Kịch bản và cạnh đóng của chính request tour đã trả về, để thẻ tour ghi đúng kịch bản (QA-5).
+  const [tourScenario, setTourScenario] = useState<{ scenarioId: string; blocked: number[] } | null>(null)
+  const [prevTour, setPrevTour] = useState<Run<TourResponse> | null>(null)       // mốc so trước/sau
   const [tourMethod, setTourMethod] = useState<TourMethod | null>(null)
   const [tourClosed, setTourClosed] = useState<RouteSegment[]>([])          // đoạn bấm đóng trên tour (R1 C5)
   const [tourCaseBlocked, setTourCaseBlocked] = useState<number[]>([])      // cạnh đóng sẵn của case tour (R1 C7)
@@ -95,6 +112,19 @@ export default function App() {
   // Bật khi nạp case, bấm Tìm đường hoặc Lập tour: kết quả kế tiếp sẽ được thu phóng cho vừa (QA-2). Không bật
   // khi đóng đoạn hay đổi kịch bản, để bản đồ không nhảy giữa lúc thao tác.
   const pendingFit = useRef(false)
+  // Kết quả đang hiện, đọc trong .then để chọn mốc so trước/sau mà không đưa state vào deps của effect gọi API.
+  const routeRef = useRef(route)
+  routeRef.current = route
+  const prevRouteRef = useRef(prevRoute)
+  prevRouteRef.current = prevRoute
+  const tourRunRef = useRef<Run<TourResponse> | null>(null)
+  tourRunRef.current = tour && tourScenario ? { res: tour, ...tourScenario } : null
+  const prevTourRef = useRef(prevTour)
+  prevTourRef.current = prevTour
+  // Nạp case xoá kết quả đang hiện, nhưng giữ lại làm mốc so cho response đầu tiên của case: nếu case mới cùng bộ
+  // điểm (vd. bước 9 → bước 10 của DEMO), response đó vẫn so được với kết quả trước khi đóng đường.
+  const carriedRoute = useRef<Run<RouteResponse> | null>(null)
+  const carriedTour = useRef<Run<TourResponse> | null>(null)
 
   // Kiểm lúc mở trang và mỗi khi một request lỗi, để badge không báo "sẵn sàng" khi backend đã tắt.
   const checkServer = useCallback(() => {
@@ -142,7 +172,10 @@ export default function App() {
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked,
     }, ctl.signal)
       .then((res) => {
-        setRoute({ res, scenarioId: routeQuery.scenarioId, blockedCount: routeQuery.blocked.length })
+        const next = { res, scenarioId: routeQuery.scenarioId, blocked: routeQuery.blocked }
+        setPrevRoute(nextPrevious(routeRef.current ?? carriedRoute.current, next, routePoints, prevRouteRef.current))
+        carriedRoute.current = null
+        setRoute(next)
         markServerUp()
       })
       .catch((e: Error) => {
@@ -173,8 +206,11 @@ export default function App() {
       include_optimal: tourQuery.stops.length + 1 <= 11,   // Held–Karp tối đa 11 điểm kể cả kho
     }, ctl.signal)
       .then((res) => {
+        const next = { res, scenarioId: tourQuery.scenarioId, blocked: tourQuery.blocked }
+        setPrevTour(nextPrevious(tourRunRef.current ?? carriedTour.current, next, tourPoints, prevTourRef.current))
+        carriedTour.current = null
         setTour(res)
-        setTourScenario({ scenarioId: tourQuery.scenarioId, blockedCount: tourQuery.blocked.length })
+        setTourScenario({ scenarioId: tourQuery.scenarioId, blocked: tourQuery.blocked })
         markServerUp()
         setTourMethod(res.chosen)
       })
@@ -230,6 +266,11 @@ export default function App() {
     layers.setZones(scenario)
     if (mode === 'route') {
       layers.setClosed(closedToDraw(route?.res.blocked_edges, closed))
+      // Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng) vẽ mờ làm mốc, chỉ khi khác tuyến hiện tại.
+      const before = prevRoute?.res.results.dijkstra
+      const now = route?.res.results.dijkstra
+      const moved = before?.status === 'ok' && (now?.status !== 'ok' || before.edge_ids?.join() !== now.edge_ids?.join())
+      layers.setPrevious(route && moved ? before.geometry.coordinates : null)
       if (route) {
         layers.setSnapped(route.res)
         layers.drawRoutes(route.res, closeSegment)
@@ -244,6 +285,7 @@ export default function App() {
         layers.setPoints(source, target)
       }
     } else {
+      layers.setPrevious(null)
       layers.setClosed(closedToDraw(tour?.blocked_edges, tourClosed))
       const cand = tour && tourMethod ? tour.candidates[tourMethod] : undefined
       const broken = new Set(tour?.status === 'infeasible_under_model' ? unreachableGroups(tour.unreachable).map((g) => g.id) : [])
@@ -256,7 +298,7 @@ export default function App() {
         layers.fitTo(toLatLngs([...pts, ...(cand?.geometry.coordinates ?? [])]))
       }
     }
-  }, [mapReady, mode, scenario, route, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
+  }, [mapReady, mode, scenario, route, prevRoute, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
     tourClosed, closeTourSegment])
 
   // --- Thao tác ---
@@ -264,6 +306,8 @@ export default function App() {
   const resetRoute = () => {
     setRouteQuery(null)
     setRoute(null)
+    setPrevRoute(null)
+    carriedRoute.current = null
     setTarget(null)
     setClosed([])
     setCaseBlocked([])
@@ -274,6 +318,8 @@ export default function App() {
     setTourQuery(null)
     setTour(null)
     setTourScenario(null)
+    setPrevTour(null)
+    carriedTour.current = null
     setTourMethod(null)
     setError(null)
   }
@@ -394,7 +440,9 @@ export default function App() {
       setTour(null)
       setTourMethod(null)
       setMode('route')
+      carriedRoute.current = routeRef.current
       setRoute(null)
+      setPrevRoute(null)
       setClosed([])
       setCaseBlocked(bl)
       setSource(c.source)
@@ -407,7 +455,9 @@ export default function App() {
       setRouteQuery(null)
       setRoute(null)
       setMode('tour')
+      carriedTour.current = tourRunRef.current
       setTour(null)
+      setPrevTour(null)
       setDepot(d)
       setStops(st)
       setTourClosed([])
@@ -421,13 +471,12 @@ export default function App() {
   const noPath = route && Object.values(route.res.results).some((r) => r?.status === 'no_path')
   const tourLabels = Object.fromEntries([...(depot ? [depot] : []), ...stops].map((p) => [p.id, p.label]))
   // Nhãn kịch bản cơ sở ghi "không đóng đường", nên phải nói rõ khi người dùng hoặc case đã đóng thêm cạnh.
-  const routeScenarioBase = route ? (scenarios.find((s) => s.id === route.scenarioId)?.label ?? route.scenarioId) : ''
-  const routeScenarioLabel = route && route.blockedCount > 0
-    ? `${routeScenarioBase}; đóng thêm ${route.blockedCount} cạnh` : routeScenarioBase
-  const tourScenarioBase = tourScenario
-    ? (scenarios.find((s) => s.id === tourScenario.scenarioId)?.label ?? tourScenario.scenarioId) : ''
-  const tourScenarioLabel = tourScenario && tourScenario.blockedCount > 0
-    ? `${tourScenarioBase}; đóng thêm ${tourScenario.blockedCount} cạnh` : tourScenarioBase
+  const runLabel = (r: { scenarioId: string; blocked: number[] }) => {
+    const base = scenarios.find((s) => s.id === r.scenarioId)?.label ?? r.scenarioId
+    return r.blocked.length > 0 ? `${base}; đóng thêm ${r.blocked.length} cạnh` : base
+  }
+  const routeScenarioLabel = route ? runLabel(route) : ''
+  const tourScenarioLabel = tourScenario ? runLabel(tourScenario) : ''
 
   const hint = mode === 'route'
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
@@ -506,8 +555,10 @@ export default function App() {
   )
 
   const results = mode === 'route'
-    ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel} /> : <Text type="supporting">Chưa có kết quả.</Text>)
-    : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel} />
+    ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel}
+      previous={prevRoute ? { res: prevRoute.res, label: runLabel(prevRoute) } : null} /> : <Text type="supporting">Chưa có kết quả.</Text>)
+    : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel}
+      previous={prevTour ? { res: prevTour.res, label: runLabel(prevTour) } : null} />
       : <Text type="supporting">Chưa có kết quả.</Text>)
 
   return (
