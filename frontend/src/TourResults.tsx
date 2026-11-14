@@ -10,11 +10,13 @@ import { VStack } from '@astryxdesign/core/VStack'
 import { TOUR_METHOD_LABEL, type TourMethod, type TourResponse } from './api'
 import { num, seconds } from './RouteResults'
 import { describeIssue, unreachableGroups } from './tourIssues'
-import { costDelta, deltaText } from './compare'
+import { costDelta, deltaText, orderChanged } from './compare'
 
 /** Chi phí của phương án được chọn, hoặc null khi tour không khả thi. */
 const chosenCost = (r: TourResponse): number | null =>
   r.status === 'ok' && r.chosen ? (r.candidates[r.chosen]?.cost_s ?? null) : null
+const chosenStops = (r: TourResponse): string[] | null =>
+  r.status === 'ok' && r.chosen ? (r.candidates[r.chosen]?.stop_order ?? null) : null
 
 // kept_order chỉ có sau khi đóng đường (R1 C6): thứ tự cũ đi lại trên đường hiện tại, để so với việc sắp lại.
 const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order']
@@ -39,6 +41,12 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
       <Text type="body" weight="semibold">
         So với lần trước, phương án được chọn: {deltaText(costDelta(chosenCost(previous.res), chosenCost(res)))}
       </Text>
+      {orderChanged(chosenStops(previous.res), chosenStops(res)) && (
+        <Text type="body">
+          Thứ tự giao đã đổi, nên chênh lệch này gồm cả phần do sắp lại, không chỉ do kịch bản hay đường đóng.
+          {res.candidates.kept_order ? ' Ảnh hưởng của riêng việc đóng đường: xem thẻ "Giữ thứ tự cũ".' : ''}
+        </Text>
+      )}
       <Text type="supporting">Lần trước: {previous.label}.</Text>
     </VStack>
   )

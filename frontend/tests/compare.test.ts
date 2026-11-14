@@ -1,7 +1,7 @@
 // Review UI 14/11 đợt 2 (PM-1, UX-5, AI-7): chênh lệch trước/sau. Chạy: cd frontend; npm test.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { costDelta, deltaText, sameIds, samePoints } from '../src/compare.ts'
+import { costDelta, deltaText, orderChanged, sameIds, samePoints } from '../src/compare.ts'
 
 test('tăng chi phí: số giây và phần trăm, có dấu +', () => {
   const d = costDelta(186.1, 300.0)
@@ -41,4 +41,11 @@ test('cùng bộ điểm: so theo node đã snap, không theo thứ tự khóa',
 test('so tập cạnh đóng không phụ thuộc thứ tự', () => {
   assert.ok(sameIds([3, 1], [1, 3]))
   assert.ok(!sameIds([1], [1, 3]))
+})
+
+test('bước 10 của DEMO: chênh lệch của phương án được chọn đi kèm việc đổi thứ tự (review #138)', () => {
+  assert.equal(deltaText(costDelta(898.07, 692.5)), '898,1 s → 692,5 s: −205,6 s (−22,9%)')
+  assert.ok(orderChanged(['p1', 'p2', 'p4', 'p3', 'p5'], ['p5', 'p1', 'p2', 'p4', 'p3']))
+  assert.ok(!orderChanged(['p1', 'p2'], ['p1', 'p2']))
+  assert.ok(!orderChanged(null, ['p1']))      // lần trước không khả thi: không có thứ tự để so
 })

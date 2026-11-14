@@ -55,3 +55,12 @@ export function sameIds(a: number[], b: number[]): boolean {
   const sa = new Set(a)
   return sa.size === new Set(b).size && b.every((x) => sa.has(x))
 }
+
+/**
+ * Thứ tự giao của phương án được chọn đổi giữa hai lần (review #138): khi đó chênh lệch chi phí gồm cả phần do
+ * sắp lại, không chỉ do kịch bản hay đường đóng, nên UI phải nói rõ và trỏ sang phép so cùng thứ tự.
+ */
+export function orderChanged(before: string[] | null | undefined, after: string[] | null | undefined): boolean {
+  if (!before || !after) return false
+  return before.join(',') !== after.join(',')
+}
