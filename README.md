@@ -20,17 +20,17 @@ Không cung cấp ETA giao thông trực tiếp hay điều hướng thương m�
 - Mở rộng ngoài proposal (D17): Dijkstra hai chiều, ALT (A* với landmark), Or-opt
 
 Đặc tả đầy đủ: [docs/TOPIC.md](docs/TOPIC.md) · thuật toán: [docs/ALGORITHMS.md](docs/ALGORITHMS.md).
+Kế hoạch triển khai: [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md) · **trạng thái hiện tại (đọc đầu tiên):** [docs/STATUS.md](docs/STATUS.md) · bằng chứng: [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## Kết quả chính
 
 Tóm tắt từ [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md); mỗi dòng ghi `run_id` trong `results/`. Thời gian đo trên laptop của nhóm, chỉ để so tương đối giữa các thuật toán.
 
 - **A* đúng nhưng chưa nhanh hơn rõ trên vùng demo.** A* cho cùng chi phí với Dijkstra ở 1.000/1.000 cặp và chỉ mở khoảng 40% số node (median r = 0,398), nhưng median tỉ số thời gian chỉ 1,03; A* nhanh hơn rõ ở chuyến trung bình (s = 1,22) (`20261031-1556-demo-054f300`, kiểm chéo trên máy thứ hai).
-- **Heuristic mạnh hơn giúp ở bản đồ lớn và chuyến dài.** Trên vùng 4,5 km, tầng dài, ALT nhanh hơn Dijkstra 2,67 lần (A* 1,27 lần); ở tầng ngắn ALT lại chậm hơn vì mỗi node tốn thêm thời gian tính heuristic (`20261113-1327-compare-871bf02`).
+- **Heuristic mạnh hơn giúp ở bản đồ lớn và chuyến dài.** Trên vùng 4,5 km, tầng dài, ALT nhanh hơn Dijkstra 2,67 lần (A* 1,27 lần); ở tầng ngắn ALT lại chậm hơn, có thể vì mỗi node tốn thêm thời gian tính heuristic (chưa đo tách) (`20261113-1327-compare-871bf02`).
 - **Ùn tắc và đóng đường chỉ ảnh hưởng chuyến đi qua vùng đó.** Ùn tắc đổi tuyến ở 16–19% số cặp (median tăng chi phí 0%, p90 10–16%). Khi không còn đường, A* phải duyệt hết vùng tới được như Dijkstra nên mất lợi thế (`20261113-0444-scenario-c1cd80b`).
 - **NN + 2-opt gần tối ưu ở median nhưng là tìm kiếm cục bộ.** So với thứ tự nhập, NN + 2-opt rẻ hơn median 11,6% (4 điểm) đến 41,0% (10 điểm); median gap so với Held–Karp 0–1,8%, gap lớn nhất trong 100 bộ ngẫu nhiên 14,1% (`20261113-0448-tour-12dd1e0`, `20261114-0517-tour-04a0d7e`). Case demo 5 điểm kẹt ở gap 43% vì ma trận chi phí bất đối xứng.
 - **Đóng một đoạn trên tour thường chỉ làm tour dài thêm ít.** Giữ thứ tự cũ tăng median 1,4%; sắp lại chỉ đổi thứ tự ở 3/18 bộ; 2/20 bộ không còn tour khép kín và app báo rõ điểm không tới được (`20261114-0517-tourclosure-04a0d7e`).
-Kế hoạch triển khai: [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md) · **trạng thái hiện tại (đọc đầu tiên):** [docs/STATUS.md](docs/STATUS.md) · bằng chứng: [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## Theo dõi công việc nhóm
 

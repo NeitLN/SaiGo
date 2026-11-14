@@ -227,7 +227,7 @@ Mọi thuật toán tìm đường chạy trên **snapshot** (trọng số cạn
 | Kiểm | NetworkX trên 1.000 truy vấn đồ thị ngẫu nhiên, có cả cạnh đóng (`test_oracle_networkx.py`); 200 cặp đồ thị thật | như Dijkstra; thêm: `h ≡ 0` thì A* mở y hệt Dijkstra |
 | Số đo | E2, E3, E4 | E2, E3, E4 |
 
-Ùn tắc chỉ nhân chi phí với α ≥ 1 và đóng đường làm chi phí thành vô cực, nên `h` tính trên `v_max` cơ sở vẫn không vượt chi phí thật: A* đúng trên mọi snapshot. Cái giá là `h` lỏng hơn khi ùn tắc (ví dụ A* — 4 ở trên; E4 đo hiệu ứng này trên đồ thị thật).
+Ùn tắc chỉ nhân chi phí với α ≥ 1 và đóng đường làm chi phí thành vô cực, nên `h` tính trên `v_max` cơ sở vẫn không vượt chi phí thật: A* đúng trên mọi snapshot. Cái giá là `h` lỏng hơn khi ùn tắc (ví dụ A* — 4 ở trên). Trên đồ thị thật, E4 thấy r = expanded A* / expanded Dijkstra tăng nhẹ khi ùn tắc; nguyên nhân chưa đo tách.
 
 ### Thứ tự giao: NN, 2-opt có hướng, Held–Karp (`tour.py`)
 
@@ -262,7 +262,7 @@ Ba thuật toán dưới đây không có trong proposal. Chúng được thêm 
 - **Vì sao vẫn đúng khi ùn tắc và đóng đường:** snapshot chỉ làm cạnh đắt lên (α ≥ 1, đóng = vô cực), nên khoảng cách cơ sở vẫn là chặn dưới. Consistency cũng giữ: `h(u) ≤ w₀(u,v) + h(v) ≤ w(u,v) + h(v)`. Nếu một kịch bản làm cạnh nào rẻ hơn cơ sở, `ensure_alt_compatible` từ chối truy vấn thay vì trả kết quả sai.
 - **Vòng lặp tìm kiếm:** dùng lại đúng `astar`; ALT chỉ khác hàm `h`. Mỗi lần tính `h` tốn O(k).
 - **Kiểm:** `tests/test_alt.py` (cùng chi phí với Dijkstra ở mọi cặp `mini.json` và trên đồ thị demo dưới mọi kịch bản và cạnh đóng; `h` không vượt khoảng cách thật, so với NetworkX trên mẫu đồ thị demo; `h` consistent trên mọi cạnh của snapshot; từ chối snapshot có cạnh rẻ hơn cơ sở).
-- **Kết quả (E2b):** mở ít node nhất trong bốn thuật toán ở mọi ô, nhưng ở tầng ngắn **chậm hơn** Dijkstra vì mỗi node tốn O(k) để tính `h`. Lợi lớn nhất ở vùng 4,5 km, chuyến dài.
+- **Kết quả (E2b):** mở ít node nhất trong bốn thuật toán ở mọi ô, nhưng ở tầng ngắn **chậm hơn** Dijkstra, có thể vì mỗi node tốn O(k) để tính `h` (chưa đo tách). Lợi lớn nhất ở vùng 4,5 km, chuyến dài.
 
 #### Or-opt xen kẽ 2-opt (`tour.py`, `or_opt`)
 
