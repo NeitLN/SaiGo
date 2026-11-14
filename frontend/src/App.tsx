@@ -75,7 +75,8 @@ const closedToDraw = (fromRes: BlockedEdge[] | undefined, clicked: RouteSegment[
 
 export default function App() {
   const narrow = useMediaQuery('(max-width: 767px)')
-  const medium = useMediaQuery('(max-width: 1279px)')
+  // Ba cột chỉ từ 1366 px: máy chiếu 1280 × 800 dùng bố cục hai cột, bản đồ 920 px thay vì 620 (góp ý #141).
+  const medium = useMediaQuery('(max-width: 1365px)')
   const layersRef = useRef<MapLayers | null>(null)
   const [mapReady, setMapReady] = useState(0)
   const onMapReady = useCallback((l: MapLayers) => {
@@ -652,7 +653,7 @@ export default function App() {
       <Layout
         header={header}
         start={
-          // 768–1279 px (máy chiếu 1024/1280): kết quả gộp xuống dưới điều khiển ở cột trái, bỏ cột phải.
+          // 768–1365 px (máy chiếu 1024/1280): kết quả gộp xuống dưới điều khiển ở cột trái, bỏ cột phải.
           <LayoutPanel width={medium ? 360 : 300} hasDivider padding={4} label="Bảng điều khiển">
             {medium ? <VStack gap={6}>{controls}{resultsBlock}</VStack> : controls}
           </LayoutPanel>
