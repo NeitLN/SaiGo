@@ -77,3 +77,37 @@
   height: 8px;
   border-radius: var(--radius-full);
 }
+
+/* Tour (review 14/11 đợt 3, UX-9): kho là ô vuông riêng, mũi tên chỉ chiều dọc tuyến, tên điểm cạnh số. */
+.tour-depot {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-element);
+  background: var(--color-data-categorical-green);
+  color: var(--color-background-card);
+  border: 2px solid var(--color-background-card);
+  font-weight: 700;
+}
+
+.tour-arrow {
+  display: grid;
+  place-items: center;
+  color: var(--color-data-categorical-purple);
+  font-size: 12px;
+  line-height: 1;
+  text-shadow: 0 0 2px var(--color-background-card);
+  pointer-events: none;
+}
+
+.tour-arrow span {
+  display: inline-block;
+}
+
+.stop-label {
+  font-weight: 600;
+}
+
+/* Kho hỏng vẫn tô đỏ: .tour-depot khai báo sau .tour-stop-broken cùng độ ưu tiên nên nền xanh đè màu đỏ (review #144). */
+.tour-depot.tour-stop-broken {
+  background: var(--color-error);
+}
