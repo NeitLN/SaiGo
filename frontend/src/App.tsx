@@ -568,7 +568,7 @@ export default function App() {
   const changeMode = (v: Mode) => {
     clickGen.current += 1
     setMode(v)
-    setError(null)
+    // Không xoá lỗi: lỗi đã gắn theo chế độ, chỉ hiện ở chế độ sinh ra nó, quay lại vẫn thấy (góp ý #147).
     setNotice(null)
     // Ô case demo không giữ tên case của chế độ kia (UX-11).
     if (DEMO_CASES.find((c) => c.id === caseId)?.mode !== v) setCaseId('')

@@ -35,6 +35,7 @@ export default function MapView({ onReady, onClick }: {
     let failed = 0
     let fallback = false
     let retry: number | undefined
+    let disposed = false   // bản đồ đã gỡ: request nền đang chạy về sau thì bỏ, không hẹn thử lại (góp ý #147)
     tiles.on('tileload', () => { loaded += 1 })
     tiles.on('tileerror', () => {
       failed += 1
@@ -42,18 +43,20 @@ export default function MapView({ onReady, onClick }: {
       fallback = true
       const load = () => getNetwork()
         .then((n) => {
+          if (disposed) return
           layers.setNetwork(n.lines)
           map.attributionControl.addAttribution('Không tải được nền OSM: đang vẽ mạng đường từ dữ liệu')
         })
         // Backend chưa sẵn sàng: tự thử lại sau 3 s, không đợi tới lần lỗi tile sau (lúc đó bản đồ có thể đã nạp
         // hết tile lỗi và không còn lỗi mới, nên nền cứ xám trống; review 14/11 đợt 3, QA-15).
-        .catch(() => { retry = window.setTimeout(load, 3000) })
+        .catch(() => { if (!disposed) retry = window.setTimeout(load, 3000) })
       load()
     })
     // Khung bản đồ đổi kích thước theo bố cục: báo Leaflet tính lại để không bị ô trắng.
     const resize = new ResizeObserver(() => map.invalidateSize())
     resize.observe(el.current!)
     return () => {
+      disposed = true
       window.clearTimeout(retry)
       resize.disconnect()
       map.remove()
