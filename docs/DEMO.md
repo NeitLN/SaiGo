@@ -75,7 +75,7 @@ Giữ đúng số bước của [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 7; bư�
 | 8 | Chuyển sang slide biểu đồ tăng quy mô | `expanded` và thời gian theo `|V|` (4 kích thước, fixed trips) | Số đo thật (RQ1b) |
 | 9 | Chuyển sang chế độ tour, case "Kho + 5 điểm giao"; chọn lần lượt 3 thẻ | Thứ tự giao đổi; chi phí trước/sau | Tầng thứ hai của bài toán (RQ2) |
 | 10 | Chọn case "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (đóng sẵn cạnh 1666, gửi kèm thứ tự tour trước khi đóng; thêm 14/11 để khỏi phải bấm trúng cạnh). Vẫn làm tay được: ở case "Kho + 5 điểm giao", thu nhỏ một mức, bấm đoạn gần Bến Bạch Đằng | Đoạn đỏ; thẻ "Giữ thứ tự cũ" 962,7 s đứng đầu; NN + 2-opt sắp lại 692,5 s, thứ tự mới, badge "Rẻ nhất"; dòng Held–Karp: sau khi đóng, 692,5 s là tối ưu | Đóng đường làm đổi cả tuyến lẫn thứ tự; tách công của thuật toán tìm đường khỏi công của việc sắp lại (RQ3). Nói rõ: sắp lại rẻ hơn tour cũ vì tour cũ là cực trị địa phương kém, không phải vì đóng đường có lợi |
-| 11 | Chọn case "Tour không còn khả thi" | "Không tới được từ kho: Nhà hát Thành phố"; không vẽ tour một phần | Hệ thống không bỏ điểm giao âm thầm (RQ3) |
+| 11 | Chọn case "Tour không còn khả thi" | "Không điểm nào đi tới được Nhà hát Thành phố."; marker Nhà hát Thành phố tô đỏ, đoạn đóng vẽ đỏ; không vẽ tour một phần | Hệ thống không bỏ điểm giao âm thầm (RQ3) |
 
 Khoản cắt 4 của đề xuất phạm vi 26/10 (đóng đường qua API/CLI thay vì bản đồ) không còn cần: đóng đoạn trên bản đồ đã có (T54, T56).
 
