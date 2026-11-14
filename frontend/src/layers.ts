@@ -78,6 +78,7 @@ export class MapLayers {
   private closed = L.layerGroup()
   private points = L.layerGroup()
   private network: L.Layer | null = null
+  private previous = L.layerGroup()
   private palette: Palette
   private map: L.Map
 
@@ -88,6 +89,11 @@ export class MapLayers {
     // marker điểm giao (markerPane, z 600). Nếu chung pane, vùng bấm vẽ sau sẽ đè lên marker: bấm vào marker
     // "Đi" lại đóng mất cạnh đầu tuyến (QA-8).
     map.createPane('points').style.zIndex = '450'
+    // Tuyến lần trước (so trước/sau) nằm dưới mọi lớp vẽ khác (overlayPane z 400) và không bấm được.
+    const prevPane = map.createPane('previous')
+    prevPane.style.zIndex = '390'
+    prevPane.style.pointerEvents = 'none'
+    this.previous.addTo(map)
     this.zones.addTo(map)
     this.routes.addTo(map)
     this.closed.addTo(map)
@@ -279,6 +285,15 @@ export class MapLayers {
       L.polyline(toLatLngs(coords), { color: this.palette.tour, weight: 5, opacity: 0.85, interactive: false }).addTo(this.routes)
     }
     if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick)
+  }
+
+  /** Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng): nét xám mờ làm mốc so (review 14/11 đợt 2, AI-7). */
+  setPrevious(coords: [number, number][] | null) {
+    this.previous.clearLayers()
+    if (!coords?.length) return
+    L.polyline(toLatLngs(coords), {
+      pane: 'previous', color: this.palette.road, weight: 9, opacity: 0.45, lineCap: 'round', interactive: false,
+    }).addTo(this.previous)
   }
 
   clearRoutes() {
