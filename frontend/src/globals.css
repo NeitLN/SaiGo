@@ -30,7 +30,8 @@
   place-items: center;
   border-radius: var(--radius-full);
   background: var(--color-data-categorical-purple);
-  color: var(--color-background-card);
+  /* Chữ trắng cố định: dùng màu nền thẻ thì ở chế độ tối thành chữ tối trên tím, chỉ 2,65:1 (FE-5). */
+  color: white;
   border: 2px solid var(--color-background-card);
   font-weight: 700;
 }
@@ -84,7 +85,7 @@
   place-items: center;
   border-radius: var(--radius-element);
   background: var(--color-data-categorical-green);
-  color: var(--color-background-card);
+  color: white;
   border: 2px solid var(--color-background-card);
   font-weight: 700;
 }
