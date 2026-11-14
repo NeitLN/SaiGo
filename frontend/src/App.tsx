@@ -363,7 +363,7 @@ export default function App() {
       if (tour && pendingFit.current) {
         pendingFit.current = false
         const pts = Object.values(tour.snapped).map((p): [number, number] => [p.lon, p.lat])
-        layers.fitTo(toLatLngs([...pts, ...(cand?.geometry.coordinates ?? [])]))
+        layers.fitTo(toLatLngs([...pts, ...(cand?.geometry.coordinates ?? [])]), 160)
       }
     }
     layers.setLegend(legend)

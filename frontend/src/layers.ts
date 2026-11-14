@@ -2,6 +2,7 @@
 // đoạn bị đóng (T54), kho và điểm giao của tour (T73).
 import L from 'leaflet'
 import type { AlgorithmResult, LatLon, RouteResponse, Scenario } from './api'
+import { arrowPoints } from './geometry'
 
 // Màu lấy từ token của theme Astryx (đọc trên phần tử bản đồ, nằm trong <Theme>), không viết mã màu cứng.
 type Palette = {
@@ -291,8 +292,14 @@ export class MapLayers {
   setTourPoints(depot: TourPoint | null, stops: TourPoint[], order?: string[], broken: ReadonlySet<string> = new Set()) {
     this.points.clearLayers()
     if (depot) {
-      const color = broken.has(depot.id) ? this.palette.closed : this.palette.source
-      this.marker(depot, 'Kho', color, depot.label !== 'Kho' ? depot.label : undefined)
+      // Kho dùng ô vuông riêng, không còn là vòng tròn xanh giống hệt "Điểm đi" (review 14/11 đợt 3, UX-9).
+      const bad = broken.has(depot.id)
+      L.marker([depot.lat, depot.lon], {
+        icon: L.divIcon({ className: bad ? 'tour-depot tour-stop-broken' : 'tour-depot', html: 'K', iconSize: [26, 26] }),
+        title: depot.label, keyboard: false,
+      })
+        .bindTooltip(depot.label !== 'Kho' ? `Kho · ${depot.label}` : 'Kho', { permanent: true, direction: 'top', offset: [0, -14] })
+        .addTo(this.points)
     }
     stops.forEach((s, i) => {
       const n = order ? order.indexOf(s.id) + 1 : i + 1
@@ -301,16 +308,20 @@ export class MapLayers {
         icon: L.divIcon({ className: bad ? 'tour-stop tour-stop-broken' : 'tour-stop', html: String(n), iconSize: [24, 24] }),
         title: s.label,
       })
-        .bindTooltip(s.label, { direction: 'top', offset: [0, -12], permanent: bad })
+        // Điểm có tên (case demo) thì hiện tên cố định cạnh số; tên mặc định "Điểm n" thì chỉ hiện khi rê chuột.
+        .bindTooltip(s.label, { direction: 'right', offset: [12, 0], permanent: bad || !/^Điểm \d+$/.test(s.label), className: 'stop-label' })
         .addTo(this.points)
     })
   }
 
   /** Thu phóng cho vừa các điểm (kết quả mới hoặc case vừa nạp); không gọi khi chỉ đóng thêm một đoạn. */
-  fitTo(points: L.LatLng[]) {
+  fitTo(points: L.LatLng[], rightPad = 40) {
     if (!points.length) return
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    this.map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 17, animate: !reduce })
+    // rightPad: chừa chỗ cho nhãn tên điểm đặt bên phải marker (tour), để tên không bị cắt ở mép.
+    this.map.fitBounds(L.latLngBounds(points), {
+      paddingTopLeft: [40, 40], paddingBottomRight: [rightPad, 40], maxZoom: 17, animate: !reduce,
+    })
   }
 
   /** Vẽ phương án tour đang chọn; có `onSegmentClick` thì bấm được từng cạnh để đóng đoạn (R1 C5). */
@@ -319,6 +330,13 @@ export class MapLayers {
     const coords = cand.geometry.coordinates
     if (coords.length) {
       L.polyline(toLatLngs(coords), { color: this.palette.tour, weight: 5, opacity: 0.85, interactive: false }).addTo(this.routes)
+      // Mũi tên chỉ chiều mỗi ~200 m (UX-9): đoạn đi và về chồng lên nhau vẫn đọc được chiều.
+      for (const a of arrowPoints(coords, 200)) {
+        L.marker([a.lat, a.lon], {
+          icon: L.divIcon({ className: 'tour-arrow', html: `<span style="transform:rotate(${a.bearing.toFixed(0)}deg)">▲</span>`, iconSize: [14, 14] }),
+          interactive: false, keyboard: false,
+        }).addTo(this.routes)
+      }
     }
     if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick)
   }
