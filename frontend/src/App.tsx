@@ -53,6 +53,8 @@ export default function App() {
   const [caseId, setCaseId] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Gợi ý khi cú bấm bản đồ bị bỏ qua vì đang hiện kết quả (review 14/11, QA-1): bấm trượt không được xoá kết quả.
+  const [notice, setNotice] = useState<string | null>(null)
 
   // Tìm đường hai điểm
   const [source, setSource] = useState<LatLon | null>(null)
@@ -69,6 +71,8 @@ export default function App() {
   const [stops, setStops] = useState<TourPoint[]>([])
   const [tourQuery, setTourQuery] = useState<TourQuery | null>(null)
   const [tour, setTour] = useState<TourResponse | null>(null)
+  // Kịch bản và số cạnh đóng của chính request tour đã trả về, để thẻ tour ghi đúng kịch bản (QA-5).
+  const [tourScenario, setTourScenario] = useState<{ scenarioId: string; blockedCount: number } | null>(null)
   const [tourMethod, setTourMethod] = useState<TourMethod | null>(null)
   const [tourClosed, setTourClosed] = useState<RouteSegment[]>([])          // đoạn bấm đóng trên tour (R1 C5)
   const [tourCaseBlocked, setTourCaseBlocked] = useState<number[]>([])      // cạnh đóng sẵn của case tour (R1 C7)
@@ -158,6 +162,7 @@ export default function App() {
     }, ctl.signal)
       .then((res) => {
         setTour(res)
+        setTourScenario({ scenarioId: tourQuery.scenarioId, blockedCount: tourQuery.blocked.length })
         markServerUp()
         setTourMethod(res.chosen)
       })
@@ -237,14 +242,22 @@ export default function App() {
   const resetTour = () => {
     setTourQuery(null)
     setTour(null)
+    setTourScenario(null)
     setTourMethod(null)
     setError(null)
   }
 
+  // Đang hiện kết quả thì cú bấm lên bản đồ không xoá gì (QA-1): một cú bấm trượt khỏi tuyến trong lúc demo
+  // từng xoá cả tuyến lẫn các đoạn đã đóng. Muốn chọn lại thì bấm Xóa.
   const onMapClick = (p: LatLon) => {
-    setCaseId('')
     if (mode === 'route') {
-      // Lần 1: điểm đi · lần 2: điểm đến · đã đủ hai điểm thì bắt đầu lại từ điểm đi.
+      if (route) {
+        setNotice('Đang hiện kết quả nên cú bấm lên bản đồ được bỏ qua. Bấm Xóa để chọn điểm mới.')
+        return
+      }
+      setCaseId('')
+      setNotice(null)
+      // Lần 1: điểm đi · lần 2: điểm đến · đã đủ hai điểm (chưa tìm) thì bắt đầu lại từ điểm đi.
       if (!source || target) {
         resetRoute()
         setSource(p)
@@ -253,25 +266,45 @@ export default function App() {
       }
       return
     }
+    if (tour) {
+      setNotice('Đang hiện tour nên cú bấm lên bản đồ được bỏ qua. Bấm Xóa để lập tour mới.')
+      return
+    }
+    setCaseId('')
+    setNotice(null)
+    // Kiểm giới hạn trước khi đổi gì (QA-12).
+    if (depot && stops.length >= MAX_TOUR_STOPS) {
+      setError(`Tối đa ${MAX_TOUR_STOPS} điểm giao.`)
+      return
+    }
     resetTour()
     if (!depot) setDepot({ ...p, id: 'depot', label: 'Kho' })
-    else if (stops.length >= MAX_TOUR_STOPS) setError(`Tối đa ${MAX_TOUR_STOPS} điểm giao.`)
     else setStops([...stops, { ...p, id: `p${stops.length + 1}`, label: `Điểm ${stops.length + 1}` }])
   }
 
   const findRoute = () => {
+    setNotice(null)
     if (source && target) setRouteQuery({ source, target, scenarioId, blocked, n: Date.now() })
   }
 
+  // Chưa tìm đường thì chỉ đổi chỗ hai điểm; trước đây nhánh này gọi resetRoute() nên mất điểm đến (QA-4).
   const swap = () => {
     if (!source || !target) return
     setSource(target)
     setTarget(source)
     if (route) setRouteQuery({ source: target, target: source, scenarioId, blocked, n: Date.now() })
-    else resetRoute()
+  }
+
+  const changeMode = (v: Mode) => {
+    setMode(v)
+    setError(null)
+    setNotice(null)
+    // Ô case demo không giữ tên case của chế độ kia (UX-11).
+    if (DEMO_CASES.find((c) => c.id === caseId)?.mode !== v) setCaseId('')
   }
 
   const clearAll = () => {
+    setNotice(null)
     setCaseId('')
     if (mode === 'route') {
       resetRoute()
@@ -286,6 +319,7 @@ export default function App() {
   }
 
   const reopenAll = () => {
+    setNotice(null)
     if (mode === 'route') {
       setClosed([])
       setCaseBlocked([])
@@ -306,11 +340,17 @@ export default function App() {
     if (!c) return
     setCaseId(id)
     setError(null)
+    setNotice(null)
     // Lấy thẳng kịch bản của case, kể cả khi danh sách kịch bản chưa về (review #103); backend vẫn kiểm id (422).
     const sid = c.scenario_id ?? 'baseline'
     setScenarioId(sid)
+    // Case đổi kịch bản chung, nên kết quả của chế độ kia (tính theo kịch bản cũ) phải bỏ; nếu không, ô
+    // kịch bản và con số sẽ lệch nhau khi quay lại chế độ đó (QA-5).
     if (c.mode === 'route' && c.source && c.target) {
       const bl = c.blocked_edge_ids ?? []
+      setTourQuery(null)
+      setTour(null)
+      setTourMethod(null)
       setMode('route')
       setRoute(null)
       setClosed([])
@@ -322,6 +362,8 @@ export default function App() {
       const d: TourPoint = { id: 'depot', label: c.depot.name, lat: c.depot.lat, lon: c.depot.lon }
       const st = c.stops.map((s, i) => ({ id: `p${i + 1}`, label: s.name, lat: s.lat, lon: s.lon }))
       const bl = c.blocked_edge_ids ?? []
+      setRouteQuery(null)
+      setRoute(null)
       setMode('tour')
       setTour(null)
       setDepot(d)
@@ -340,20 +382,25 @@ export default function App() {
   const routeScenarioBase = route ? (scenarios.find((s) => s.id === route.scenarioId)?.label ?? route.scenarioId) : ''
   const routeScenarioLabel = route && route.blockedCount > 0
     ? `${routeScenarioBase}; đóng thêm ${route.blockedCount} cạnh` : routeScenarioBase
+  const tourScenarioBase = tourScenario
+    ? (scenarios.find((s) => s.id === tourScenario.scenarioId)?.label ?? tourScenario.scenarioId) : ''
+  const tourScenarioLabel = tourScenario && tourScenario.blockedCount > 0
+    ? `${tourScenarioBase}; đóng thêm ${tourScenario.blockedCount} cạnh` : tourScenarioBase
 
   const hint = mode === 'route'
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
       : !target ? 'Bấm để chọn điểm đến.'
-        : route ? 'Bấm vào một đoạn trên tuyến để đóng đoạn đó. Bấm lên bản đồ để chọn lại từ đầu.'
+        : route ? 'Bấm vào một đoạn trên tuyến để đóng đoạn đó. Bấm Xóa để chọn điểm mới.'
           : 'Bấm Tìm đường. Bấm lên bản đồ lần nữa để chọn lại từ đầu.')
     : (!depot ? 'Bấm lên bản đồ để đặt kho.'
-      : tour?.status === 'ok' ? 'Bấm vào một đoạn trên tour để đóng đoạn đó; tour được lập lại. Bấm lên bản đồ để thêm điểm giao.'
-        : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`
-          + (tourBlocked.length ? ' Các đoạn đang đóng vẫn giữ khi lập tour mới; bấm Mở lại tất cả để bỏ.' : ''))
+      : tour?.status === 'ok' ? 'Bấm vào một đoạn trên tour để đóng đoạn đó; tour được lập lại. Bấm Xóa để lập tour mới.'
+        : tour ? 'Bấm Mở lại tất cả để bỏ các đoạn đang đóng, hoặc Xóa để lập tour mới.'
+          : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`
+            + (tourBlocked.length ? ' Các đoạn đang đóng vẫn giữ khi lập tour mới; bấm Mở lại tất cả để bỏ.' : ''))
 
   const controls = (
     <VStack gap={4}>
-      <SegmentedControl label="Chế độ" value={mode} layout="fill" onChange={(v) => { setMode(v as Mode); setError(null) }}>
+      <SegmentedControl label="Chế độ" value={mode} layout="fill" onChange={(v) => changeMode(v as Mode)}>
         <SegmentedControlItem value="route" label="Tìm đường" />
         <SegmentedControlItem value="tour" label="Tour" />
       </SegmentedControl>
@@ -407,6 +454,7 @@ export default function App() {
         </VStack>
       )}
       {busy && <Spinner label="Đang tính…" />}
+      {notice && <Banner status="info" title={notice} />}
       {error && <Banner status="error" title={error} />}
       {mode === 'route' && noPath && (
         <Banner status="info" title="Không có đường đi giữa hai điểm này trong kịch bản hiện tại." />
@@ -416,7 +464,7 @@ export default function App() {
 
   const results = mode === 'route'
     ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel} /> : <Text type="supporting">Chưa có kết quả.</Text>)
-    : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} />
+    : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel} />
       : <Text type="supporting">Chưa có kết quả.</Text>)
 
   return (

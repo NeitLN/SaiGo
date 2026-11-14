@@ -84,6 +84,10 @@ export class MapLayers {
   constructor(map: L.Map) {
     this.map = map
     this.palette = readPalette(map.getContainer())
+    // Marker điểm đi/đến/kho nằm trong pane riêng, trên vùng bấm 18 px của tuyến (overlayPane, z 400) và dưới
+    // marker điểm giao (markerPane, z 600). Nếu chung pane, vùng bấm vẽ sau sẽ đè lên marker: bấm vào marker
+    // "Đi" lại đóng mất cạnh đầu tuyến (QA-8).
+    map.createPane('points').style.zIndex = '450'
     this.zones.addTo(map)
     this.routes.addTo(map)
     this.closed.addTo(map)
@@ -126,7 +130,12 @@ export class MapLayers {
   }
 
   private marker(p: LatLon, label: string, color: string, tooltip?: string) {
-    return L.circleMarker([p.lat, p.lon], { radius: 7, color, weight: 3, fillColor: this.palette.surface, fillOpacity: 1 })
+    // Bấm vào marker không lan xuống bản đồ (không chọn lại điểm, không đóng đoạn). Leaflet chỉ dừng lan sự kiện
+    // ở layer có nghe 'click', nên cần cả listener rỗng lẫn bubblingMouseEvents: false.
+    return L.circleMarker([p.lat, p.lon], {
+      radius: 7, color, weight: 3, fillColor: this.palette.surface, fillOpacity: 1, pane: 'points', bubblingMouseEvents: false,
+    })
+      .on('click', () => {})
       .bindTooltip(tooltip ? `${label} · ${tooltip}` : label, { permanent: true, direction: 'top', offset: [0, -6] })
       .addTo(this.points)
   }

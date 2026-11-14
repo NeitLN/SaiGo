@@ -21,30 +21,34 @@ function brokenStops(unreachable: { from_id: string; to_id: string }[]): { noRea
   }
 }
 
-export default function TourResults({ res, labels, selected, onSelect }: {
+export default function TourResults({ res, labels, selected, onSelect, scenarioLabel }: {
   res: TourResponse
   labels: Record<string, string>
   selected: TourMethod | null
   onSelect: (m: TourMethod) => void
+  scenarioLabel: string   // kịch bản của chính request đã trả về (QA-5), như dòng "Kịch bản" của RouteResults
 }) {
   const name = (id: string) => labels[id] ?? id
   if (res.status === 'infeasible_under_model') {
     const { noReach, noReturn } = brokenStops(res.unreachable)
     return (
-      <Banner status="error" title="Không lập được tour đầy đủ" collapsible={false}
-        description="Có chặng không đi được trong kịch bản này, nên không hiện tour thiếu điểm.">
-        <VStack gap={1}>
-          {noReach.length > 0 && (
-            <Text type="body" weight="semibold">Không tới được từ kho: {noReach.map(name).join(', ')}</Text>
-          )}
-          {noReturn.length > 0 && (
-            <Text type="body" weight="semibold">Không quay về được kho: {noReturn.map(name).join(', ')}</Text>
-          )}
-          {res.unreachable.map((p) => (
-            <Text key={`${p.from_id}-${p.to_id}`} type="body">Không đi được: {name(p.from_id)} → {name(p.to_id)}</Text>
-          ))}
-        </VStack>
-      </Banner>
+      <VStack gap={3}>
+        <Banner status="error" title="Không lập được tour đầy đủ" collapsible={false}
+          description="Có chặng không đi được trong kịch bản này, nên không hiện tour thiếu điểm.">
+          <VStack gap={1}>
+            {noReach.length > 0 && (
+              <Text type="body" weight="semibold">Không tới được từ kho: {noReach.map(name).join(', ')}</Text>
+            )}
+            {noReturn.length > 0 && (
+              <Text type="body" weight="semibold">Không quay về được kho: {noReturn.map(name).join(', ')}</Text>
+            )}
+            {res.unreachable.map((p) => (
+              <Text key={`${p.from_id}-${p.to_id}`} type="body">Không đi được: {name(p.from_id)} → {name(p.to_id)}</Text>
+            ))}
+          </VStack>
+        </Banner>
+        <Text type="supporting">Kịch bản: {scenarioLabel}</Text>
+      </VStack>
     )
   }
   return (
@@ -81,6 +85,7 @@ export default function TourResults({ res, labels, selected, onSelect }: {
       <Text type="supporting">
         Thời gian tính toán: ma trận {num(res.matrix_runtime_ms, 2)} ms, sắp thứ tự {num(res.order_runtime_ms ?? 0, 2)} ms
       </Text>
+      <Text type="supporting">Kịch bản: {scenarioLabel}</Text>
     </VStack>
   )
 }
