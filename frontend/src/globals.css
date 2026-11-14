@@ -106,3 +106,8 @@
 .stop-label {
   font-weight: 600;
 }
+
+/* Kho hỏng vẫn tô đỏ: .tour-depot khai báo sau .tour-stop-broken cùng độ ưu tiên nên nền xanh đè màu đỏ (review #144). */
+.tour-depot.tour-stop-broken {
+  background: var(--color-error);
+}
