@@ -20,7 +20,10 @@ const chosenStops = (r: TourResponse): string[] | null =>
 
 // kept_order chỉ có sau khi đóng đường (R1 C6): thứ tự cũ đi lại trên đường hiện tại, để so với việc sắp lại.
 // optimal đứng cuối: thẻ đối chứng Held–Karp, cho xem tour tối ưu mà các heuristic phải so (review 14/11 đợt 2).
-const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order', 'optimal']
+// nearest_neighbor_2opt_oropt chỉ có khi bật "Phần mở rộng" (đợt 3); đứng trước thẻ tối ưu.
+const METHODS: TourMethod[] = [
+  'input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order', 'nearest_neighbor_2opt_oropt', 'optimal',
+]
 
 /** So với thứ tự nhập, không in "cải thiện" kèm số âm (review 14/11, AI-4). Ngưỡng 0,05% để khớp số in ra 1 chữ số. */
 function improvementText(pct: number): string {
@@ -106,6 +109,12 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
               <Text type="body">Quãng đường: {num(c.distance_m, 0)} m</Text>
               {m === 'kept_order' && (
                 <Text type="supporting">Thứ tự trước khi đóng đường, mỗi chặng tìm lại trên đường hiện tại.</Text>
+              )}
+              {m === 'nearest_neighbor_2opt_oropt' && (
+                <Text type="supporting">
+                  Phần mở rộng: Or-opt xen kẽ 2-opt, chạy tiếp từ NN + 2-opt. Không nằm trong các phương án đã đo ở E5,
+                  nên không có số đo tổng quát; không dùng để chọn tour.
+                </Text>
               )}
               {m === 'optimal' && (
                 <Text type="supporting">

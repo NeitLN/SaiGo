@@ -10,7 +10,11 @@ import { costDelta, deltaText } from './compare'
 
 const ALGOS: Algorithm[] = ['dijkstra', 'astar']
 // Cùng màu với tuyến trên bản đồ (layers.ts: categorical blue / orange).
-const LEGEND: Record<Algorithm, 'blue' | 'orange'> = { dijkstra: 'blue', astar: 'orange' }
+const LEGEND: Record<Algorithm, 'blue' | 'orange' | 'teal' | 'purple'> = {
+  dijkstra: 'blue', astar: 'orange', alt: 'teal', bidijkstra: 'purple',
+}
+// Phần mở rộng (D17, đợt 3): bảng phụ riêng để bảng chính không chật; không vẽ tuyến riêng vì cùng chi phí.
+const EXT: Algorithm[] = ['alt', 'bidijkstra']
 
 export function num(x: number, digits = 1): string {
   return x.toLocaleString('vi-VN', { maximumFractionDigits: digits, minimumFractionDigits: digits })
@@ -27,6 +31,7 @@ const ROWS: [string, (r: AlgorithmResult) => string][] = [
   // Một lần chạy của truy vấn này (review 14/11, AI-1): nhãn nói rõ để không bị đọc thành kết luận tốc độ.
   ['Thời gian tính toán (1 lần chạy)', (r) => `${num(r.runtime_ms, 2)} ms`],
 ]
+const EXT_ROWS: [string, (r: AlgorithmResult) => string][] = [ROWS[0], ROWS[2], ROWS[3]]
 
 interface Row extends Record<string, unknown> {
   metric: string
@@ -52,6 +57,13 @@ function nodeLine(res: RouteResponse): string | null {
   return `Ở truy vấn này, A* mở ${num((100 * a.expanded) / d.expanded, 0)}% số node của Dijkstra.`
 }
 
+/** Hai kết quả cùng chi phí (cùng không có đường cũng tính là cùng), sai số 1e-6 như costs_match của backend. */
+function sameCost(a?: AlgorithmResult, b?: AlgorithmResult): boolean {
+  if (!a || !b) return false
+  if (a.status !== 'ok' || b.status !== 'ok') return a.status === b.status
+  return Math.abs((a.cost_s ?? 0) - (b.cost_s ?? 0)) <= 1e-6 * Math.max(1, b.cost_s ?? 0)
+}
+
 /** Chi phí của tuyến (Dijkstra; A* luôn bằng khi cùng có đường) hoặc null nếu không có đường. */
 const routeCost = (r: RouteResponse): number | null => {
   const d = r.results.dijkstra
@@ -71,6 +83,12 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
     return row
   })
   const nodes = nodeLine(res)
+  const extAlgos = EXT.filter((a) => res.results[a])
+  const extData: Row[] = EXT_ROWS.map(([metric, f]) => {
+    const row: Row = { metric }
+    for (const a of extAlgos) row[a] = f(res.results[a]!)
+    return row
+  })
   const before = previous?.res.results.dijkstra
   const now = res.results.dijkstra
   const moved = before?.status === 'ok' && now?.status === 'ok' && before.edge_ids?.join() !== now.edge_ids?.join()
@@ -104,6 +122,25 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
         Thời gian tính là một lần chạy trên máy này, dao động giữa các lần; không dùng để so tốc độ hai thuật toán.
       </Text>
       <Text type="supporting">Kịch bản: {scenarioLabel}</Text>
+      {extAlgos.length > 0 && (
+        <VStack gap={2}>
+          <Text type="body" weight="semibold">Phần mở rộng (ngoài proposal)</Text>
+          <Table<Row>
+            data={extData}
+            idKey="metric"
+            density="compact"
+            columns={[
+              { key: 'metric', header: 'Chỉ số' },
+              // Cột hẹp: "Hai chiều" thay "Dijkstra hai chiều" để tiêu đề không bị cắt.
+              ...extAlgos.map((a) => ({ key: a, header: a === 'bidijkstra' ? 'Hai chiều' : ALGORITHM_LABEL[a], align: 'end' as const })),
+            ]}
+          />
+          <Text type="supporting">
+            Cùng chi phí với Dijkstra: {extAlgos.every((a) => sameCost(res.results[a], res.results.dijkstra)) ? 'có' : 'không'}.
+            Số đo trên nhiều cặp: EXPERIMENTS mục E2b.
+          </Text>
+        </VStack>
+      )}
       {(res.warnings ?? []).map((w) => <Banner key={w} status="warning" title={w} />)}
     </VStack>
   )
