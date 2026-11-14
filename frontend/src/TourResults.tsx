@@ -13,12 +13,25 @@ import { num, seconds } from './RouteResults'
 // kept_order chỉ có sau khi đóng đường (R1 C6): thứ tự cũ đi lại trên đường hiện tại, để so với việc sắp lại.
 const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order']
 
-/** Điểm giao không tới được từ kho hoặc không quay về được kho (R1 C4); đủ để nêu tên, vì tour khép kín qua kho. */
-function brokenStops(unreachable: { from_id: string; to_id: string }[]): { noReach: string[]; noReturn: string[] } {
-  return {
-    noReach: unreachable.filter((p) => p.from_id === 'depot').map((p) => p.to_id),
-    noReturn: unreachable.filter((p) => p.to_id === 'depot').map((p) => p.from_id),
+type Pair = { from_id: string; to_id: string }
+export interface UnreachableGroup { id: string; dir: 'to' | 'from'; others: string[] }
+
+/**
+ * Gom các cặp không đi được (R1 C4) thành ít dòng nhất (review 14/11, QA-14): gom theo điểm đến hoặc theo
+ * điểm đi, cách nào ra ít nhóm hơn. Một điểm bị cô lập thường là đích của mọi cặp hỏng, nên chỉ còn một dòng
+ * thay cho n dòng "Không đi được: X → Y". `id` của mỗi nhóm là điểm cần tô đỏ trên bản đồ.
+ */
+export function unreachableGroups(pairs: Pair[]): UnreachableGroup[] {
+  const group = (key: (p: Pair) => string, other: (p: Pair) => string) => {
+    const m = new Map<string, string[]>()
+    for (const p of pairs) m.set(key(p), [...(m.get(key(p)) ?? []), other(p)])
+    return m
   }
+  const byTo = group((p) => p.to_id, (p) => p.from_id)
+  const byFrom = group((p) => p.from_id, (p) => p.to_id)
+  return byTo.size <= byFrom.size
+    ? [...byTo].map(([id, others]) => ({ id, dir: 'to' as const, others }))
+    : [...byFrom].map(([id, others]) => ({ id, dir: 'from' as const, others }))
 }
 
 export default function TourResults({ res, labels, selected, onSelect, scenarioLabel }: {
@@ -28,22 +41,26 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
   onSelect: (m: TourMethod) => void
   scenarioLabel: string   // kịch bản của chính request đã trả về (QA-5), như dòng "Kịch bản" của RouteResults
 }) {
-  const name = (id: string) => labels[id] ?? id
+  const name = (id: string) => {
+    const label = labels[id] ?? id
+    return id === 'depot' ? (label === 'Kho' ? 'kho' : `kho ${label}`) : label
+  }
   if (res.status === 'infeasible_under_model') {
-    const { noReach, noReturn } = brokenStops(res.unreachable)
+    const others = Object.keys(res.snapped).length - 1   // số điểm khác một điểm cho trước (gồm kho)
+    const line = (g: UnreachableGroup) => {
+      const all = g.others.length === others
+      if (g.dir === 'to') {
+        return all ? `Không điểm nào đi tới được ${name(g.id)}.` : `Không đi tới được ${name(g.id)} từ: ${g.others.map(name).join(', ')}.`
+      }
+      return all ? `Từ ${name(g.id)} không đi được tới điểm nào.` : `Từ ${name(g.id)} không đi tới được: ${g.others.map(name).join(', ')}.`
+    }
     return (
       <VStack gap={3}>
         <Banner status="error" title="Không lập được tour đầy đủ" collapsible={false}
-          description="Có chặng không đi được trong kịch bản này, nên không hiện tour thiếu điểm.">
+          description="Có chặng không đi được trong kịch bản này, nên không hiện tour thiếu điểm. Điểm hỏng được tô đỏ trên bản đồ.">
           <VStack gap={1}>
-            {noReach.length > 0 && (
-              <Text type="body" weight="semibold">Không tới được từ kho: {noReach.map(name).join(', ')}</Text>
-            )}
-            {noReturn.length > 0 && (
-              <Text type="body" weight="semibold">Không quay về được kho: {noReturn.map(name).join(', ')}</Text>
-            )}
-            {res.unreachable.map((p) => (
-              <Text key={`${p.from_id}-${p.to_id}`} type="body">Không đi được: {name(p.from_id)} → {name(p.to_id)}</Text>
+            {unreachableGroups(res.unreachable).map((g) => (
+              <Text key={`${g.dir}-${g.id}`} type="body" weight="semibold">{line(g)}</Text>
             ))}
           </VStack>
         </Banner>

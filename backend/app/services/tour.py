@@ -33,7 +33,7 @@ from app.api.schemas import (
 from app.graph.closures import reverse_twins
 from app.graph.model import Graph, GraphMeta
 from app.graph.scenario import Scenario, Snapshot
-from app.services.routing import RouteInputError, _snap, build_geometry, edge_coords, request_snapshot
+from app.services.routing import RouteInputError, _snap, blocked_edges, build_geometry, edge_coords, request_snapshot
 
 
 def cost_matrix(graph: Graph, snap: Snapshot, nodes: list[int]) -> tuple[list[list[float]], list[list[list[int]]]]:
@@ -85,7 +85,7 @@ def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[s
     matrix_ms = round((time.perf_counter_ns() - t0) / 1e6, 3)
 
     base = dict(dataset_id=graph.dataset_id, snapshot_id=snap.snapshot_id, snapped=snapped,
-                matrix_runtime_ms=matrix_ms)
+                matrix_runtime_ms=matrix_ms, blocked_edges=blocked_edges(graph, meta, req.blocked_edge_ids))
     unreachable = [UnreachablePair(from_id=ids[i], to_id=ids[j])
                    for i in range(n) for j in range(n) if i != j and D[i][j] == math.inf]
     if unreachable:

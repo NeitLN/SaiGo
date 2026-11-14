@@ -34,3 +34,8 @@
   border: 2px solid var(--color-background-card);
   font-weight: 700;
 }
+
+/* Điểm giao không tới được / không đi ra được khi tour không khả thi (review 14/11, UX-4). */
+.tour-stop-broken {
+  background: var(--color-error);
+}

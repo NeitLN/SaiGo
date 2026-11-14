@@ -15,13 +15,13 @@ import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import {
   BASELINE, MAX_TOUR_STOPS, getDataset, getHealth, postRoute, postTour,
-  type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
+  type BlockedEdge, type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
 } from './api'
 import { DEMO_CASES, DEMO_DATASET_ID } from './cases'
-import type { MapLayers, RouteSegment, TourPoint } from './layers'
+import { toLatLngs, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
-import TourResults from './TourResults'
+import TourResults, { unreachableGroups } from './TourResults'
 
 type Mode = 'route' | 'tour'
 
@@ -35,6 +35,9 @@ const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((
 // Đóng đoạn = cạnh được bấm và cạnh đối của nó (DATA_MODEL 4.2); bỏ trùng, giữ thứ tự để so sánh được.
 const blockedIds = (preset: number[], segs: RouteSegment[]) =>
   [...new Set([...preset, ...segs.flatMap((s) => (s.twinId === null ? [s.edgeId] : [s.edgeId, s.twinId]))])]
+// Đoạn đóng để vẽ: lấy từ response (gồm cả cạnh đóng sẵn của case, QA-3); chưa có response thì vẽ đoạn đã bấm.
+const closedToDraw = (fromRes: BlockedEdge[] | undefined, clicked: RouteSegment[]): RouteSegment[] =>
+  fromRes ? fromRes.map((b) => ({ edgeId: b.edge_id, twinId: null, latlngs: toLatLngs(b.geometry) })) : clicked
 
 export default function App() {
   const layersRef = useRef<MapLayers | null>(null)
@@ -84,6 +87,9 @@ export default function App() {
   const shownTourOrder = useRef<string[] | undefined>(undefined)
   shownTourOrder.current = tour && tourMethod ? tour.candidates[tourMethod]?.stop_order : undefined
   const keepOrderOnClose = useRef<string[] | undefined>(undefined)
+  // Bật khi nạp case, bấm Tìm đường hoặc Lập tour: kết quả kế tiếp sẽ được thu phóng cho vừa (QA-2). Không bật
+  // khi đóng đoạn hay đổi kịch bản, để bản đồ không nhảy giữa lúc thao tác.
+  const pendingFit = useRef(false)
 
   // Kiểm lúc mở trang và mỗi khi một request lỗi, để badge không báo "sẵn sàng" khi backend đã tắt.
   const checkServer = useCallback(() => {
@@ -212,20 +218,32 @@ export default function App() {
     if (!layers) return
     layers.setZones(scenario)
     if (mode === 'route') {
-      layers.setClosed(closed)
+      layers.setClosed(closedToDraw(route?.res.blocked_edges, closed))
       if (route) {
         layers.setSnapped(route.res)
         layers.drawRoutes(route.res, closeSegment)
+        if (pendingFit.current) {
+          pendingFit.current = false
+          const { source: s, target: t } = route.res.snapped
+          const line = route.res.results.dijkstra?.geometry.coordinates ?? []
+          layers.fitTo([...toLatLngs([[s.lon, s.lat], [t.lon, t.lat]]), ...toLatLngs(line)])
+        }
       } else {
         layers.clearRoutes()
         layers.setPoints(source, target)
       }
     } else {
-      layers.setClosed(tourClosed)
+      layers.setClosed(closedToDraw(tour?.blocked_edges, tourClosed))
       const cand = tour && tourMethod ? tour.candidates[tourMethod] : undefined
-      layers.setTourPoints(depot, stops, cand?.stop_order)
+      const broken = new Set(tour?.status === 'infeasible_under_model' ? unreachableGroups(tour.unreachable).map((g) => g.id) : [])
+      layers.setTourPoints(depot, stops, cand?.stop_order, broken)
       if (cand) layers.drawTour(cand, closeTourSegment)
       else layers.clearRoutes()
+      if (tour && pendingFit.current) {
+        pendingFit.current = false
+        const pts = Object.values(tour.snapped).map((p): [number, number] => [p.lon, p.lat])
+        layers.fitTo(toLatLngs([...pts, ...(cand?.geometry.coordinates ?? [])]))
+      }
     }
   }, [mapReady, mode, scenario, route, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
     tourClosed, closeTourSegment])
@@ -286,7 +304,15 @@ export default function App() {
 
   const findRoute = () => {
     setNotice(null)
-    if (source && target) setRouteQuery({ source, target, scenarioId, blocked, n: Date.now() })
+    if (!source || !target) return
+    pendingFit.current = true
+    setRouteQuery({ source, target, scenarioId, blocked, n: Date.now() })
+  }
+
+  const buildTour = () => {
+    if (!depot) return
+    pendingFit.current = true
+    setTourQuery({ depot, stops, scenarioId, blocked: tourBlocked, n: Date.now() })
   }
 
   // Chưa tìm đường thì chỉ đổi chỗ hai điểm; trước đây nhánh này gọi resetRoute() nên mất điểm đến (QA-4).
@@ -345,6 +371,7 @@ export default function App() {
     setCaseId(id)
     setError(null)
     setNotice(null)
+    pendingFit.current = true
     // Lấy thẳng kịch bản của case, kể cả khi danh sách kịch bản chưa về (review #103); backend vẫn kiểm id (422).
     const sid = c.scenario_id ?? 'baseline'
     setScenarioId(sid)
@@ -445,8 +472,7 @@ export default function App() {
         <VStack gap={2}>
           <Text type="supporting">Kho: {depot ? depot.label : '—'} · {stops.length} điểm giao</Text>
           <HStack gap={2}>
-            <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0}
-              onClick={() => depot && setTourQuery({ depot, stops, scenarioId, blocked: tourBlocked, n: Date.now() })} />
+            <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0} onClick={buildTour} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
           {tourBlocked.length > 0 && (

@@ -45,6 +45,12 @@ export interface AlgorithmResult {
   runtime_ms: number
 }
 
+// Thêm 14/11 (review UI, QA-3): cạnh đóng của request kèm hình học [lon, lat], để vẽ cả cạnh đóng sẵn của case.
+export interface BlockedEdge {
+  edge_id: number
+  geometry: [number, number][]
+}
+
 export interface RouteResponse {
   dataset_id: string
   snapshot_id?: string | null
@@ -52,6 +58,7 @@ export interface RouteResponse {
   results: Partial<Record<Algorithm, AlgorithmResult>>
   costs_match?: boolean | null
   warnings?: string[]
+  blocked_edges?: BlockedEdge[]
 }
 
 export const ALGORITHM_LABEL: Record<Algorithm, string> = { dijkstra: 'Dijkstra', astar: 'A*' }
@@ -134,6 +141,7 @@ export interface TourResponse {
   matrix_runtime_ms: number
   order_runtime_ms?: number | null
   warnings?: string[]
+  blocked_edges?: BlockedEdge[]
 }
 
 export const MAX_TOUR_STOPS = 14 // khớp schemas.MAX_TOUR_STOPS của backend

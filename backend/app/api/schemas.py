@@ -107,6 +107,13 @@ class AlgorithmRouteResult(BaseModel):
     trace_truncated: bool = False
 
 
+class BlockedEdge(BaseModel):
+    """Một cạnh đóng trong request kèm hình học [lon, lat], để UI vẽ được cả cạnh đóng sẵn của case (review 14/11)."""
+
+    edge_id: int
+    geometry: list[list[float]]
+
+
 class RouteResponse(BaseModel):
     """Phản hồi tìm đường theo contract v1 (docs/ARCHITECTURE.md mục 4.1)."""
 
@@ -116,6 +123,8 @@ class RouteResponse(BaseModel):
     results: dict[str, AlgorithmRouteResult]
     costs_match: bool | None = None
     warnings: list[str] = Field(default_factory=list)
+    # Thêm 14/11: các cạnh trong blocked_edge_ids, theo thứ tự gửi lên, bỏ trùng.
+    blocked_edges: list[BlockedEdge] = Field(default_factory=list)
 
 
 class ZoneOut(BaseModel):
@@ -237,3 +246,4 @@ class TourResponse(BaseModel):
     matrix_runtime_ms: float
     order_runtime_ms: float | None = None
     warnings: list[str] = Field(default_factory=list)
+    blocked_edges: list[BlockedEdge] = Field(default_factory=list)   # như RouteResponse; có cả khi không khả thi

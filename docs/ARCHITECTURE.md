@@ -165,6 +165,7 @@ Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo ti
 - `results.<thuật toán>.edge_twin_ids`: cùng độ dài với `edge_ids`; phần tử thứ i là id cạnh đối (`v → u`, cùng đoạn đường) của `edge_ids[i]`, hoặc `null` nếu đường một chiều. UI "đóng đoạn" gửi cả hai id trong `blocked_edge_ids`; API không tự thêm cạnh đối (DATA_MODEL mục 4.2).
 - `GET /api/dataset` trả `{"dataset_id", "node_count", "edge_count", "scenarios": [{"id", "label", "rules": [{"zone": {"type", "lat", "lon", "radius_m"}, "alpha", "highway"}]}]}`, cùng cấu trúc file `saigo-scenarios/1`.
 - Kịch bản nạp lúc khởi động từ `SAIGO_SCENARIOS` (mặc định `data/config/scenarios.json`); `scenario_id` không có trong file → 422. `scenario_id: null` nghĩa là `baseline`.
+- Thêm 14/11 (review UI, QA-3): `blocked_edges` = `[{edge_id, geometry}]`, mỗi cạnh trong `blocked_edge_ids` của request đúng một lần, theo thứ tự gửi lên, kèm hình học `[lon, lat]`; có cả khi `no_path`. UI vẽ đoạn đóng từ trường này, nên cạnh đóng sẵn của case demo (chỉ có id) cũng hiện trên bản đồ. `/api/tour` có trường cùng tên và cùng nghĩa, kể cả khi không khả thi.
 - `runtime_ms` đo theo đúng định nghĩa của benchmark (EXPERIMENT_PLAN mục 3.1 bước 5): với A*, thời gian dựng heuristic **được** tính vào. `geo_scale` (duyệt mọi cạnh) và bảng cạnh đối tính một lần lúc khởi động, nên request đầu tiên không bị đội giờ.
 
 **`POST /api/tour` (T72).** Tour khép kín kho → các điểm giao → kho, trên cùng snapshot (kịch bản + cạnh đóng) như `/api/route`.
@@ -184,6 +185,7 @@ Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo ti
 | `optimal` | Chỉ khi `include_optimal` và tổng số điểm ≤ 11 (kể cả kho, `HELD_KARP_MAX_POINTS`): `{stop_order, cost_s, gap_pct}` (gap của phương án được chọn) |
 | `unreachable` | Các cặp `{from_id, to_id}` không đi được |
 | `matrix_runtime_ms`, `order_runtime_ms` | Đo riêng thời gian xây ma trận và thời gian sắp thứ tự |
+| `blocked_edges` | Như `/api/route` (thêm 14/11): cạnh đóng của request kèm hình học, có cả khi `infeasible_under_model` |
 
 - Ma trận xây bằng Dijkstra một nguồn tới các điểm còn lại cho từng hàng (`dijkstra_many`); tuyến của mỗi phương án ghép từ đúng các chặng đó, nên `cost_s` = tổng trọng số các cạnh trong `edge_ids`.
 - 1–14 điểm giao; id khác nhau và khác `"depot"`. Điểm cách đường > 150 m, hai điểm gắn vào cùng một node, kịch bản/cạnh không có → 422. Chưa hỗ trợ tour mở: `return_to_depot` chỉ nhận `true` (TOPIC 15.3). Ở cả hai endpoint, `blocked_edge_ids` chỉ nhận số nguyên (không nhận `true`/`false`) và `scenario_id: ""` là kịch bản không có (422); chỉ `null` mới là `baseline`.
