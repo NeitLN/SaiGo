@@ -23,7 +23,7 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 
 ## Bị chặn / rủi ro
 - UI-1 chưa kiểm được trên máy này; nền dự phòng `/api/network` đã có (T56 R8). Kiểm ở R3 trên mạng khác; chuẩn bị video demo.
-- Các PR cũ đã có PR khác thay (#97, #104, #107, #108) còn mở; cần đóng tay trên GitHub.
+- #107, #108 (đã gộp vào #109) còn mở; cần đóng tay trên GitHub (#97, #104 đã đóng).
 - MVP 08/11 không đạt đúng hạn (PROGRESS mục 1); không ảnh hưởng kế hoạch mới vì không còn hạn nộp.
 
 ## Quyết định
@@ -40,7 +40,7 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 1. Essay: điền MSSV, đọc chéo, dàn trang Word (Times New Roman 12, double spaced, lề 1 inch), đếm trang.
 2. T82: tập kịch bản DEMO ba lần có bấm giờ (≤ 4 phút), quay video dự phòng trên máy tải được tile OSM.
 3. R3 / T80: clone sạch trên máy thứ hai → tải dữ liệu từ Release → kiểm hash → chạy demo theo README; Minh chạy lại một bảng EXPERIMENTS; kiểm UI-1.
-4. Đóng tay các PR đã có PR khác thay: #97, #104, #107, #108.
+4. Đóng tay #107, #108 (đã gộp vào #109).
 
 ## Bộ kiểm nhanh (chạy đầu mỗi session)
 - `.venv\Scripts\python.exe -m pytest -q` → 14/11 trên main: 429 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; có đồ thị demo thì các test `realdata` khác vẫn chạy)
