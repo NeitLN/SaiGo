@@ -120,6 +120,11 @@ export default function App() {
   // trace nằm trong vòng lặp đang đo giờ: lấy chung với request chính thì 'Thời gian tính toán' bị đội lên.
   const [showTrace, setShowTrace] = useState(false)
   const [trace, setTrace] = useState<RouteResponse | null>(null)
+  // Phần mở rộng (D17, đợt 3 phương án E-b): tắt mặc định để 4 phút demo không lẫn thứ ngoài proposal; bật khi
+  // hỏi đáp. Bật/tắt thì tìm lại với cùng tham số (đọc qua ref để không đưa vào deps của effect gọi API).
+  const [showExt, setShowExt] = useState(false)
+  const showExtRef = useRef(showExt)
+  showExtRef.current = showExt
 
   // Tour (T73)
   const [depot, setDepot] = useState<TourPoint | null>(null)
@@ -200,7 +205,8 @@ export default function App() {
     setBusy(true)
     setError(null)
     postRoute({
-      source: latLon(routeQuery.source), target: latLon(routeQuery.target), algorithms: ['dijkstra', 'astar'],
+      source: latLon(routeQuery.source), target: latLon(routeQuery.target),
+      algorithms: showExtRef.current ? ['dijkstra', 'astar', 'alt', 'bidijkstra'] : ['dijkstra', 'astar'],
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked,
     }, ctl.signal)
       .then((res) => {
@@ -236,6 +242,7 @@ export default function App() {
       blocked_edge_ids: tourQuery.blocked,
       ...(tourQuery.keepOrder ? { keep_order: tourQuery.keepOrder } : {}),
       include_optimal: tourQuery.stops.length + 1 <= 11,   // Held–Karp tối đa 11 điểm kể cả kho
+      ...(showExtRef.current ? { include_or_opt: true } : {}),
     }, ctl.signal)
       .then((res) => {
         const next = { res, scenarioId: tourQuery.scenarioId, blocked: tourQuery.blocked }
@@ -279,6 +286,13 @@ export default function App() {
       .catch(() => { if (!ctl.signal.aborted) setTrace(null) })   // lớp phụ: lỗi thì chỉ không vẽ chấm
     return () => ctl.abort()
   }, [showTrace, routeQuery, mode])
+
+  const toggleExt = (on: boolean) => {
+    setShowExt(on)
+    showExtRef.current = on
+    setRouteQuery((q) => (q ? { ...q, n: q.n + 1 } : q))
+    setTourQuery((q) => (q ? { ...q, n: q.n + 1 } : q))
+  }
 
   // Viền vùng có dữ liệu: vẽ lại khi bản đồ được tạo lại (đổi bố cục) hoặc khi đọc xong /api/dataset.
   useEffect(() => {
@@ -685,6 +699,8 @@ export default function App() {
           )}
         </VStack>
       )}
+      <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
+        description={mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).'} />
       {busy && <Spinner label="Đang tính…" />}
       {notice && <Banner status="info" title={notice} />}
       {error && <Banner status="error" title={error} />}

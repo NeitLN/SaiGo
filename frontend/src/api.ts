@@ -11,7 +11,8 @@ export interface LatLon {
   lon: number
 }
 
-export type Algorithm = 'dijkstra' | 'astar'
+// alt, bidijkstra: phần mở rộng (D17), chỉ gửi khi bật công tắc "Phần mở rộng" (review 14/11 đợt 3).
+export type Algorithm = 'dijkstra' | 'astar' | 'alt' | 'bidijkstra'
 
 export interface RouteRequest {
   source: LatLon
@@ -64,7 +65,9 @@ export interface RouteResponse {
   blocked_edges?: BlockedEdge[]
 }
 
-export const ALGORITHM_LABEL: Record<Algorithm, string> = { dijkstra: 'Dijkstra', astar: 'A*' }
+export const ALGORITHM_LABEL: Record<Algorithm, string> = {
+  dijkstra: 'Dijkstra', astar: 'A*', alt: 'ALT', bidijkstra: 'Dijkstra hai chiều',
+}
 
 // GET /api/dataset (T51). Kịch bản giữ đúng cấu trúc `saigo-scenarios/1` của data/config/scenarios.json
 // và `CongestionZone` của backend/app/graph/scenario.py (DATA_MODEL mục 4.1).
@@ -127,12 +130,14 @@ export interface TourRequest {
   scenario_id?: string
   blocked_edge_ids?: number[]
   include_optimal?: boolean
+  include_or_opt?: boolean // phần mở rộng: thêm phương án nearest_neighbor_2opt_oropt (không bao giờ là chosen)
   keep_order?: string[] // R1 C1: thứ tự id điểm giao trước khi đóng đường
 }
 
 // kept_order chỉ có khi request gửi keep_order (R1 C2); không bao giờ là `chosen`.
 // optimal (thêm 14/11): tour Held–Karp khi request có include_optimal; chỉ để đối chứng, không bao giờ là chosen.
 export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt' | 'kept_order' | 'optimal'
+  | 'nearest_neighbor_2opt_oropt'
 
 export const TOUR_METHOD_LABEL: Record<TourMethod, string> = {
   input: 'Thứ tự nhập',
@@ -140,6 +145,7 @@ export const TOUR_METHOD_LABEL: Record<TourMethod, string> = {
   nearest_neighbor_2opt: 'NN + 2-opt',
   kept_order: 'Giữ thứ tự cũ',
   optimal: 'Tối ưu (Held–Karp, đối chứng)',
+  nearest_neighbor_2opt_oropt: 'NN + 2-opt + Or-opt (mở rộng)',
 }
 
 export interface TourCandidate {
