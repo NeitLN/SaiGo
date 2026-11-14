@@ -105,6 +105,20 @@ def test_include_optimal_reports_gap(client):
     assert r["optimal"]["gap_pct"] == pytest.approx(0.0)    # gap của phương án được chọn
 
 
+def test_optimal_candidate_drawable_never_chosen(client, mini):
+    """Review UI 14/11 đợt 2: thẻ Held–Karp xem được trên bản đồ → `candidates.optimal` có đủ hình học,
+    cùng chi phí và thứ tự với `optimal`, không bao giờ là `chosen`; không xin thì không có."""
+    graph, _ = mini
+    r = tour(client, ["B", "A", "T"], include_optimal=True).json()
+    opt = r["candidates"]["optimal"]
+    assert opt["cost_s"] == pytest.approx(r["optimal"]["cost_s"]) == pytest.approx(180.0)
+    assert opt["stop_order"] == r["optimal"]["stop_order"]
+    assert len(opt["edge_geometries"]) == len(opt["edge_ids"]) > 0
+    check_closed_route(graph, baseline_snapshot(graph).weights, opt, depot=0)
+    assert r["chosen"] != "optimal"
+    assert "optimal" not in tour(client, ["B", "A", "T"]).json()["candidates"]
+
+
 def test_single_stop(client):
     r = tour(client, ["A"]).json()
     assert r["candidates"]["input"]["stop_order"] == ["a"]

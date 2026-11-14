@@ -106,6 +106,11 @@ def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[s
         # R1 C2: thứ tự trước khi đóng đường, mỗi chặng lấy từ ma trận của snapshot mới. Không đưa vào
         # choose_tour, nên không được chọn và không tính vào gap: so sánh tách khỏi việc sắp lại.
         orders["kept_order"] = [0] + [ids.index(pid) for pid in req.keep_order]
+    best = held_karp(D) if req.include_optimal else None
+    if best is not None:
+        # Review UI 14/11 đợt 2: tour tối ưu cũng là một phương án vẽ được (thẻ đối chứng trên UI). Không đưa vào
+        # choose_tour nên không bao giờ là chosen; optimal (chi phí, gap) giữ nguyên như cũ.
+        orders["optimal"] = best
 
     c_input = plan.candidates["input"]
     candidates = {}
@@ -125,8 +130,7 @@ def plan_tour(graph: Graph, meta: GraphMeta, req: TourRequest, scenarios: dict[s
         )
 
     optimal = None
-    if req.include_optimal:
-        best = held_karp(D)
+    if best is not None:
         c_opt = tour_cost(D, best)
         or_opt_gap = None
         if req.include_or_opt:

@@ -180,8 +180,8 @@ Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo ti
 |---|---|
 | `status` | `"ok"` hoặc `"infeasible_under_model"` (có chặng không đi được; xem `unreachable`) |
 | `snapped` | `"depot"` và id từng điểm giao → `{id, node_id, lat, lon, snap_distance_m}` |
-| `candidates` | `input`, `nearest_neighbor`, `nearest_neighbor_2opt` → `{stop_order, cost_s, distance_m, improvement_pct, edge_ids, geometry, edge_twin_ids, edge_geometries}`; thêm `nearest_neighbor_2opt_oropt` khi `include_or_opt`, `kept_order` khi request có `keep_order` (R1); rỗng khi không khả thi. `edge_twin_ids`, `edge_geometries` cùng định nghĩa với `/api/route` (R1) |
-| `chosen` | Phương án rẻ nhất trong `input`, `nearest_neighbor`, `nearest_neighbor_2opt` (và Or-opt khi bật); hòa thì giữ phương án đứng trước (không thay thứ tự nhập bằng lời giải tệ hơn). Không bao giờ là `kept_order` |
+| `candidates` | `input`, `nearest_neighbor`, `nearest_neighbor_2opt` → `{stop_order, cost_s, distance_m, improvement_pct, edge_ids, geometry, edge_twin_ids, edge_geometries}`; thêm `nearest_neighbor_2opt_oropt` khi `include_or_opt`, `kept_order` khi request có `keep_order` (R1), `optimal` (tour Held–Karp, vẽ được; thêm 14/11) khi `include_optimal`; rỗng khi không khả thi. `edge_twin_ids`, `edge_geometries` cùng định nghĩa với `/api/route` (R1) |
+| `chosen` | Phương án rẻ nhất trong `input`, `nearest_neighbor`, `nearest_neighbor_2opt` (và Or-opt khi bật); hòa thì giữ phương án đứng trước (không thay thứ tự nhập bằng lời giải tệ hơn). Không bao giờ là `kept_order` hay `optimal` |
 | `optimal` | Chỉ khi `include_optimal` và tổng số điểm ≤ 11 (kể cả kho, `HELD_KARP_MAX_POINTS`): `{stop_order, cost_s, gap_pct}` (gap của phương án được chọn) |
 | `unreachable` | Các cặp `{from_id, to_id}` không đi được |
 | `matrix_runtime_ms`, `order_runtime_ms` | Đo riêng thời gian xây ma trận và thời gian sắp thứ tự |

@@ -112,13 +112,15 @@ export interface TourRequest {
 }
 
 // kept_order chỉ có khi request gửi keep_order (R1 C2); không bao giờ là `chosen`.
-export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt' | 'kept_order'
+// optimal (thêm 14/11): tour Held–Karp khi request có include_optimal; chỉ để đối chứng, không bao giờ là chosen.
+export type TourMethod = 'input' | 'nearest_neighbor' | 'nearest_neighbor_2opt' | 'kept_order' | 'optimal'
 
 export const TOUR_METHOD_LABEL: Record<TourMethod, string> = {
   input: 'Thứ tự nhập',
   nearest_neighbor: 'Nearest Neighbor',
   nearest_neighbor_2opt: 'NN + 2-opt',
   kept_order: 'Giữ thứ tự cũ',
+  optimal: 'Tối ưu (Held–Karp, đối chứng)',
 }
 
 export interface TourCandidate {

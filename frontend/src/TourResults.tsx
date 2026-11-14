@@ -19,7 +19,8 @@ const chosenStops = (r: TourResponse): string[] | null =>
   r.status === 'ok' && r.chosen ? (r.candidates[r.chosen]?.stop_order ?? null) : null
 
 // kept_order chỉ có sau khi đóng đường (R1 C6): thứ tự cũ đi lại trên đường hiện tại, để so với việc sắp lại.
-const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order']
+// optimal đứng cuối: thẻ đối chứng Held–Karp, cho xem tour tối ưu mà các heuristic phải so (review 14/11 đợt 2).
+const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order', 'optimal']
 
 /** So với thứ tự nhập, không in "cải thiện" kèm số âm (review 14/11, AI-4). Ngưỡng 0,05% để khớp số in ra 1 chữ số. */
 function improvementText(pct: number): string {
@@ -105,6 +106,12 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
               <Text type="body">Quãng đường: {num(c.distance_m, 0)} m</Text>
               {m === 'kept_order' && (
                 <Text type="supporting">Thứ tự trước khi đóng đường, mỗi chặng tìm lại trên đường hiện tại.</Text>
+              )}
+              {m === 'optimal' && (
+                <Text type="supporting">
+                  Quy hoạch động Held–Karp, chỉ tính khi tối đa 10 điểm giao. Dùng để đo các heuristic cách tối ưu bao xa,
+                  không dùng để chọn tour.
+                </Text>
               )}
               {m === 'kept_order' && keptBefore(c.stop_order) !== null && (
                 <Text type="body" weight="semibold">

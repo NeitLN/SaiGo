@@ -240,6 +240,7 @@ class TourResponse(BaseModel):
     status: Literal["ok", "infeasible_under_model"]
     snapped: dict[str, SnappedStop]    # "depot" và id của từng điểm giao
     candidates: dict[str, TourCandidate] = Field(default_factory=dict)   # input | nearest_neighbor | nearest_neighbor_2opt
+    # (+ nearest_neighbor_2opt_oropt khi include_or_opt, kept_order khi keep_order, optimal khi include_optimal)
     chosen: str | None = None
     optimal: TourOptimal | None = None
     unreachable: list[UnreachablePair] = Field(default_factory=list)
