@@ -182,7 +182,11 @@ export default function App() {
         if (ctl.signal.aborted) return
         pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
         setTour(null)
-        setError(`Lỗi: ${e.message}`)
+        // API gọi điểm bằng id nội bộ ('p2', 'depot'); đổi sang tên người dùng thấy trên marker (QA-13).
+        const names: Record<string, string> = Object.fromEntries(tourQuery.stops.map((s) => [s.id, s.label]))
+        names.depot = 'kho'
+        const msg = e.message.replace(/'([\w-]+)'/g, (m, id: string) => (id in names ? `"${names[id]}"` : m))
+        setError(`Lỗi: ${msg}`)
         checkServer()
       })
       .finally(() => !ctl.signal.aborted && setBusy(false))
@@ -477,7 +481,9 @@ export default function App() {
         </VStack>
       ) : (
         <VStack gap={2}>
-          <Text type="supporting">Kho: {depot ? depot.label : '—'} · {stops.length} điểm giao</Text>
+          <Text type="supporting">
+            {!depot ? 'Chưa đặt kho' : depot.label === 'Kho' ? 'Đã đặt kho' : `Kho: ${depot.label}`} · {stops.length} điểm giao
+          </Text>
           <HStack gap={2}>
             <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0} onClick={buildTour} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />

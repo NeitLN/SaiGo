@@ -23,13 +23,32 @@ const ROWS: [string, (r: AlgorithmResult) => string][] = [
   ['Thời gian di chuyển ước tính (theo kịch bản)', (r) => (r.status !== 'ok' || r.cost_s === null ? 'Không có đường' : seconds(r.cost_s))],
   ['Quãng đường', (r) => (r.status !== 'ok' || r.distance_m === null ? '—' : `${num(r.distance_m, 0)} m`)],
   ['Số node mở rộng', (r) => num(r.expanded, 0)],
-  ['Thời gian tính toán', (r) => `${num(r.runtime_ms, 2)} ms`],
+  // Một lần chạy của truy vấn này (review 14/11, AI-1): nhãn nói rõ để không bị đọc thành kết luận tốc độ.
+  ['Thời gian tính toán (1 lần chạy)', (r) => `${num(r.runtime_ms, 2)} ms`],
 ]
 
 interface Row extends Record<string, unknown> {
   metric: string
   dijkstra?: string
   astar?: string
+}
+
+/** Dòng kết luận về chi phí (AI-2, QA-6): hai bên cùng không có đường thì không gọi là "chi phí trùng khớp". */
+function costLine(res: RouteResponse): string {
+  const d = res.results.dijkstra
+  const a = res.results.astar
+  if (d?.status === 'no_path' && a?.status === 'no_path') return 'Cả hai thuật toán cùng báo không có đường.'
+  if (res.costs_match === true) return 'Chi phí trùng khớp: có'
+  if (res.costs_match === false) return 'Chi phí trùng khớp: không'
+  return 'Chi phí trùng khớp: —'
+}
+
+/** Tỉ lệ node A* so với Dijkstra trên chính truy vấn này (AI-3); chỉ khi cả hai tìm được đường. */
+function nodeLine(res: RouteResponse): string | null {
+  const d = res.results.dijkstra
+  const a = res.results.astar
+  if (!d || !a || d.status !== 'ok' || a.status !== 'ok' || d.expanded === 0) return null
+  return `Ở truy vấn này, A* mở ${num((100 * a.expanded) / d.expanded, 0)}% số node của Dijkstra.`
 }
 
 export default function RouteResults({ res, scenarioLabel }: { res: RouteResponse; scenarioLabel: string }) {
@@ -39,7 +58,7 @@ export default function RouteResults({ res, scenarioLabel }: { res: RouteRespons
     for (const a of algos) row[a] = f(res.results[a]!)
     return row
   })
-  const match = res.costs_match === true ? 'có' : res.costs_match === false ? 'không' : '—'
+  const nodes = nodeLine(res)
   return (
     <VStack gap={3}>
       <HStack gap={2}>
@@ -50,11 +69,15 @@ export default function RouteResults({ res, scenarioLabel }: { res: RouteRespons
         idKey="metric"
         density="compact"
         columns={[
-          { key: 'metric', header: '' },
+          { key: 'metric', header: 'Chỉ số' },
           ...algos.map((a) => ({ key: a, header: ALGORITHM_LABEL[a], align: 'end' as const })),
         ]}
       />
-      <Text type="body" weight="semibold">Chi phí trùng khớp: {match}</Text>
+      <Text type="body" weight="semibold">{costLine(res)}</Text>
+      {nodes && <Text type="body">{nodes}</Text>}
+      <Text type="supporting">
+        Thời gian tính là một lần chạy trên máy này, dao động giữa các lần; không dùng để so tốc độ hai thuật toán.
+      </Text>
       <Text type="supporting">Kịch bản: {scenarioLabel}</Text>
       {(res.warnings ?? []).map((w) => <Banner key={w} status="warning" title={w} />)}
     </VStack>

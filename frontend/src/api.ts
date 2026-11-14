@@ -178,7 +178,12 @@ function errorMessage(status: number, body: unknown): string {
   const detail = (body as { detail?: unknown } | null)?.detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail)) {
-    return detail.map((d) => (d as { msg?: string }).msg ?? JSON.stringify(d)).join('; ')
+    return detail.map((d) => {
+      const e = d as { type?: string; msg?: string; ctx?: { max_length?: number } }
+      // Lỗi giới hạn số phần tử là lỗi người dùng gặp được (UI chặn ở 14 nhưng API vẫn kiểm): ghi tiếng Việt.
+      if (e.type === 'too_long' && e.ctx?.max_length !== undefined) return `Quá nhiều phần tử: tối đa ${e.ctx.max_length}.`
+      return e.msg ?? JSON.stringify(d)
+    }).join('; ')
   }
   return `HTTP ${status}`
 }
