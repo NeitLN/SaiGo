@@ -156,6 +156,13 @@ class NetworkResponse(BaseModel):
     lines: list[list[list[float]]]
 
 
+class BBox(BaseModel):
+    south: float
+    west: float
+    north: float
+    east: float
+
+
 class DatasetResponse(BaseModel):
     """Đồ thị đang nạp và các kịch bản dùng được (cùng cấu trúc `saigo-scenarios/1`)."""
 
@@ -163,6 +170,18 @@ class DatasetResponse(BaseModel):
     node_count: int
     edge_count: int
     scenarios: list[ScenarioOut]
+    bbox: BBox | None = None           # thêm 14/11: khung bao mọi node, để UI vẽ viền vùng có dữ liệu
+
+
+class SnapCheckResponse(BaseModel):
+    """GET /api/snap (thêm 14/11): node gần nhất trong SCC và khoảng cách, để UI kiểm điểm ngay lúc đặt."""
+
+    node_id: int
+    lat: float                         # toạ độ node đã snap
+    lon: float
+    snap_distance_m: float
+    max_m: float                       # cùng ngưỡng /api/route, /api/tour dùng (150 m)
+    ok: bool                           # snap_distance_m ≤ max_m
 
 
 # --- /api/tour (T72; TOPIC mục 15.3–15.4) ---

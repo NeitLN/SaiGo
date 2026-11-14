@@ -16,7 +16,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { useMediaQuery } from '@astryxdesign/core/hooks'
 import {
-  BASELINE, MAX_TOUR_STOPS, getDataset, getHealth, postRoute, postTour,
+  BASELINE, MAX_TOUR_STOPS, getDataset, getHealth, getSnap, postRoute, postTour, type BBox,
   type BlockedEdge, type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
 } from './api'
 import { DEMO_CASES, DEMO_DATASET_ID } from './cases'
@@ -88,6 +88,7 @@ export default function App() {
 
   const [server, setServer] = useState<{ text: string; ok: boolean | null }>({ text: 'Đang kiểm tra server…', ok: null })
   const [datasetId, setDatasetId] = useState<string | null>(null)
+  const [dataArea, setDataArea] = useState<BBox | null>(null)   // viền vùng có dữ liệu (PM-7, UX-3)
   const [scenarios, setScenarios] = useState<Scenario[]>([BASELINE])
   const [scenarioNote, setScenarioNote] = useState<string | null>(null)
   const [scenarioId, setScenarioId] = useState('baseline')
@@ -165,6 +166,7 @@ export default function App() {
         setScenarioNote(null)
         setDatasetId(d.dataset_id)
         if (d.scenarios.length) setScenarios(d.scenarios)
+        setDataArea(d.bbox ?? null)
       })
       .catch((e: Error) => setScenarioNote(`Không đọc được danh sách kịch bản: ${e.message}`))
   }, [])
@@ -271,6 +273,11 @@ export default function App() {
     return () => ctl.abort()
   }, [showTrace, routeQuery, mode])
 
+  // Viền vùng có dữ liệu: vẽ lại khi bản đồ được tạo lại (đổi bố cục) hoặc khi đọc xong /api/dataset.
+  useEffect(() => {
+    layersRef.current?.setDataArea(dataArea)
+  }, [mapReady, dataArea])
+
   // Đóng/mở đoạn khi đang có kết quả thì tìm lại ngay với danh sách cạnh đóng mới.
   useEffect(() => {
     setRouteQuery((q) => (q && !sameIds(q.blocked, blocked) ? { ...q, blocked, n: q.n + 1 } : q))
@@ -367,7 +374,7 @@ export default function App() {
 
   // Đang hiện kết quả thì cú bấm lên bản đồ không xoá gì (QA-1): một cú bấm trượt khỏi tuyến trong lúc demo
   // từng xoá cả tuyến lẫn các đoạn đã đóng. Muốn chọn lại thì bấm Xóa.
-  const onMapClick = (p: LatLon) => {
+  const placePoint = (p: LatLon) => {
     if (mode === 'route') {
       if (route) {
         setNotice('Đang hiện kết quả nên cú bấm lên bản đồ được bỏ qua. Bấm Xóa để chọn điểm mới.')
@@ -375,6 +382,7 @@ export default function App() {
       }
       setCaseId('')
       setNotice(null)
+      setError(null)
       // Lần 1: điểm đi · lần 2: điểm đến · đã đủ hai điểm (chưa tìm) thì bắt đầu lại từ điểm đi.
       if (!source || target) {
         resetRoute()
@@ -398,6 +406,38 @@ export default function App() {
     resetTour()
     if (!depot) setDepot({ ...p, id: 'depot', label: 'Kho' })
     else setStops([...stops, { ...p, id: `p${stops.length + 1}`, label: `Điểm ${stops.length + 1}` }])
+  }
+  const placePointRef = useRef(placePoint)
+  placePointRef.current = placePoint
+
+  // Kiểm điểm ngay lúc bấm (review 14/11 đợt 2, PM-7): điểm cách đường quá ngưỡng bị từ chối tại chỗ, kèm
+  // khoảng cách, thay vì được đặt rồi làm hỏng cả tuyến/tour lúc gửi (trước đây lỗi 'p2' sau khi đặt 12 điểm).
+  // Mỗi lần chỉ kiểm một cú bấm; không kiểm được (server lỗi) thì vẫn đặt, /api/route, /api/tour sẽ báo như cũ.
+  const checking = useRef(false)
+  const onMapClick = (p: LatLon) => {
+    if ((mode === 'route' && route) || (mode === 'tour' && tour)) {
+      placePoint(p)            // chỉ hiện gợi ý "Bấm Xóa", không đặt gì
+      return
+    }
+    if (checking.current) return
+    checking.current = true
+    getSnap(p)
+      .then((s) => {
+        if (s.ok) placePointRef.current(p)
+        else setError(`Điểm vừa bấm cách đường ${Math.round(s.snap_distance_m)} m, quá ngưỡng ${s.max_m} m nên không được đặt. `
+          + 'Hãy bấm gần đường hơn, trong viền vùng có dữ liệu.')
+      })
+      .catch(() => placePointRef.current(p))
+      .finally(() => { checking.current = false })
+  }
+
+  // Bỏ điểm cuối (PM-7, U-2): bỏ điểm giao vừa thêm, hết điểm giao thì bỏ kho; không phải xoá cả tour làm lại.
+  const removeLastPoint = () => {
+    setCaseId('')
+    setNotice(null)
+    resetTour()
+    if (stops.length) setStops(stops.slice(0, -1))
+    else setDepot(null)
   }
 
   const findRoute = () => {
@@ -579,6 +619,7 @@ export default function App() {
           </Text>
           <HStack gap={2}>
             <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0} onClick={buildTour} />
+            <Button label="Bỏ điểm cuối" isDisabled={!depot} onClick={removeLastPoint} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
           {tourBlocked.length > 0 && (

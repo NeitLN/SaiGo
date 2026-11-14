@@ -87,11 +87,30 @@ export interface Scenario {
   rules: CongestionRule[]
 }
 
+export interface BBox { south: number; west: number; north: number; east: number }
+
 export interface DatasetResponse {
   dataset_id: string
   node_count?: number
   edge_count?: number
   scenarios: Scenario[]
+  bbox?: BBox | null // thêm 14/11: khung bao mọi node, để vẽ viền vùng có dữ liệu
+}
+
+// GET /api/snap (thêm 14/11): kiểm một điểm ngay lúc người dùng bấm, cùng ngưỡng với /api/route, /api/tour.
+export interface SnapCheck {
+  node_id: number
+  lat: number
+  lon: number
+  snap_distance_m: number
+  max_m: number
+  ok: boolean
+}
+
+export async function getSnap(p: LatLon): Promise<SnapCheck> {
+  const res = await fetch(`/api/snap?lat=${p.lat}&lon=${p.lon}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
 // Cùng nhãn với data/config/scenarios.json; chỉ dùng khi API chưa có /api/dataset.
