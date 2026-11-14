@@ -17,7 +17,8 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 ## Đang ở đâu
 - R0 xong (#127, #128).
 - R1 xong (#129): lập lại tour sau khi đóng đường, giữ thứ tự cũ / sắp lại, case "Tour không còn khả thi"; bằng chứng ở [phiếu R1](tasks/R1-tour-closure.md).
-- R2 (khóa bằng chứng): PR đang review. E5 thêm n = 5, cột p90 và max Gap; E5b thí nghiệm tour sau khi đóng đường; Or-opt ghi rõ chỉ minh họa. Phần "Minh chạy lại một bảng trên máy mình" chuyển sang R3 vì cần máy khác.
+- R2 xong (#130): E5 thêm n = 5, cột p90 và max Gap; E5b tour sau khi đóng đường; Or-opt ghi rõ chỉ minh họa. Phần "Minh chạy lại một bảng trên máy mình" chuyển sang R3 vì cần máy khác.
+- R4: bản nháp essay tiếng Anh ở [essay/essay.md](essay/essay.md) (khoảng 2.640 từ trước phần tham khảo, tức khoảng 10 trang double spaced), PR đang review. Còn: điền MSSV ở bìa, cả nhóm đọc chéo, dàn trang Word để đếm trang thật; slide; video demo.
 
 ## Bị chặn / rủi ro
 - UI-1 chưa kiểm được trên máy này; nền dự phòng `/api/network` đã có (T56 R8). Kiểm ở R3 trên mạng khác; chuẩn bị video demo.
@@ -35,9 +36,9 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 | Ngưỡng snap 150 m | Giả định hiện hành, đã dùng trong mọi thí nghiệm | — |
 
 ## Bước tiếp theo
-1. Merge PR R2.
-2. R3: chạy trên máy thứ hai theo README (Minh chạy lại một bảng EXPERIMENTS); kiểm UI-1 ở mạng khác.
-3. R4: essay, slide, video demo.
+1. Merge PR bản nháp essay (R4).
+2. R4: slide 15 phút theo DEMO và essay; quay video demo dự phòng (cần người bấm và máy có tile OSM).
+3. R3 (cần người, máy khác): chạy theo README trên máy thứ hai, Minh chạy lại một bảng EXPERIMENTS; kiểm UI-1 ở mạng không chặn tile.
 
 ## Bộ kiểm nhanh (chạy đầu mỗi session)
 - `.venv\Scripts\python.exe -m pytest -q` → 14/11 trên main: 429 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; có đồ thị demo thì các test `realdata` khác vẫn chạy)
