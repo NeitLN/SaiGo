@@ -26,6 +26,7 @@ Mọi số hiển thị đều lấy từ response của backend; không có s�
 - Chế độ: **Tìm đường hai điểm** (mặc định) / **Tour**.
 - Case demo chọn sẵn: "Hai điểm qua trung tâm", "Không còn đường", "Kho + 5 điểm giao", "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (bước 10, thêm 14/11), "Tour không còn khả thi" (R1). Chọn case là app tự chạy và tự thu phóng vừa kết quả.
 - Kịch bản: Bình thường / Cao điểm mô phỏng — trung tâm (`peak-center`).
+- Đặt điểm từ địa danh (thêm 14/11): chọn Dinh Độc Lập, Chợ Bến Thành, Nhà thờ Đức Bà… thay vì bấm bản đồ; đi qua cùng bước kiểm khoảng cách, dùng được bằng bàn phím.
 - Nút **Tìm đường** (chạy cả Dijkstra và A*), nút **Mở lại các đoạn đã đóng**.
 
 ### 1.2. Giữa — bản đồ
