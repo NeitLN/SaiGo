@@ -197,10 +197,12 @@ export default function App() {
   // --- Vẽ bản đồ từ state ---
 
   const closeSegment = useCallback((seg: RouteSegment) => {
+    setNotice(null)
     setClosed((prev) => (prev.some((s) => s.edgeId === seg.edgeId) ? prev : [...prev, seg]))
   }, [])
 
   const closeTourSegment = useCallback((seg: RouteSegment) => {
+    setNotice(null)
     keepOrderOnClose.current = shownTourOrder.current
     setTourClosed((prev) => (prev.some((s) => s.edgeId === seg.edgeId) ? prev : [...prev, seg]))
   }, [])
@@ -292,7 +294,9 @@ export default function App() {
     if (!source || !target) return
     setSource(target)
     setTarget(source)
-    if (route) setRouteQuery({ source: target, target: source, scenarioId, blocked, n: Date.now() })
+    // Đã gửi request (kể cả khi chưa về) thì phải tìm lại theo chiều mới; nếu chỉ đổi state, request cũ về sau
+    // sẽ vẽ tuyến chiều cũ trong khi ô điểm đã đảo (review #134).
+    if (routeQuery) setRouteQuery({ source: target, target: source, scenarioId, blocked, n: Date.now() })
   }
 
   const changeMode = (v: Mode) => {
