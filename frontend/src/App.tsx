@@ -16,8 +16,8 @@ import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { useAnnounce, useMediaQuery } from '@astryxdesign/core/hooks'
 import {
-  BASELINE, MAX_TOUR_STOPS, getDataset, getHealth, getSnap, postRoute, postTour, type BBox,
-  type BlockedEdge, type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
+  BASELINE, MAX_TOUR_STOPS, getSnap, postRoute, postTour,
+  type BlockedEdge, type LatLon, type RouteResponse, type TourMethod, type TourResponse,
 } from './api'
 import { DEMO_CASES, DEMO_DATASET_ID, NAMED_PLACES } from './cases'
 import { toLatLngs, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
@@ -25,69 +25,18 @@ import MapView from './MapView'
 import RouteResults from './RouteResults'
 import TourResults from './TourResults'
 import { unreachableGroups } from './tourIssues'
-import { samePoints, sameIds as sameIdSet } from './compare'
-
-type Mode = 'route' | 'tour'
+import {
+  TRACE_LIMIT, addTourPoint, blockedIds, distanceText, fmt, latLon, nextPrevious, nextRoutePoint, removeLastTourPoint,
+  renameIds, routeAnnouncement, routePoints, sameIdList, tourAnnouncement, tourPoints, traceLegend, type Mode, type Pt,
+  type Run,
+} from './appLogic'
+import { useServerStatus } from './useServerStatus'
 
 // Mỗi lần gửi request là một query mới (n tăng); effect hủy request cũ nên chỉ kết quả mới nhất được hiện.
 interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; n: number }
 // keepOrder (R1): thứ tự điểm giao trước khi đóng đường, để API trả thêm phương án "Giữ thứ tự cũ".
 interface TourQuery { depot: TourPoint; stops: TourPoint[]; scenarioId: string; blocked: number[]; keepOrder?: string[]; n: number }
 
-// Lần chạy đã trả về: response kèm kịch bản và cạnh đóng của chính request đó (nhãn, so sánh trước/sau).
-type Run<T> = { res: T; scenarioId: string; blocked: number[] }
-const routePoints = (r: RouteResponse) => ({ source: r.snapped.source.node_id, target: r.snapped.target.node_id })
-const tourPoints = (r: TourResponse) => Object.fromEntries(Object.entries(r.snapped).map(([k, v]) => [k, v.node_id]))
-/**
- * Lần trước để so (review 14/11 đợt 2, PM-1/UX-5/AI-7): chỉ khi cùng điểm mà khác kịch bản hoặc khác cạnh đóng.
- * Cùng điểm, cùng tham số (bấm lại Tìm đường) thì giữ mốc cũ; khác điểm thì bỏ mốc.
- */
-function nextPrevious<T>(prev: Run<T> | null, next: Run<T>, pts: (r: T) => Record<string, number>, kept: Run<T> | null): Run<T> | null {
-  if (!prev || !samePoints(pts(prev.res), pts(next.res))) return null
-  if (prev.scenarioId === next.scenarioId && sameIdSet(prev.blocked, next.blocked)) return kept
-  return prev
-}
-
-const vn = (x: number, d = 1) => x.toLocaleString('vi-VN', { maximumFractionDigits: d })
-/** Câu đọc cho trình đọc màn hình khi có kết quả tìm đường (FE-3); số lấy từ response. */
-function routeAnnouncement(r: RouteResponse): string {
-  const d = r.results.dijkstra
-  const a = r.results.astar
-  if (!d || d.status !== 'ok' || d.cost_s === null) return 'Không có đường đi giữa hai điểm này trong kịch bản hiện tại.'
-  const nodes = a ? ` Dijkstra mở ${vn(d.expanded, 0)} node, A* mở ${vn(a.expanded, 0)} node.` : ''
-  return `Tìm xong: ${vn(d.cost_s)} giây, ${vn(d.distance_m ?? 0, 0)} mét.${nodes}`
-}
-/** Câu đọc khi có kết quả tour (FE-3). */
-function tourAnnouncement(r: TourResponse): string {
-  if (r.status !== 'ok' || !r.chosen) return 'Không lập được tour đầy đủ: có chặng không đi được.'
-  const c = r.candidates[r.chosen]
-  return c ? `Lập tour xong: phương án được chọn ${vn(c.cost_s)} giây.` : 'Lập tour xong.'
-}
-
-// Đủ cho mọi truy vấn trên vùng demo (lớn nhất 1.762 node khi không còn đường); backend giới hạn 5.000.
-const TRACE_LIMIT = 5000
-
-/** Chú thích lớp node đã mở rộng: số node của chính lần tìm có trace (bằng số ở bảng vì cùng tham số). */
-function traceLegend(r: RouteResponse): string {
-  const d = r.results.dijkstra
-  const a = r.results.astar
-  if (!d || !a) return ''
-  const cut = d.trace_truncated || a.trace_truncated ? ' Chỉ vẽ ' + TRACE_LIMIT.toLocaleString('vi-VN') + ' node đầu.' : ''
-  return `Đang vẽ ${d.expanded.toLocaleString('vi-VN')} node Dijkstra và ${a.expanded.toLocaleString('vi-VN')} node A* đã mở rộng.${cut}`
-}
-
-// Khoảng cách trong thông báo: dưới 1 km ghi mét, từ 1 km ghi km một chữ số (góp ý #142: tránh "280402 m").
-const distanceText = (m: number) =>
-  m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km`
-
-// Điểm có thể mang tên (chọn từ danh sách địa danh hoặc từ case): ô điểm đi/đến hiện tên thay cho toạ độ.
-type Pt = LatLon & { name?: string }
-const fmt = (p: Pt | null) => (p ? (p.name ?? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`) : '—')
-const latLon = (p: LatLon): LatLon => ({ lat: p.lat, lon: p.lon })   // không gửi tên lên API
-const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i])
-// Đóng đoạn = cạnh được bấm và cạnh đối của nó (DATA_MODEL 4.2); bỏ trùng, giữ thứ tự để so sánh được.
-const blockedIds = (preset: number[], segs: RouteSegment[]) =>
-  [...new Set([...preset, ...segs.flatMap((s) => (s.twinId === null ? [s.edgeId] : [s.edgeId, s.twinId]))])]
 // Đoạn đóng để vẽ: cạnh đóng trong response (gồm cả cạnh đóng sẵn của case, QA-3) cộng các đoạn vừa bấm mà
 // response chưa có, để nét đỏ hiện ngay khi bấm, không chờ request về (review #135).
 const closedToDraw = (fromRes: BlockedEdge[] | undefined, clicked: RouteSegment[]): RouteSegment[] => {
@@ -109,11 +58,7 @@ export default function App() {
     setMapReady((n) => n + 1)
   }, [])
 
-  const [server, setServer] = useState<{ text: string; ok: boolean | null }>({ text: 'Đang kiểm tra server…', ok: null })
-  const [datasetId, setDatasetId] = useState<string | null>(null)
-  const [dataArea, setDataArea] = useState<BBox | null>(null)   // viền vùng có dữ liệu (PM-7, UX-3)
-  const [scenarios, setScenarios] = useState<Scenario[]>([BASELINE])
-  const [scenarioNote, setScenarioNote] = useState<string | null>(null)
+  const { server, datasetId, dataArea, scenarios, scenarioNote, checkServer, markServerUp } = useServerStatus()
   const [scenarioId, setScenarioId] = useState('baseline')
   const [mode, setMode] = useState<Mode>('route')
   const [caseId, setCaseId] = useState('')
@@ -190,61 +135,6 @@ export default function App() {
   const carriedRoute = useRef<Run<RouteResponse> | null>(null)
   const carriedTour = useRef<Run<TourResponse> | null>(null)
 
-  // Kiểm lúc mở trang và mỗi khi một request lỗi, để badge không báo "sẵn sàng" khi backend đã tắt.
-  const checkServer = useCallback(() => {
-    getHealth()
-      .then((h) => setServer({ text: h.dataset_loaded ? `Server sẵn sàng · ${h.dataset_id ?? ''}` : 'Server chạy, chưa nạp dataset', ok: h.dataset_loaded }))
-      .catch(() => setServer({ text: 'Không kết nối được server', ok: false }))
-  }, [])
-  const loadDataset = useCallback(() => {
-    getDataset()
-      .then((d) => {
-        if (d === null) {
-          setScenarioNote('API chưa có /api/dataset (T51); chỉ có kịch bản cơ sở.')
-          return
-        }
-        setScenarioNote(null)
-        setDatasetId(d.dataset_id)
-        if (d.scenarios.length) setScenarios(d.scenarios)
-        setDataArea(d.bbox ?? null)
-      })
-      .catch((e: Error) => setScenarioNote(`Không đọc được danh sách kịch bản: ${e.message}`))
-  }, [])
-  // Request thành công sau khi backend bật lại (kể cả khi mở trang lúc backend còn tắt): đưa badge về
-  // "sẵn sàng" và đọc lại danh sách kịch bản, không cần tải lại trang.
-  const serverOk = useRef(server.ok)
-  serverOk.current = server.ok
-  const markServerUp = useCallback(() => {
-    if (serverOk.current === true) return
-    checkServer()
-    loadDataset()
-  }, [checkServer, loadDataset])
-
-  useEffect(() => {
-    checkServer()
-    loadDataset()
-  }, [checkServer, loadDataset])
-
-  // Badge server tự cập nhật (review 14/11 đợt 3, QA-7): trước đây chỉ kiểm lúc mở trang và khi request lỗi, nên
-  // backend tắt mà badge vẫn "sẵn sàng" tới lần bấm sau. Kiểm mỗi 10 s và khi quay lại cửa sổ; lên lại thì đọc
-  // lại danh sách kịch bản như markServerUp.
-  useEffect(() => {
-    const tick = () => {
-      getHealth()
-        .then((h) => {
-          if (h.dataset_loaded && serverOk.current !== true) loadDataset()
-          setServer({ text: h.dataset_loaded ? `Server sẵn sàng · ${h.dataset_id ?? ''}` : 'Server chạy, chưa nạp dataset', ok: h.dataset_loaded })
-        })
-        .catch(() => setServer({ text: 'Không kết nối được server', ok: false }))
-    }
-    const id = window.setInterval(tick, 10_000)
-    window.addEventListener('focus', tick)
-    return () => {
-      window.clearInterval(id)
-      window.removeEventListener('focus', tick)
-    }
-  }, [loadDataset])
-
   // --- Gọi API ---
 
   useEffect(() => {
@@ -307,10 +197,8 @@ export default function App() {
         if (ctl.signal.aborted) return
         pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
         setTour(null)
-        // API gọi điểm bằng id nội bộ ('p2', 'depot'); đổi sang tên người dùng thấy trên marker (QA-13).
-        const names: Record<string, string> = Object.fromEntries(tourQuery.stops.map((s) => [s.id, s.label]))
-        names.depot = 'kho'
-        const msg = e.message.replace(/'([\w-]+)'/g, (m, id: string) => (id in names ? `"${names[id]}"` : m))
+        // API gọi điểm bằng id nội bộ ('p2', 'depot'); đổi sang tên trên marker (QA-13).
+        const msg = renameIds(e.message, tourQuery.stops)
         setErrorState({ mode: 'tour', text: `Lỗi: ${msg}` })
         checkServer()
       })
@@ -351,14 +239,14 @@ export default function App() {
 
   // Đóng/mở đoạn khi đang có kết quả thì tìm lại ngay với danh sách cạnh đóng mới.
   useEffect(() => {
-    setRouteQuery((q) => (q && !sameIds(q.blocked, blocked) ? { ...q, blocked, n: q.n + 1 } : q))
+    setRouteQuery((q) => (q && !sameIdList(q.blocked, blocked) ? { ...q, blocked, n: q.n + 1 } : q))
   }, [blocked])
 
   // R1 C5: tour cũng vậy. Đóng thêm đoạn thì gửi kèm thứ tự đang xem lúc bấm (giữ thứ tự cũ); mở lại hết thì
   // lập lại tour ban đầu, không còn phương án giữ thứ tự cũ.
   useEffect(() => {
     setTourQuery((q) => {
-      if (!q || sameIds(q.blocked, tourBlocked)) return q
+      if (!q || sameIdList(q.blocked, tourBlocked)) return q
       const keepOrder = tourBlocked.length ? (keepOrderOnClose.current ?? q.keepOrder) : undefined
       return { ...q, blocked: tourBlocked, keepOrder, n: q.n + 1 }
     })
@@ -471,13 +359,10 @@ export default function App() {
       setCaseId('')
       setNotice(null)
       setError(null)
-      // Lần 1: điểm đi · lần 2: điểm đến · đã đủ hai điểm (chưa tìm) thì bắt đầu lại từ điểm đi.
-      if (!source || target) {
-        resetRoute()
-        setSource(p)
-      } else {
-        setTarget(p)
-      }
+      const next = nextRoutePoint(source, target, p)
+      if (next.restart) resetRoute()
+      setSource(next.source)
+      setTarget(next.target)
       return
     }
     if (tour) {
@@ -486,22 +371,15 @@ export default function App() {
     }
     setCaseId('')
     setNotice(null)
-    // Kiểm giới hạn trước khi đổi gì (QA-12).
-    if (depot && stops.length >= MAX_TOUR_STOPS) {
-      setError(`Tối đa ${MAX_TOUR_STOPS} điểm giao.`)
-      return
-    }
-    // Chọn lại đúng một điểm đã có (thường là cùng địa danh) thì chặn ngay, thay vì để tới Lập tour mới báo
-    // "trùng node" (góp ý #145). Điểm chọn từ danh sách có toạ độ node chính xác nên so bằng toạ độ.
-    const same = [...(depot ? [depot] : []), ...stops]
-      .find((q) => Math.abs(q.lat - p.lat) < 1e-7 && Math.abs(q.lon - p.lon) < 1e-7)
-    if (same) {
-      setError(`"${same.label}" đã có trong tour.`)
+    // Giới hạn số điểm (QA-12) và chặn trùng (góp ý #145) kiểm trước khi đổi gì; xem addTourPoint.
+    const added = addTourPoint(depot, stops, p, MAX_TOUR_STOPS)
+    if (added.kind === 'error') {
+      setError(added.text)
       return
     }
     resetTour()
-    if (!depot) setDepot({ ...latLon(p), id: 'depot', label: p.name ?? 'Kho' })
-    else setStops([...stops, { ...latLon(p), id: `p${stops.length + 1}`, label: p.name ?? `Điểm ${stops.length + 1}` }])
+    if (added.kind === 'depot') setDepot(added.depot)
+    else setStops(added.stops)
   }
   const placePointRef = useRef(placePoint)
   placePointRef.current = placePoint
@@ -538,8 +416,9 @@ export default function App() {
     setCaseId('')
     setNotice(null)
     resetTour()
-    if (stops.length) setStops(stops.slice(0, -1))
-    else setDepot(null)
+    const left = removeLastTourPoint(depot, stops)
+    setDepot(left.depot)
+    setStops(left.stops)
   }
 
   const findRoute = () => {
