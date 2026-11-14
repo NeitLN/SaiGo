@@ -19,7 +19,7 @@ import {
   BASELINE, MAX_TOUR_STOPS, getDataset, getHealth, getSnap, postRoute, postTour, type BBox,
   type BlockedEdge, type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
 } from './api'
-import { DEMO_CASES, DEMO_DATASET_ID } from './cases'
+import { DEMO_CASES, DEMO_DATASET_ID, NAMED_PLACES } from './cases'
 import { toLatLngs, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
@@ -64,7 +64,10 @@ function traceLegend(r: RouteResponse): string {
 const distanceText = (m: number) =>
   m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km`
 
-const fmt = (p: LatLon | null) => (p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—')
+// Điểm có thể mang tên (chọn từ danh sách địa danh hoặc từ case): ô điểm đi/đến hiện tên thay cho toạ độ.
+type Pt = LatLon & { name?: string }
+const fmt = (p: Pt | null) => (p ? (p.name ?? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`) : '—')
+const latLon = (p: LatLon): LatLon => ({ lat: p.lat, lon: p.lon })   // không gửi tên lên API
 const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i])
 // Đóng đoạn = cạnh được bấm và cạnh đối của nó (DATA_MODEL 4.2); bỏ trùng, giữ thứ tự để so sánh được.
 const blockedIds = (preset: number[], segs: RouteSegment[]) =>
@@ -104,8 +107,8 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null)
 
   // Tìm đường hai điểm
-  const [source, setSource] = useState<LatLon | null>(null)
-  const [target, setTarget] = useState<LatLon | null>(null)
+  const [source, setSource] = useState<Pt | null>(null)
+  const [target, setTarget] = useState<Pt | null>(null)
   const [closed, setClosed] = useState<RouteSegment[]>([])          // đoạn người dùng bấm đóng (T54)
   const [caseBlocked, setCaseBlocked] = useState<number[]>([])      // cạnh đóng sẵn của case demo
   const [routeQuery, setRouteQuery] = useState<RouteQuery | null>(null)
@@ -197,7 +200,7 @@ export default function App() {
     setBusy(true)
     setError(null)
     postRoute({
-      source: routeQuery.source, target: routeQuery.target, algorithms: ['dijkstra', 'astar'],
+      source: latLon(routeQuery.source), target: latLon(routeQuery.target), algorithms: ['dijkstra', 'astar'],
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked,
     }, ctl.signal)
       .then((res) => {
@@ -269,7 +272,7 @@ export default function App() {
     setTrace(null)   // bỏ chấm của truy vấn cũ ngay, không để hiện lẫn tới khi trace mới về (review #139)
     const ctl = new AbortController()
     postRoute({
-      source: routeQuery.source, target: routeQuery.target, algorithms: ['dijkstra', 'astar'],
+      source: latLon(routeQuery.source), target: latLon(routeQuery.target), algorithms: ['dijkstra', 'astar'],
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked, trace_limit: TRACE_LIMIT,
     }, ctl.signal)
       .then(setTrace)
@@ -395,10 +398,10 @@ export default function App() {
 
   // Đang hiện kết quả thì cú bấm lên bản đồ không xoá gì (QA-1): một cú bấm trượt khỏi tuyến trong lúc demo
   // từng xoá cả tuyến lẫn các đoạn đã đóng. Muốn chọn lại thì bấm Xóa.
-  const placePoint = (p: LatLon) => {
+  const placePoint = (p: Pt) => {
     if (mode === 'route') {
       if (route) {
-        setNotice('Đang hiện kết quả nên cú bấm lên bản đồ được bỏ qua. Bấm Xóa để chọn điểm mới.')
+        setNotice('Đang hiện kết quả nên điểm mới không được đặt. Bấm Xóa để chọn điểm mới.')
         return
       }
       setCaseId('')
@@ -414,7 +417,7 @@ export default function App() {
       return
     }
     if (tour) {
-      setNotice('Đang hiện tour nên cú bấm lên bản đồ được bỏ qua. Bấm Xóa để lập tour mới.')
+      setNotice('Đang hiện tour nên điểm mới không được thêm. Bấm Xóa để lập tour mới.')
       return
     }
     setCaseId('')
@@ -424,9 +427,17 @@ export default function App() {
       setError(`Tối đa ${MAX_TOUR_STOPS} điểm giao.`)
       return
     }
+    // Chọn lại đúng một điểm đã có (thường là cùng địa danh) thì chặn ngay, thay vì để tới Lập tour mới báo
+    // "trùng node" (góp ý #145). Điểm chọn từ danh sách có toạ độ node chính xác nên so bằng toạ độ.
+    const same = [...(depot ? [depot] : []), ...stops]
+      .find((q) => Math.abs(q.lat - p.lat) < 1e-7 && Math.abs(q.lon - p.lon) < 1e-7)
+    if (same) {
+      setError(`"${same.label}" đã có trong tour.`)
+      return
+    }
     resetTour()
-    if (!depot) setDepot({ ...p, id: 'depot', label: 'Kho' })
-    else setStops([...stops, { ...p, id: `p${stops.length + 1}`, label: `Điểm ${stops.length + 1}` }])
+    if (!depot) setDepot({ ...latLon(p), id: 'depot', label: p.name ?? 'Kho' })
+    else setStops([...stops, { ...latLon(p), id: `p${stops.length + 1}`, label: p.name ?? `Điểm ${stops.length + 1}` }])
   }
   const placePointRef = useRef(placePoint)
   placePointRef.current = placePoint
@@ -438,7 +449,7 @@ export default function App() {
   // Tăng khi nạp case, đổi chế độ, Xóa hay Bỏ điểm cuối: kết quả kiểm về sau những thao tác đó bị bỏ, để điểm
   // không bị đặt vào case vừa nạp hay sang chế độ kia (góp ý #142).
   const clickGen = useRef(0)
-  const onMapClick = (p: LatLon) => {
+  const onMapClick = (p: Pt) => {
     if ((mode === 'route' && route) || (mode === 'tour' && tour)) {
       placePoint(p)            // chỉ hiện gợi ý "Bấm Xóa", không đặt gì
       return
@@ -623,6 +634,20 @@ export default function App() {
       />
       {scenarioNote && <Text type="supporting">{scenarioNote}</Text>}
       <Text type="body">{hint}</Text>
+      {/* Đặt điểm từ danh sách địa danh (đợt 3, C-b): như một cú bấm bản đồ tại địa danh đó, đi qua cùng
+          bước kiểm; dùng được bằng bàn phím. Ô luôn về trống sau khi chọn để chọn tiếp được. */}
+      <Selector
+        label={mode === 'route' ? 'Đặt điểm từ địa danh' : 'Thêm kho / điểm giao từ địa danh'}
+        placeholder="Chọn địa danh có tên"
+        options={NAMED_PLACES.map((p) => ({ value: p.name, label: p.name }))}
+        value=""
+        onChange={(v) => {
+          const place = NAMED_PLACES.find((p) => p.name === v)
+          if (place) onMapClick(place)
+        }}
+        isDisabled={caseDisabled}
+        disabledMessage={`Địa danh lấy toạ độ trên đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
+      />
       {mode === 'route' ? (
         <VStack gap={2}>
           <Text type="supporting">Điểm đi: {fmt(source)}</Text>
