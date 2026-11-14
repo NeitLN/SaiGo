@@ -60,6 +60,10 @@ function traceLegend(r: RouteResponse): string {
   return `Đang vẽ ${d.expanded.toLocaleString('vi-VN')} node Dijkstra và ${a.expanded.toLocaleString('vi-VN')} node A* đã mở rộng.${cut}`
 }
 
+// Khoảng cách trong thông báo: dưới 1 km ghi mét, từ 1 km ghi km một chữ số (góp ý #142: tránh "280402 m").
+const distanceText = (m: number) =>
+  m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km`
+
 const fmt = (p: LatLon | null) => (p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—')
 const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i])
 // Đóng đoạn = cạnh được bấm và cạnh đối của nó (DATA_MODEL 4.2); bỏ trùng, giữ thứ tự để so sánh được.
@@ -414,6 +418,9 @@ export default function App() {
   // khoảng cách, thay vì được đặt rồi làm hỏng cả tuyến/tour lúc gửi (trước đây lỗi 'p2' sau khi đặt 12 điểm).
   // Mỗi lần chỉ kiểm một cú bấm; không kiểm được (server lỗi) thì vẫn đặt, /api/route, /api/tour sẽ báo như cũ.
   const checking = useRef(false)
+  // Tăng khi nạp case, đổi chế độ, Xóa hay Bỏ điểm cuối: kết quả kiểm về sau những thao tác đó bị bỏ, để điểm
+  // không bị đặt vào case vừa nạp hay sang chế độ kia (góp ý #142).
+  const clickGen = useRef(0)
   const onMapClick = (p: LatLon) => {
     if ((mode === 'route' && route) || (mode === 'tour' && tour)) {
       placePoint(p)            // chỉ hiện gợi ý "Bấm Xóa", không đặt gì
@@ -421,18 +428,21 @@ export default function App() {
     }
     if (checking.current) return
     checking.current = true
+    const gen = clickGen.current
     getSnap(p)
       .then((s) => {
+        if (gen !== clickGen.current) return
         if (s.ok) placePointRef.current(p)
-        else setError(`Điểm vừa bấm cách đường ${Math.round(s.snap_distance_m)} m, quá ngưỡng ${s.max_m} m nên không được đặt. `
+        else setError(`Điểm vừa bấm cách đường ${distanceText(s.snap_distance_m)}, quá ngưỡng ${s.max_m} m nên không được đặt. `
           + 'Hãy bấm gần đường hơn, trong viền vùng có dữ liệu.')
       })
-      .catch(() => placePointRef.current(p))
+      .catch(() => { if (gen === clickGen.current) placePointRef.current(p) })
       .finally(() => { checking.current = false })
   }
 
   // Bỏ điểm cuối (PM-7, U-2): bỏ điểm giao vừa thêm, hết điểm giao thì bỏ kho; không phải xoá cả tour làm lại.
   const removeLastPoint = () => {
+    clickGen.current += 1
     setCaseId('')
     setNotice(null)
     resetTour()
@@ -464,6 +474,7 @@ export default function App() {
   }
 
   const changeMode = (v: Mode) => {
+    clickGen.current += 1
     setMode(v)
     setError(null)
     setNotice(null)
@@ -472,6 +483,7 @@ export default function App() {
   }
 
   const clearAll = () => {
+    clickGen.current += 1
     setNotice(null)
     setCaseId('')
     if (mode === 'route') {
@@ -504,6 +516,7 @@ export default function App() {
   }
 
   const loadCase = (id: string) => {
+    clickGen.current += 1
     const c = DEMO_CASES.find((x) => x.id === id)
     if (!c) return
     setCaseId(id)
