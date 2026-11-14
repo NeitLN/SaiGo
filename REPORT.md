@@ -1,12 +1,12 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 05:41 14/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 15:04 14/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=43521329921)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=43574008057)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
-- **Đã đóng:** 115 giờ — có bằng chứng (PR/commit) 115 giờ · **Còn lại:** 21 giờ, 6 task mở
-- **Đường lý tưởng hôm nay:** 0 giờ → **chậm** hơn kế hoạch 21.0 giờ
+- **Đã đóng:** 117 giờ — có bằng chứng (PR/commit) 115 giờ, **đóng tay chưa có PR 2 giờ** · **Còn lại:** 19 giờ, 5 task mở
+- **Đường lý tưởng hôm nay:** 0 giờ → **chậm** hơn kế hoạch 19.0 giờ
 - Mốc: cổng G1 05/11 · final ready 12/11 · thuyết trình 19/11 · nộp 22/11
 
 ### Theo tuần
@@ -16,7 +16,7 @@ _Tự động cập nhật 05:41 14/11/2026 (giờ VN) bởi workflow `tracking.
 | Tuần 1 · 19–25/10 | 27 | 10 | 3 | 129 | 2 | 3 |
 | Tuần 2 · 26/10–01/11 | 30 | 69 | 24 | 57 | 36 | 55 |
 | Tuần 3 · 02–08/11 | 62 | 4 | 2 | 53 | 4 | 3 |
-| Tuần 4 · 09–15/11 | 17 | 32 | 11 | 21 | 25 | 31 |
+| Tuần 4 · 09–15/11 | 17 | 34 | 12 | 19 | 28 | 34 |
 
 ### Theo thành viên
 
@@ -24,11 +24,12 @@ _Tự động cập nhật 05:41 14/11/2026 (giờ VN) bởi workflow `tracking.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Bảo (@dobaovlu) | 11.0 | 11.0 | 5 | 0 | 0 | 5 | 15 |
 | Duy Anh (@anh7032) | 31.5 | 31.5 | 11 | 0 | 0 | 25 | 16 |
-| Minh (@Jayson135724) | 21.5 | 21.5 | 9 | 0 | 0 | 10 | 53 |
-| Tiến (@NeitLN) | 72.0 | 51.0 | 18 | 0 | 6 | 27 | 8 |
+| Minh (@Jayson135724) | 21.5 | 21.5 | 9 | 0 | 0 | 10 | 56 |
+| Tiến (@NeitLN) | 72.0 | 51.0 | 18 | 1 | 5 | 30 | 8 |
 
 ### Đóng trong 7 ngày qua
 
+- 14/11 · #38 T81 · Đồng bộ tài liệu (2 h, **đóng tay, chưa có PR**)
 - 14/11 · #36 T74 · Benchmark tour (3 h, qua commit)
 - 14/11 · #35 T73 · UI tour tối giản (3 h, qua PR)
 - 14/11 · #28 T63 · Thí nghiệm ùn tắc và đóng đường (3 h, qua commit)
