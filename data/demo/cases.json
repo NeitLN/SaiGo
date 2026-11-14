@@ -58,6 +58,26 @@
       }
     },
     {
+      "id": "kho-5-diem-dong-ben-bach-dang",
+      "label": "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng",
+      "mode": "tour",
+      "demo_steps": [10],
+      "_comment": "Review UI 14/11 (PM-3): bước 10 dựng sẵn, khỏi phải thu nhỏ bản đồ rồi bấm trúng cạnh 1666. Cùng kho và 5 điểm của kho-5-diem; đóng cạnh 1666 (một chiều); keep_order là thứ tự tour NN + 2-opt trước khi đóng (expected.baseline.nn_2opt_order của kho-5-diem), nên API trả cả 'Giữ thứ tự cũ' lẫn phương án sắp lại. Số như expected.close_edge_1666 của kho-5-diem.",
+      "depot": {"name": "Chợ Bến Thành", "lat": 10.772193, "lon": 106.697556},
+      "stops": [
+        {"name": "Nhà thờ Đức Bà", "lat": 10.779612, "lon": 106.698826},
+        {"name": "Nhà hát Thành phố", "lat": 10.776389, "lon": 106.702729},
+        {"name": "Bảo tàng Mỹ thuật", "lat": 10.76942, "lon": 106.699924},
+        {"name": "Bến Bạch Đằng", "lat": 10.774716, "lon": 106.706182},
+        {"name": "Công viên Tao Đàn", "lat": 10.777484, "lon": 106.693042}
+      ],
+      "scenario_id": "baseline",
+      "blocked_edge_ids": [1666],
+      "keep_order": ["p1", "p2", "p4", "p3", "p5"],
+      "expected": {"kept_order": 962.7, "chosen": "nearest_neighbor_2opt", "nearest_neighbor_2opt": 692.5,
+                   "nn_2opt_order": ["p5", "p1", "p2", "p4", "p3"]}
+    },
+    {
       "id": "tour-khong-kha-thi",
       "label": "Tour không còn khả thi",
       "mode": "tour",

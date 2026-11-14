@@ -412,8 +412,8 @@ export default function App() {
       setStops(st)
       setTourClosed([])
       setTourCaseBlocked(bl)
-      keepOrderOnClose.current = undefined
-      setTourQuery({ depot: d, stops: st, scenarioId: sid, blocked: bl, n: Date.now() })
+      keepOrderOnClose.current = c.keep_order
+      setTourQuery({ depot: d, stops: st, scenarioId: sid, blocked: bl, keepOrder: c.keep_order, n: Date.now() })
     }
   }
 
