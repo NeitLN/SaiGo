@@ -1,7 +1,7 @@
 # Thuật toán
 
-Công thức, pseudocode và điều kiện đúng cho Dijkstra, A*, Nearest Neighbor, 2-opt.
-Đặc tả gốc: [TOPIC.md](TOPIC.md) mục 9–10. Cập nhật tài liệu này khi từng module được cài và kiểm thử.
+Chạy tay Dijkstra và A* trên đồ thị mẫu, rồi tóm tắt từng thuật toán đã cài trong `backend/app/algorithms/`: ý tưởng, điều kiện đúng, độ phức tạp, nơi đo. Gồm cả ba phần mở rộng ngoài proposal (D17): Dijkstra hai chiều, ALT, Or-opt.
+Đặc tả gốc: [TOPIC.md](TOPIC.md) mục 9–10; mô hình chi phí và điều kiện heuristic: [DATA_MODEL.md](DATA_MODEL.md) mục 5–6. Số đo: [EXPERIMENTS.md](EXPERIMENTS.md).
 
 ## Chạy tay trên đồ thị mẫu
 
@@ -212,3 +212,61 @@ Kết quả: **`no_path`**, `expanded` = 5. Khi không có đường, A* cũng p
 | 6 | Đóng A→T và B→T | — | `no_path` | 5 | 5 |
 
 Đối chiếu với DATA_MODEL mục 7: chi phí, tuyến và số node mở rộng khớp ở mọi ô bảng đó đã điền. Bốn ô bảng đó để trống được điền thêm ở đây: tình huống 2 (Dijkstra 2, A* 2) và tình huống 4 (Dijkstra 5, A* 4).
+
+## Thuật toán đã cài
+
+Mọi thuật toán tìm đường chạy trên **snapshot** (trọng số cạnh = thời gian cơ sở × α của kịch bản, cạnh đóng = vô cực) và trả cùng kiểu `SearchResult` với cùng bộ đếm (`expanded`, `pushes`, `relaxations`, `max_frontier`, `trace`), nên so được trực tiếp. Đúng = cùng chi phí với Dijkstra; mọi thuật toán đều được kiểm như vậy trên `mini.json`, đồ thị ngẫu nhiên có cạnh song song, và đồ thị demo dưới mọi kịch bản và khi đóng đường.
+
+### Tìm đường: Dijkstra và A* (lõi của proposal)
+
+| | Dijkstra (`dijkstra.py`) | A* (`astar.py`, `heuristics.py`) |
+|---|---|---|
+| Thứ tự lấy khỏi heap | `g(n)` | `f(n) = g(n) + h(n)`, `h(n) = c · haversine(n, đích) / v_max` |
+| Điều kiện đúng | trọng số không âm | `h` admissible; ở đây còn consistent nhờ hệ số `c = geo_scale` (DATA_MODEL mục 5.1–5.2), nên không node nào phải mở lại (`reopened = 0` ở mọi truy vấn E2) |
+| Độ phức tạp (heap nhị phân) | O((V + E) log V) | cùng cận trên; lợi chỉ ở số node mở thực tế |
+| Kiểm | NetworkX trên 1.000 truy vấn đồ thị ngẫu nhiên, có cả cạnh đóng (`test_oracle_networkx.py`); 200 cặp đồ thị thật | như Dijkstra; thêm: `h ≡ 0` thì A* mở y hệt Dijkstra |
+| Số đo | E2, E3, E4 | E2, E3, E4 |
+
+Ùn tắc chỉ nhân chi phí với α ≥ 1 và đóng đường làm chi phí thành vô cực, nên `h` tính trên `v_max` cơ sở vẫn không vượt chi phí thật: A* đúng trên mọi snapshot. Cái giá là `h` lỏng hơn khi ùn tắc (ví dụ A* — 4 ở trên). Trên đồ thị thật, E4 thấy r = expanded A* / expanded Dijkstra tăng nhẹ khi ùn tắc; nguyên nhân chưa đo tách.
+
+### Thứ tự giao: NN, 2-opt có hướng, Held–Karp (`tour.py`)
+
+Ma trận chi phí `D[i][j]` là thời gian đi **có hướng** từ điểm i tới điểm j (mỗi hàng là một lần Dijkstra một-nguồn-nhiều-đích), kho là chỉ số 0 cố định ở đầu và cuối. `D` **bất đối xứng** vì đường một chiều.
+
+- **Nearest Neighbor:** từ vị trí hiện tại, chọn điểm chưa giao có `D` nhỏ nhất; hòa thì chọn chỉ số nhỏ hơn. O(n²).
+- **2-opt có hướng:** đảo một đoạn điểm giao, nhận nước đầu tiên làm giảm chi phí hơn `1e-9` s, lặp tới khi không còn nước nào. Đảo đoạn còn đảo chiều các chặng bên trong, nên công thức delta của 2-opt đối xứng **sai** ở đây; code tính lại toàn bộ chi phí tour cho mỗi ứng viên: O(n) mỗi ứng viên, O(n³) mỗi vòng quét. Kết quả là cực trị địa phương, không phải tối ưu.
+- **`choose_tour`:** lấy phương án rẻ nhất trong {thứ tự nhập, NN, NN + 2-opt}; hòa thì giữ phương án đứng trước, nên không bao giờ trả thứ tự tệ hơn thứ tự nhập.
+- **Held–Karp:** quy hoạch động `dp[S][j]` = chi phí nhỏ nhất đi từ kho, thăm đúng tập S, kết thúc ở j. O(2ⁿ · n²) thời gian, O(2ⁿ · n) bộ nhớ; giới hạn 11 điểm kể cả kho. Chỉ dùng làm đối chứng để đo gap (E5) và khi gọi `/api/tour` với `include_optimal`.
+- **Tour sau khi đóng đường (R1):** dựng lại ma trận trên snapshot mới, báo song song "giữ thứ tự cũ" (cùng thứ tự, mỗi chặng tìm đường lại) và "sắp lại" (`choose_tour` lại); nếu có chặng không còn đường thì báo điểm không tới được thay vì vẽ tour thiếu điểm. Số đo: E5b.
+
+Số đo: E5 (gap so với Held–Karp, n = 4–10) và E5b.
+
+### Phần mở rộng (D17)
+
+Ba thuật toán dưới đây không có trong proposal. Chúng được thêm để trả lời câu hỏi "tìm từ hai đầu hoặc dùng heuristic mạnh hơn có giúp không" (E2b) và "có thoát được cực trị địa phương của 2-opt không". Cả ba đều gọi được qua API (`algorithms` của `/api/route` nhận `bidijkstra`, `alt`; `/api/tour` nhận `include_or_opt`), nhưng mặc định của API và giao diện không đổi.
+
+#### Dijkstra hai chiều (`bidijkstra.py`)
+
+- **Ý tưởng:** chạy Dijkstra xuôi từ nguồn trên cạnh ra và ngược từ đích trên cạnh vào (đồ thị có hướng nên phía ngược phải dùng `in_edges`). Mỗi bước mở rộng phía có đỉnh heap nhỏ hơn. Mỗi khi quét một cạnh nối hai phía, cập nhật μ = chi phí tuyến tốt nhất đã gặp (`g_f[u] + w(u,v) + g_b[v]`).
+- **Điều kiện dừng:** `top_f + top_b ≥ μ`. Với trọng số không âm, mọi tuyến chưa thấy phải dài ít nhất `top_f + top_b`, nên μ đã tối ưu. Tuyến dựng lại từ predecessor hai phía quanh cạnh nối tốt nhất.
+- **Bộ đếm:** `expanded` là tổng số node mở ở hai phía; `trace` ghi đúng thứ tự xen kẽ thực tế. `in_edges` dựng một lần cho mỗi đồ thị (như `out_edges` của Dijkstra một chiều) nên so thời gian công bằng.
+- **Không dùng heuristic:** giảm số node nhờ tìm từ hai đầu, không nhờ ước lượng.
+- **Kiểm:** `tests/test_bidijkstra.py` (mọi cặp `mini.json`, mọi kịch bản và cạnh đóng trên đồ thị demo, đồ thị ngẫu nhiên có cạnh song song, `no_path`, thứ tự `trace`); API cảnh báo nếu chi phí khác Dijkstra.
+
+#### ALT: A* với landmark và bất đẳng thức tam giác (`alt.py`)
+
+- **Tiền xử lý:** chọn k = 8 landmark kiểu "farthest point" trên thành phần liên thông mạnh lớn nhất (điểm đầu do seed 20261113 chọn, nên cùng đồ thị cho cùng bộ landmark). Với mỗi landmark L, chạy Dijkstra xuôi và ngược trên **chi phí cơ sở** để có d(L, v) và d(v, L) cho mọi v: 2k lần Dijkstra, bộ nhớ 8 byte × |V| × 2k. Làm một lần cho mỗi đồ thị, không tính vào thời gian truy vấn. E2b đo: 29,7 ms và 0,24 MB (vùng 2 km); 365,9 ms và 1,30 MB (vùng 4,5 km).
+- **Heuristic:** với đích t,
+  `h(v) = max(0, max_L [d(L, t) − d(L, v)], max_L [d(v, L) − d(t, L)])`.
+  Cả hai vế là chặn dưới của d(v, t) theo bất đẳng thức tam giác trên đồ thị có hướng, nên `h` admissible và consistent với chi phí cơ sở.
+- **Vì sao vẫn đúng khi ùn tắc và đóng đường:** snapshot chỉ làm cạnh đắt lên (α ≥ 1, đóng = vô cực), nên khoảng cách cơ sở vẫn là chặn dưới. Consistency cũng giữ: `h(u) ≤ w₀(u,v) + h(v) ≤ w(u,v) + h(v)`. Nếu một kịch bản làm cạnh nào rẻ hơn cơ sở, `ensure_alt_compatible` từ chối truy vấn thay vì trả kết quả sai.
+- **Vòng lặp tìm kiếm:** dùng lại đúng `astar`; ALT chỉ khác hàm `h`. Mỗi lần tính `h` tốn O(k).
+- **Kiểm:** `tests/test_alt.py` (cùng chi phí với Dijkstra ở mọi cặp `mini.json` và trên đồ thị demo dưới mọi kịch bản và cạnh đóng; `h` không vượt khoảng cách thật, so với NetworkX trên mẫu đồ thị demo; `h` consistent trên mọi cạnh của snapshot; từ chối snapshot có cạnh rẻ hơn cơ sở).
+- **Kết quả (E2b):** mở ít node nhất trong bốn thuật toán ở mọi ô, nhưng ở tầng ngắn **chậm hơn** Dijkstra, có thể vì mỗi node tốn O(k) để tính `h` (chưa đo tách). Lợi lớn nhất ở vùng 4,5 km, chuyến dài.
+
+#### Or-opt xen kẽ 2-opt (`tour.py`, `or_opt`)
+
+- **Ý tưởng:** chuyển một đoạn 1–3 điểm giao liên tiếp sang vị trí khác trong tour, thử cả giữ chiều và đảo chiều đoạn. Như 2-opt, nhận nước đầu tiên làm giảm chi phí hơn `1e-9` s và tính lại toàn bộ chi phí (vì ma trận bất đối xứng). Khi Or-opt hết nước thì chạy 2-opt; lặp lại cho tới khi cả hai cùng không cải thiện được, tức tour là cực trị địa phương của cả hai kiểu nước đi.
+- **Vì sao thêm:** ở case demo "Kho + 5 điểm giao", NN + 2-opt kẹt ở tour kém tối ưu 43% (tối ưu là tour NN đi ngược chiều); Or-opt tìm được tối ưu ở case này.
+- **Kiểm:** `tests/test_tour_or_opt.py`. Trên 200 ma trận ngẫu nhiên bất đối xứng (n = 4–9), kết quả luôn là tour hợp lệ, không đắt hơn NN + 2-opt và không rẻ hơn Held–Karp. Mặc định của `/api/tour` không đổi khi không bật `include_or_opt`.
+- **Giới hạn:** chỉ dùng minh họa. Or-opt không nằm trong các phương án đo ở E5, nên không có số đo tổng quát về gap hay thời gian của nó.

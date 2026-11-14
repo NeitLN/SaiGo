@@ -10,6 +10,8 @@
 
 > Tài liệu này phục vụ đăng ký, thuyết trình proposal, phân công và triển khai đồ án. Các mục tiêu, cấu hình và ngưỡng đề xuất cần được xác nhận bằng thực nghiệm. Không sử dụng các ví dụ hoặc ô kết quả chưa đo làm thành tích của nhóm.
 
+> **Cập nhật 14/11:** đây là đặc tả gốc, giữ nguyên để đối chiếu. Những điểm đã đổi khi triển khai (cắt growing trips, giao diện React, thêm ALT / Dijkstra hai chiều / Or-opt, kế hoạch R0–R4, …) ghi ở [PROJECT_BRIEF.md](PROJECT_BRIEF.md) mục 4 (D1–D18); khi hai tài liệu khác nhau thì PROJECT_BRIEF được ưu tiên. Kết quả đo thật ở [EXPERIMENTS.md](EXPERIMENTS.md).
+
 ## Mục lục
 
 1. Tổng quan và ý nghĩa tên SaiGo

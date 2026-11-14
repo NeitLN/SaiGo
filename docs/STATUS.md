@@ -18,12 +18,12 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 - R0 xong (#127, #128).
 - R1 xong (#129): lập lại tour sau khi đóng đường, giữ thứ tự cũ / sắp lại, case "Tour không còn khả thi"; bằng chứng ở [phiếu R1](tasks/R1-tour-closure.md).
 - R2 xong (#130): E5 thêm n = 5, cột p90 và max Gap; E5b tour sau khi đóng đường; Or-opt ghi rõ chỉ minh họa. Phần "Minh chạy lại một bảng trên máy mình" chuyển sang R3 vì cần máy khác.
+- T81 xong (14/11): ALGORITHMS.md có tóm tắt mọi thuật toán đã cài; README có kết quả chính kèm `run_id`; TOPIC.md trỏ sang PROJECT_BRIEF mục 4. #107, #108 đã đóng.
 - R4, phần làm được trên máy này đã xong: bản nháp essay tiếng Anh [essay/essay.md](essay/essay.md) (#131; khoảng 2.640 từ trước phần tham khảo, tức khoảng 10 trang double spaced); slide 15 phút (15 slide, có ghi chú cho người nói, số liệu theo essay; Tiến giữ bản slide, không để trong repo).
 - **Phần còn lại cần người:** điền MSSV ở bìa essay, cả nhóm đọc chéo, dàn trang Word để đếm trang thật; tập demo có bấm giờ và quay video dự phòng (T82); R3: chạy trên máy thứ hai theo README, Minh chạy lại một bảng EXPERIMENTS, kiểm UI-1 ở mạng không chặn tile.
 
 ## Bị chặn / rủi ro
 - UI-1 chưa kiểm được trên máy này; nền dự phòng `/api/network` đã có (T56 R8). Kiểm ở R3 trên mạng khác; chuẩn bị video demo.
-- #107, #108 (đã gộp vào #109) còn mở; cần đóng tay trên GitHub (#97, #104 đã đóng).
 - MVP 08/11 không đạt đúng hạn (PROGRESS mục 1); không ảnh hưởng kế hoạch mới vì không còn hạn nộp.
 
 ## Quyết định
@@ -40,7 +40,6 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 1. Essay: điền MSSV, đọc chéo, dàn trang Word (Times New Roman 12, double spaced, lề 1 inch), đếm trang.
 2. T82: tập kịch bản DEMO ba lần có bấm giờ (≤ 4 phút), quay video dự phòng trên máy tải được tile OSM.
 3. R3 / T80: clone sạch trên máy thứ hai → tải dữ liệu từ Release → kiểm hash → chạy demo theo README; Minh chạy lại một bảng EXPERIMENTS; kiểm UI-1.
-4. Đóng tay #107, #108 (đã gộp vào #109).
 
 ## Bộ kiểm nhanh (chạy đầu mỗi session)
 - `.venv\Scripts\python.exe -m pytest -q` → 14/11 trên main: 429 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; có đồ thị demo thì các test `realdata` khác vẫn chạy)
@@ -56,6 +55,6 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 - Burndown: `python scripts/tracking/burndown.py --out build/tracking`
 
 ## Tài liệu lệch với code / với quyết định
-- README: dòng trạng thái đã cập nhật 14/11; phần phạm vi và kết quả chính viết lại ở R4 cùng essay.
-- `docs/ALGORITHMS.md` chưa có ALT, Dijkstra hai chiều, Or-opt (T81, R4).
+- README: phạm vi và kết quả chính đã cập nhật 14/11, mỗi kết quả kèm `run_id`.
+- `docs/ALGORITHMS.md`: đã có tóm tắt mọi thuật toán đã cài, gồm ALT, Dijkstra hai chiều, Or-opt (T81, 14/11).
 - TOPIC.md là đặc tả gốc 01/10; khi khác PROJECT_BRIEF thì PROJECT_BRIEF được ưu tiên.
