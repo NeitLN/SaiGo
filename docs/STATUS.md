@@ -34,6 +34,7 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 | R1: báo cả "giữ thứ tự cũ" và "sắp lại" trên cùng snapshot; cho đóng đoạn trên tour; thêm case "tour không còn khả thi" | **Đã chốt** | Tiến ủy quyền, 14/11 (ROADMAP mục 7) |
 | Bỏ khỏi DEMO: nhật ký snapshot, so Dijkstra/A* trên một chặng của tour | **Đã chốt** | D18 |
 | Giữ ALT, Dijkstra hai chiều, Or-opt làm phần mở rộng | **Đã chốt** | D17 |
+| Lớp node đã mở rộng: tĩnh, có công tắc, mặc định tắt, trace bằng request riêng; không animation | **Đã chốt** | Review UI 14/11 (6/6 vai đồng ý) |
 | Giao diện React + Astryx | **Đã merge** (#103) | D15 |
 | Ngưỡng snap 150 m | Giả định hiện hành, đã dùng trong mọi thí nghiệm | — |
 

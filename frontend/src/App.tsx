@@ -11,6 +11,7 @@ import { Layout, LayoutContent, LayoutHeader, LayoutPanel } from '@astryxdesign/
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Spinner } from '@astryxdesign/core/Spinner'
+import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import {
@@ -44,6 +45,18 @@ function nextPrevious<T>(prev: Run<T> | null, next: Run<T>, pts: (r: T) => Recor
   if (!prev || !samePoints(pts(prev.res), pts(next.res))) return null
   if (prev.scenarioId === next.scenarioId && sameIdSet(prev.blocked, next.blocked)) return kept
   return prev
+}
+
+// Đủ cho mọi truy vấn trên vùng demo (lớn nhất 1.762 node khi không còn đường); backend giới hạn 5.000.
+const TRACE_LIMIT = 5000
+
+/** Chú thích lớp node đã mở rộng: số node của chính lần tìm có trace (bằng số ở bảng vì cùng tham số). */
+function traceLegend(r: RouteResponse): string {
+  const d = r.results.dijkstra
+  const a = r.results.astar
+  if (!d || !a) return ''
+  const cut = d.trace_truncated || a.trace_truncated ? ' Chỉ vẽ ' + TRACE_LIMIT.toLocaleString('vi-VN') + ' node đầu.' : ''
+  return `Đang vẽ ${d.expanded.toLocaleString('vi-VN')} node Dijkstra và ${a.expanded.toLocaleString('vi-VN')} node A* đã mở rộng.${cut}`
 }
 
 const fmt = (p: LatLon | null) => (p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '—')
@@ -89,6 +102,10 @@ export default function App() {
   // hiện có, nên nạp lại danh sách không làm gọi lại /api/route (review #103).
   const [route, setRoute] = useState<Run<RouteResponse> | null>(null)
   const [prevRoute, setPrevRoute] = useState<Run<RouteResponse> | null>(null)   // mốc so trước/sau
+  // Lớp node đã mở rộng (review 14/11 đợt 2): tắt mặc định. Trace lấy bằng request riêng có trace_limit, vì ghi
+  // trace nằm trong vòng lặp đang đo giờ: lấy chung với request chính thì 'Thời gian tính toán' bị đội lên.
+  const [showTrace, setShowTrace] = useState(false)
+  const [trace, setTrace] = useState<RouteResponse | null>(null)
 
   // Tour (T73)
   const [depot, setDepot] = useState<TourPoint | null>(null)
@@ -232,6 +249,22 @@ export default function App() {
     }
   }, [tourQuery, checkServer, markServerUp])
 
+  useEffect(() => {
+    if (!showTrace || !routeQuery || mode !== 'route') {
+      setTrace(null)
+      return
+    }
+    setTrace(null)   // bỏ chấm của truy vấn cũ ngay, không để hiện lẫn tới khi trace mới về (review #139)
+    const ctl = new AbortController()
+    postRoute({
+      source: routeQuery.source, target: routeQuery.target, algorithms: ['dijkstra', 'astar'],
+      scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked, trace_limit: TRACE_LIMIT,
+    }, ctl.signal)
+      .then(setTrace)
+      .catch(() => { if (!ctl.signal.aborted) setTrace(null) })   // lớp phụ: lỗi thì chỉ không vẽ chấm
+    return () => ctl.abort()
+  }, [showTrace, routeQuery, mode])
+
   // Đóng/mở đoạn khi đang có kết quả thì tìm lại ngay với danh sách cạnh đóng mới.
   useEffect(() => {
     setRouteQuery((q) => (q && !sameIds(q.blocked, blocked) ? { ...q, blocked, n: q.n + 1 } : q))
@@ -271,6 +304,7 @@ export default function App() {
       const now = route?.res.results.dijkstra
       const moved = before?.status === 'ok' && (now?.status !== 'ok' || before.edge_ids?.join() !== now.edge_ids?.join())
       layers.setPrevious(route && moved ? before.geometry.coordinates : null)
+      layers.setTrace(trace?.results.dijkstra?.trace ?? null, trace?.results.astar?.trace ?? null)
       if (route) {
         layers.setSnapped(route.res)
         layers.drawRoutes(route.res, closeSegment)
@@ -286,6 +320,7 @@ export default function App() {
       }
     } else {
       layers.setPrevious(null)
+      layers.setTrace(null, null)
       layers.setClosed(closedToDraw(tour?.blocked_edges, tourClosed))
       const cand = tour && tourMethod ? tour.candidates[tourMethod] : undefined
       const broken = new Set(tour?.status === 'infeasible_under_model' ? unreachableGroups(tour.unreachable).map((g) => g.id) : [])
@@ -298,7 +333,7 @@ export default function App() {
         layers.fitTo(toLatLngs([...pts, ...(cand?.geometry.coordinates ?? [])]))
       }
     }
-  }, [mapReady, mode, scenario, route, prevRoute, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
+  }, [mapReady, mode, scenario, route, prevRoute, trace, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
     tourClosed, closeTourSegment])
 
   // --- Thao tác ---
@@ -527,6 +562,9 @@ export default function App() {
               <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
             </HStack>
           )}
+          <Switch label="Hiện node đã mở rộng" value={showTrace} onChange={setShowTrace}
+            description="Chấm xanh: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng." />
+          {showTrace && trace && <Text type="supporting">{traceLegend(trace)}</Text>}
         </VStack>
       ) : (
         <VStack gap={2}>
