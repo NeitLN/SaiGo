@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.algorithms.heuristics import geo_scale
 from app.api.routes import router
@@ -69,4 +70,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SaiGo API", version="0.1.0", lifespan=lifespan)
+# Nén response từ 1 KB khi client nhận gzip (review UI 14/11 đợt 3, FE-9): /api/network ~283 KB không nén.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.include_router(router, prefix="/api")

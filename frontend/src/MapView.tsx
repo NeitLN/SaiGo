@@ -17,7 +17,9 @@ export default function MapView({ onReady, onClick }: {
   onClickRef.current = onClick
 
   useEffect(() => {
-    const map = L.map(el.current!).setView(CENTER, 16)
+    // Nút zoom ghi tiếng Việt (trang là lang=vi; review 14/11 đợt 3, FE-4).
+    const map = L.map(el.current!, { zoomControl: false }).setView(CENTER, 16)
+    L.control.zoom({ zoomInTitle: 'Phóng to', zoomOutTitle: 'Thu nhỏ' }).addTo(map)
     // Nền tile OSM chỉ để xem tương tác, không tải hàng loạt (docs/ARCHITECTURE.md mục 6).
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -32,22 +34,30 @@ export default function MapView({ onReady, onClick }: {
     let loaded = 0
     let failed = 0
     let fallback = false
+    let retry: number | undefined
+    let disposed = false   // bản đồ đã gỡ: request nền đang chạy về sau thì bỏ, không hẹn thử lại (góp ý #147)
     tiles.on('tileload', () => { loaded += 1 })
     tiles.on('tileerror', () => {
       failed += 1
       if (fallback || loaded > 0 || failed < 3) return
       fallback = true
-      getNetwork()
+      const load = () => getNetwork()
         .then((n) => {
+          if (disposed) return
           layers.setNetwork(n.lines)
           map.attributionControl.addAttribution('Không tải được nền OSM: đang vẽ mạng đường từ dữ liệu')
         })
-        .catch(() => { fallback = false }) // backend chưa sẵn sàng: thử lại ở lần lỗi tile sau
+        // Backend chưa sẵn sàng: tự thử lại sau 3 s, không đợi tới lần lỗi tile sau (lúc đó bản đồ có thể đã nạp
+        // hết tile lỗi và không còn lỗi mới, nên nền cứ xám trống; review 14/11 đợt 3, QA-15).
+        .catch(() => { if (!disposed) retry = window.setTimeout(load, 3000) })
+      load()
     })
     // Khung bản đồ đổi kích thước theo bố cục: báo Leaflet tính lại để không bị ô trắng.
     const resize = new ResizeObserver(() => map.invalidateSize())
     resize.observe(el.current!)
     return () => {
+      disposed = true
+      window.clearTimeout(retry)
       resize.disconnect()
       map.remove()
     }

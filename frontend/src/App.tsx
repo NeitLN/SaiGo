@@ -14,7 +14,7 @@ import { Spinner } from '@astryxdesign/core/Spinner'
 import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
-import { useMediaQuery } from '@astryxdesign/core/hooks'
+import { useAnnounce, useMediaQuery } from '@astryxdesign/core/hooks'
 import {
   BASELINE, MAX_TOUR_STOPS, getDataset, getHealth, getSnap, postRoute, postTour, type BBox,
   type BlockedEdge, type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
@@ -46,6 +46,22 @@ function nextPrevious<T>(prev: Run<T> | null, next: Run<T>, pts: (r: T) => Recor
   if (!prev || !samePoints(pts(prev.res), pts(next.res))) return null
   if (prev.scenarioId === next.scenarioId && sameIdSet(prev.blocked, next.blocked)) return kept
   return prev
+}
+
+const vn = (x: number, d = 1) => x.toLocaleString('vi-VN', { maximumFractionDigits: d })
+/** Câu đọc cho trình đọc màn hình khi có kết quả tìm đường (FE-3); số lấy từ response. */
+function routeAnnouncement(r: RouteResponse): string {
+  const d = r.results.dijkstra
+  const a = r.results.astar
+  if (!d || d.status !== 'ok' || d.cost_s === null) return 'Không có đường đi giữa hai điểm này trong kịch bản hiện tại.'
+  const nodes = a ? ` Dijkstra mở ${vn(d.expanded, 0)} node, A* mở ${vn(a.expanded, 0)} node.` : ''
+  return `Tìm xong: ${vn(d.cost_s)} giây, ${vn(d.distance_m ?? 0, 0)} mét.${nodes}`
+}
+/** Câu đọc khi có kết quả tour (FE-3). */
+function tourAnnouncement(r: TourResponse): string {
+  if (r.status !== 'ok' || !r.chosen) return 'Không lập được tour đầy đủ: có chặng không đi được.'
+  const c = r.candidates[r.chosen]
+  return c ? `Lập tour xong: phương án được chọn ${vn(c.cost_s)} giây.` : 'Lập tour xong.'
 }
 
 // Đủ cho mọi truy vấn trên vùng demo (lớn nhất 1.762 node khi không còn đường); backend giới hạn 5.000.
@@ -101,8 +117,20 @@ export default function App() {
   const [scenarioId, setScenarioId] = useState('baseline')
   const [mode, setMode] = useState<Mode>('route')
   const [caseId, setCaseId] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Bận và lỗi tách theo chế độ (review 14/11 đợt 3, QA-11): đổi kịch bản chạy lại query của cả hai chế độ, nên
+  // dùng chung một cờ thì spinner tắt sớm và lỗi của chế độ đang ẩn hiện ở chế độ đang xem.
+  const [busyRoute, setBusyRoute] = useState(false)
+  const [busyTour, setBusyTour] = useState(false)
+  const [errorState, setErrorState] = useState<{ mode: Mode; text: string } | null>(null)
+  const modeRef = useRef<Mode>('route')
+  /** Lỗi của thao tác người dùng vừa làm: gắn với chế độ đang xem; null thì xoá mọi lỗi. */
+  const setError = useCallback((text: string | null) => setErrorState(text ? { mode: modeRef.current, text } : null), [])
+  modeRef.current = mode
+  const clearErrorOf = (m: Mode) => setErrorState((s) => (s?.mode === m ? null : s))
+  // Đọc kết quả cho người dùng trình đọc màn hình (FE-3): Banner của Astryx không có live region.
+  const announce = useAnnounce()
+  const announceRef = useRef(announce)
+  announceRef.current = announce
   // Gợi ý khi cú bấm bản đồ bị bỏ qua vì đang hiện kết quả (review 14/11, QA-1): bấm trượt không được xoá kết quả.
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -197,19 +225,40 @@ export default function App() {
     loadDataset()
   }, [checkServer, loadDataset])
 
+  // Badge server tự cập nhật (review 14/11 đợt 3, QA-7): trước đây chỉ kiểm lúc mở trang và khi request lỗi, nên
+  // backend tắt mà badge vẫn "sẵn sàng" tới lần bấm sau. Kiểm mỗi 10 s và khi quay lại cửa sổ; lên lại thì đọc
+  // lại danh sách kịch bản như markServerUp.
+  useEffect(() => {
+    const tick = () => {
+      getHealth()
+        .then((h) => {
+          if (h.dataset_loaded && serverOk.current !== true) loadDataset()
+          setServer({ text: h.dataset_loaded ? `Server sẵn sàng · ${h.dataset_id ?? ''}` : 'Server chạy, chưa nạp dataset', ok: h.dataset_loaded })
+        })
+        .catch(() => setServer({ text: 'Không kết nối được server', ok: false }))
+    }
+    const id = window.setInterval(tick, 10_000)
+    window.addEventListener('focus', tick)
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('focus', tick)
+    }
+  }, [loadDataset])
+
   // --- Gọi API ---
 
   useEffect(() => {
     if (!routeQuery) return
     const ctl = new AbortController()
-    setBusy(true)
-    setError(null)
+    setBusyRoute(true)
+    clearErrorOf('route')
     postRoute({
       source: latLon(routeQuery.source), target: latLon(routeQuery.target),
       algorithms: showExtRef.current ? ['dijkstra', 'astar', 'alt', 'bidijkstra'] : ['dijkstra', 'astar'],
       scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked,
     }, ctl.signal)
       .then((res) => {
+        announceRef.current(routeAnnouncement(res))
         const next = { res, scenarioId: routeQuery.scenarioId, blocked: routeQuery.blocked }
         setPrevRoute(nextPrevious(routeRef.current ?? carriedRoute.current, next, routePoints, prevRouteRef.current))
         carriedRoute.current = null
@@ -220,21 +269,21 @@ export default function App() {
         if (ctl.signal.aborted) return
         pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
         setRoute(null)
-        setError(`Lỗi: ${e.message}`)
+        setErrorState({ mode: 'route', text: `Lỗi: ${e.message}` })
         checkServer()
       })
-      .finally(() => !ctl.signal.aborted && setBusy(false))
+      .finally(() => !ctl.signal.aborted && setBusyRoute(false))
     return () => {
       ctl.abort()
-      setBusy(false)
+      setBusyRoute(false)
     }
   }, [routeQuery, checkServer, markServerUp])
 
   useEffect(() => {
     if (!tourQuery) return
     const ctl = new AbortController()
-    setBusy(true)
-    setError(null)
+    setBusyTour(true)
+    clearErrorOf('tour')
     postTour({
       depot: { lat: tourQuery.depot.lat, lon: tourQuery.depot.lon },
       stops: tourQuery.stops.map(({ id, lat, lon }) => ({ id, lat, lon })),
@@ -245,6 +294,7 @@ export default function App() {
       ...(showExtRef.current ? { include_or_opt: true } : {}),
     }, ctl.signal)
       .then((res) => {
+        announceRef.current(tourAnnouncement(res))
         const next = { res, scenarioId: tourQuery.scenarioId, blocked: tourQuery.blocked }
         setPrevTour(nextPrevious(tourRunRef.current ?? carriedTour.current, next, tourPoints, prevTourRef.current))
         carriedTour.current = null
@@ -261,13 +311,13 @@ export default function App() {
         const names: Record<string, string> = Object.fromEntries(tourQuery.stops.map((s) => [s.id, s.label]))
         names.depot = 'kho'
         const msg = e.message.replace(/'([\w-]+)'/g, (m, id: string) => (id in names ? `"${names[id]}"` : m))
-        setError(`Lỗi: ${msg}`)
+        setErrorState({ mode: 'tour', text: `Lỗi: ${msg}` })
         checkServer()
       })
-      .finally(() => !ctl.signal.aborted && setBusy(false))
+      .finally(() => !ctl.signal.aborted && setBusyTour(false))
     return () => {
       ctl.abort()
-      setBusy(false)
+      setBusyTour(false)
     }
   }, [tourQuery, checkServer, markServerUp])
 
@@ -518,7 +568,7 @@ export default function App() {
   const changeMode = (v: Mode) => {
     clickGen.current += 1
     setMode(v)
-    setError(null)
+    // Không xoá lỗi: lỗi đã gắn theo chế độ, chỉ hiện ở chế độ sinh ra nó, quay lại vẫn thấy (góp ý #147).
     setNotice(null)
     // Ô case demo không giữ tên case của chế độ kia (UX-11).
     if (DEMO_CASES.find((c) => c.id === caseId)?.mode !== v) setCaseId('')
@@ -701,9 +751,10 @@ export default function App() {
       )}
       <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
         description={mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).'} />
-      {busy && <Spinner label="Đang tính…" />}
+      {(mode === 'route' ? busyRoute : busyTour) && <Spinner label="Đang tính…" />}
       {notice && <Banner status="info" title={notice} />}
-      {error && <Banner status="error" title={error} />}
+      {/* role="alert": lỗi được đọc ngay cho người dùng trình đọc màn hình (FE-3). */}
+      {errorState && errorState.mode === mode && <Banner status="error" title={errorState.text} role="alert" />}
       {mode === 'route' && noPath && (
         <Banner status="info" title="Không có đường đi giữa hai điểm này trong kịch bản hiện tại." />
       )}
