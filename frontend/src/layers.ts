@@ -109,6 +109,9 @@ export class MapLayers {
     this.area.addTo(map)
     this.legendEl = L.DomUtil.create('div', 'map-legend')
     this.legendEl.style.display = 'none'
+    // Bấm hay cuộn trên chú giải không lan xuống bản đồ (review #143: bấm chú giải từng đặt điểm, cuộn thì zoom).
+    L.DomEvent.disableClickPropagation(this.legendEl)
+    L.DomEvent.disableScrollPropagation(this.legendEl)
     const legendEl = this.legendEl
     const Legend = L.Control.extend({ onAdd: () => legendEl })
     new Legend({ position: 'bottomleft' }).addTo(map)
@@ -367,7 +370,8 @@ export class MapLayers {
       dijkstra: this.swatchLine(this.palette.dijkstra),
       astar: this.swatchLine(this.palette.astar, true),
       same: this.swatchLine(this.palette.dijkstra, false, this.palette.astar),
-      zone: `<i class="legend-area" style="border-color:${this.palette.zone};background:${this.palette.zone}"></i>`,
+      // Tô nhạt như trên bản đồ (fillOpacity 0.1), viền đậm (góp ý #143).
+      zone: `<i class="legend-area" style="border-color:${this.palette.zone};background:color-mix(in srgb, ${this.palette.zone} 15%, transparent)"></i>`,
       closed: this.swatchLine(this.palette.closed, true),
       previous: this.swatchLine(this.palette.road),
       trace: `<i class="legend-dot" style="background:${this.palette.dijkstra}"></i><i class="legend-dot" style="background:${this.palette.astar}"></i>`,
