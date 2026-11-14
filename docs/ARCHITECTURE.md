@@ -121,6 +121,7 @@ results/             <run_id>/queries.csv, measurements.csv, env.json
 | POST | `/api/route` | Tìm đường giữa hai điểm | T13 (skeleton), T51 |
 | POST | `/api/tour` | Tour nhiều điểm | T72 |
 | GET | `/api/network` | Mạng đường của vùng đang nạp, **chỉ** để vẽ nền khi không tải được tile OSM | T56 (R8) |
+| GET | `/api/snap?lat=&lon=` | Node gần nhất (trong SCC) và khoảng cách, `ok` theo ngưỡng 150 m như `/api/route`, `/api/tour`; UI kiểm điểm ngay lúc bấm. `/api/dataset` thêm `bbox` (khung bao mọi node) để vẽ viền vùng có dữ liệu | Review UI 14/11 |
 
 Ngày 26/10 ([PROJECT_BRIEF](PROJECT_BRIEF.md) D12) đã bỏ việc vẽ toàn mạng đường lên bản đồ (T32). 13/11 `/api/network` quay lại với vai trò khác: nền dự phòng khi mạng chặn tile OSM (DNS không phân giải được `tile.openstreetmap.org`, gặp trên máy Minh và máy Tiến). Trả `{"dataset_id", "lines": [[[lon, lat], …], …]}`, mỗi đoạn đường hai chiều một lần (bỏ cạnh đối có id lớn hơn); dựng một lần lúc khởi động. Vùng demo: 2.668 đường, ~277 KB. Không tải sẵn tile OSM vì chính sách sử dụng tile của OSM cấm tải hàng loạt.
 

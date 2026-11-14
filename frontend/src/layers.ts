@@ -79,6 +79,7 @@ export class MapLayers {
   private points = L.layerGroup()
   private network: L.Layer | null = null
   private previous = L.layerGroup()
+  private area = L.layerGroup()
   private trace = L.layerGroup()
   private traceRenderer: L.Canvas
   private palette: Palette
@@ -96,6 +97,7 @@ export class MapLayers {
     prevPane.style.zIndex = '390'
     prevPane.style.pointerEvents = 'none'
     this.previous.addTo(map)
+    this.area.addTo(map)
     // Node đã mở rộng: dưới tuyến (overlayPane z 400), trên tuyến lần trước; canvas vì có thể vài nghìn chấm.
     const tracePane = map.createPane('trace')
     tracePane.style.zIndex = '395'
@@ -294,6 +296,18 @@ export class MapLayers {
       L.polyline(toLatLngs(coords), { color: this.palette.tour, weight: 5, opacity: 0.85, interactive: false }).addTo(this.routes)
     }
     if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick)
+  }
+
+  /**
+   * Viền vùng có dữ liệu (review 14/11 đợt 2, PM-7/UX-3): khung bao mọi node, nét đứt xám, không bấm được.
+   * Người dùng thấy ngay đặt điểm ở đâu thì snap được, thay vì bấm ra ngoài rồi mới bị báo lỗi.
+   */
+  setDataArea(b: { south: number; west: number; north: number; east: number } | null) {
+    this.area.clearLayers()
+    if (!b) return
+    L.rectangle([[b.south, b.west], [b.north, b.east]], {
+      pane: 'previous', color: this.palette.road, weight: 2, dashArray: '8 6', fill: false, interactive: false,
+    }).addTo(this.area)
   }
 
   /** Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng): nét xám mờ làm mốc so (review 14/11 đợt 2, AI-7). */

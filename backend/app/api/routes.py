@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
-from app.api.schemas import (DatasetResponse, HealthResponse, NetworkResponse, RouteRequest, RouteResponse,
-                             TourRequest, TourResponse)
+from app.api.schemas import (BBox, DatasetResponse, HealthResponse, NetworkResponse, RouteRequest, RouteResponse,
+                             SnapCheckResponse, TourRequest, TourResponse)
 from app.graph.model import Graph, GraphMeta
-from app.services.routing import RouteInputError, route
+from app.graph.snap import nearest_node
+from app.services.routing import SNAP_MAX_M, RouteInputError, route
 from app.services.tour import plan_tour
 
 router = APIRouter()
@@ -47,8 +48,22 @@ def dataset(request: Request) -> DatasetResponse:
                    for r in s.rules]}
         for s in request.app.state.scenarios.values()
     ]
+    bbox = BBox(south=min(graph.node_lat), west=min(graph.node_lon), north=max(graph.node_lat),
+                east=max(graph.node_lon)) if graph.node_lat else None
     return DatasetResponse(dataset_id=graph.dataset_id, node_count=len(graph.node_lat),
-                           edge_count=len(graph.edge_u), scenarios=scenarios)
+                           edge_count=len(graph.edge_u), scenarios=scenarios, bbox=bbox)
+
+
+@router.get("/snap", response_model=SnapCheckResponse)
+def snap_check(request: Request, lat: float = Query(..., ge=-90, le=90),
+               lon: float = Query(..., ge=-180, le=180)) -> SnapCheckResponse:
+    """Node gần nhất của một điểm và có đạt ngưỡng snap không (review UI 14/11, PM-7). UI gọi lúc người dùng bấm
+    đặt điểm, để từ chối điểm quá xa đường ngay, không đợi tới lúc tìm đường hay lập tour."""
+    graph, meta = _loaded(request)
+    s = nearest_node(graph, meta, lat, lon, max_m=None)
+    return SnapCheckResponse(node_id=s.node_id, lat=graph.node_lat[s.node_id], lon=graph.node_lon[s.node_id],
+                             snap_distance_m=s.snap_distance_m, max_m=SNAP_MAX_M,
+                             ok=s.snap_distance_m <= SNAP_MAX_M)
 
 
 @router.get("/network", response_model=NetworkResponse)
