@@ -20,7 +20,7 @@ import {
   type BlockedEdge, type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
 } from './api'
 import { DEMO_CASES, DEMO_DATASET_ID } from './cases'
-import { toLatLngs, type MapLayers, type RouteSegment, type TourPoint } from './layers'
+import { toLatLngs, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
 import TourResults from './TourResults'
@@ -314,6 +314,8 @@ export default function App() {
     const layers = layersRef.current
     if (!layers) return
     layers.setZones(scenario)
+    const legend: LegendItem[] = []
+    if (scenario.rules.length) legend.push({ kind: 'zone', label: 'Vùng cao điểm mô phỏng' })
     if (mode === 'route') {
       layers.setClosed(closedToDraw(route?.res.blocked_edges, closed))
       // Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng) vẽ mờ làm mốc, chỉ khi khác tuyến hiện tại.
@@ -321,6 +323,17 @@ export default function App() {
       const now = route?.res.results.dijkstra
       const moved = before?.status === 'ok' && (now?.status !== 'ok' || before.edge_ids?.join() !== now.edge_ids?.join())
       layers.setPrevious(route && moved ? before.geometry.coordinates : null)
+      const d = route?.res.results.dijkstra
+      const a = route?.res.results.astar
+      if (d?.status === 'ok' && a?.status === 'ok' && d.edge_ids?.join() === a.edge_ids?.join()) {
+        legend.unshift({ kind: 'same', label: 'Dijkstra và A* trùng tuyến' })
+      } else {
+        if (a?.status === 'ok') legend.unshift({ kind: 'astar', label: 'Tuyến A* (nét đứt)' })
+        if (d?.status === 'ok') legend.unshift({ kind: 'dijkstra', label: 'Tuyến Dijkstra' })
+      }
+      if (closedToDraw(route?.res.blocked_edges, closed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
+      if (route && moved) legend.push({ kind: 'previous', label: 'Tuyến lần trước' })
+      if (trace) legend.push({ kind: 'trace', label: 'Node đã mở rộng: Dijkstra, A*' })
       layers.setTrace(trace?.results.dijkstra?.trace ?? null, trace?.results.astar?.trace ?? null)
       if (route) {
         layers.setSnapped(route.res)
@@ -342,6 +355,9 @@ export default function App() {
       const cand = tour && tourMethod ? tour.candidates[tourMethod] : undefined
       const broken = new Set(tour?.status === 'infeasible_under_model' ? unreachableGroups(tour.unreachable).map((g) => g.id) : [])
       layers.setTourPoints(depot, stops, cand?.stop_order, broken)
+      if (cand) legend.unshift({ kind: 'tour', label: 'Tour đang xem' })
+      if (closedToDraw(tour?.blocked_edges, tourClosed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
+      if (broken.size) legend.push({ kind: 'broken', label: 'Điểm không đi được' })
       if (cand) layers.drawTour(cand, closeTourSegment)
       else layers.clearRoutes()
       if (tour && pendingFit.current) {
@@ -350,6 +366,7 @@ export default function App() {
         layers.fitTo(toLatLngs([...pts, ...(cand?.geometry.coordinates ?? [])]))
       }
     }
+    layers.setLegend(legend)
   }, [mapReady, mode, scenario, route, prevRoute, trace, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
     tourClosed, closeTourSegment])
 

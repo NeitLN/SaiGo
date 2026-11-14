@@ -6,7 +6,7 @@ import type { AlgorithmResult, LatLon, RouteResponse, Scenario } from './api'
 // Màu lấy từ token của theme Astryx (đọc trên phần tử bản đồ, nằm trong <Theme>), không viết mã màu cứng.
 type Palette = {
   dijkstra: string; astar: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string
-  road: string
+  road: string; casing: string
 }
 
 function readPalette(el: HTMLElement): Palette {
@@ -24,14 +24,22 @@ function readPalette(el: HTMLElement): Palette {
     source: v('--color-data-categorical-green'),
     target: v('--color-data-categorical-red'),
     closed: v('--color-error'),
-    zone: v('--color-data-categorical-orange'),
+    // Vùng ùn tắc dùng màu cảnh báo, không dùng cam của A* (review 14/11 đợt 3, UX-2: hai nghĩa cùng một màu).
+    zone: v('--color-warning'),
     tour: v('--color-data-categorical-purple'),
     surface: v('--color-background-card'),
     road: v('--color-text-secondary'),
+    // Viền tối dưới tuyến: tuyến cam của A* trên nền xám chỉ đạt 2,29:1, dưới mức 3:1 (FE-5, WCAG 1.4.11).
+    casing: v('--color-text-primary'),
   }
   probe.remove()
   return palette
 }
+
+export type LegendKind = 'dijkstra' | 'astar' | 'same' | 'zone' | 'closed' | 'previous' | 'trace' | 'tour' | 'broken'
+export interface LegendItem { kind: LegendKind; label: string }
+
+const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 // GeoJSON là [lon, lat]; Leaflet cần [lat, lon].
 export function toLatLngs(coords: [number, number][]): L.LatLng[] {
@@ -84,6 +92,7 @@ export class MapLayers {
   private traceRenderer: L.Canvas
   private palette: Palette
   private map: L.Map
+  private legendEl: HTMLDivElement
 
   constructor(map: L.Map) {
     this.map = map
@@ -98,6 +107,11 @@ export class MapLayers {
     prevPane.style.pointerEvents = 'none'
     this.previous.addTo(map)
     this.area.addTo(map)
+    this.legendEl = L.DomUtil.create('div', 'map-legend')
+    this.legendEl.style.display = 'none'
+    const legendEl = this.legendEl
+    const Legend = L.Control.extend({ onAdd: () => legendEl })
+    new Legend({ position: 'bottomleft' }).addTo(map)
     // Node đã mở rộng: dưới tuyến (overlayPane z 400), trên tuyến lần trước; canvas vì có thể vài nghìn chấm.
     const tracePane = map.createPane('trace')
     tracePane.style.zIndex = '395'
@@ -137,10 +151,13 @@ export class MapLayers {
       const kinds = [...new Set((rule.highway ?? []).map((h) => h.replace(/_link$/, '')))]
       const roads = kinds.length ? ` · ${kinds.join(', ')}` : ''
       L.circle([z.lat, z.lon], {
-        radius: z.radius_m, color: this.palette.zone, weight: 1, fillColor: this.palette.zone, fillOpacity: 0.15, interactive: false,
+        radius: z.radius_m, color: this.palette.zone, weight: 2, dashArray: '6 6', fillColor: this.palette.zone, fillOpacity: 0.1,
+        interactive: false,
       }).addTo(this.zones)
-      L.tooltip({ permanent: true, direction: 'center', className: 'zone-label', interactive: false })
-        .setLatLng([z.lat, z.lon])
+      // Nhãn ở mép trên vòng tròn thay vì ở tâm, để không đè lên tuyến đi qua giữa vùng (UX-2).
+      const topLat = z.lat + z.radius_m / 111_320
+      L.tooltip({ permanent: true, direction: 'top', className: 'zone-label', interactive: false })
+        .setLatLng([topLat, z.lon])
         .setContent(`Cao điểm mô phỏng · ×${rule.alpha.toLocaleString('vi-VN')}${roads}`)
         .addTo(this.zones)
     }
@@ -180,16 +197,21 @@ export class MapLayers {
     this.routes.clearLayers()
     const d = res.results.dijkstra
     const a = res.results.astar
+    const casing = (ll: L.LatLng[], weight: number) =>
+      L.polyline(ll, { color: this.palette.casing, weight, opacity: 0.35, interactive: false }).addTo(this.routes)
     if (sameRoute(d, a)) {
       const latlngs = toLatLngs(d!.geometry.coordinates)
+      casing(latlngs, 13)
       L.polyline(latlngs, { color: this.palette.astar, weight: 10, opacity: 0.9, interactive: false }).addTo(this.routes)
       L.polyline(latlngs, { color: this.palette.dijkstra, weight: 5, interactive: false }).addTo(this.routes)
     } else {
       if (d?.status === 'ok') {
+        casing(toLatLngs(d.geometry.coordinates), 9)
         L.polyline(toLatLngs(d.geometry.coordinates), { color: this.palette.dijkstra, weight: 6, opacity: 0.8, interactive: false })
           .addTo(this.routes)
       }
       if (a?.status === 'ok') {
+        casing(toLatLngs(a.geometry.coordinates), 7)
         L.polyline(toLatLngs(a.geometry.coordinates), { color: this.palette.astar, weight: 4, dashArray: '8 6', interactive: false })
           .addTo(this.routes)
       }
@@ -334,6 +356,31 @@ export class MapLayers {
     }
     dots(dijkstra, this.palette.dijkstra, 4)
     dots(astar, this.palette.astar, 2.5)
+  }
+
+  /**
+   * Chú giải nổi góc dưới trái (review 14/11 đợt 3, UX-2): chỉ liệt kê những gì đang vẽ, màu lấy từ cùng palette
+   * với các lớp, nên luôn khớp nét trên bản đồ. Rỗng thì ẩn.
+   */
+  setLegend(items: LegendItem[]) {
+    const sw: Record<LegendKind, string> = {
+      dijkstra: this.swatchLine(this.palette.dijkstra),
+      astar: this.swatchLine(this.palette.astar, true),
+      same: this.swatchLine(this.palette.dijkstra, false, this.palette.astar),
+      zone: `<i class="legend-area" style="border-color:${this.palette.zone};background:${this.palette.zone}"></i>`,
+      closed: this.swatchLine(this.palette.closed, true),
+      previous: this.swatchLine(this.palette.road),
+      trace: `<i class="legend-dot" style="background:${this.palette.dijkstra}"></i><i class="legend-dot" style="background:${this.palette.astar}"></i>`,
+      tour: this.swatchLine(this.palette.tour),
+      broken: `<i class="legend-dot" style="background:${this.palette.closed}"></i>`,
+    }
+    this.legendEl.innerHTML = items.map((it) => `<div class="legend-row">${sw[it.kind]}<span>${escapeHtml(it.label)}</span></div>`).join('')
+    this.legendEl.style.display = items.length ? '' : 'none'
+  }
+
+  private swatchLine(color: string, dashed = false, outline?: string) {
+    const style = `border-top-color:${color};border-top-style:${dashed ? 'dashed' : 'solid'}${outline ? `;box-shadow:0 0 0 2px ${outline}` : ''}`
+    return `<i class="legend-line" style="${style}"></i>`
   }
 
   clearRoutes() {
