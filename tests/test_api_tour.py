@@ -275,9 +275,12 @@ def demo_client(monkeypatch):
 def demo_case(case_id):
     cases = json.loads((ROOT / "data" / "demo" / "cases.json").read_text(encoding="utf-8"))["cases"]
     c = next(x for x in cases if x["id"] == case_id)
-    return {"depot": {"lat": c["depot"]["lat"], "lon": c["depot"]["lon"]},
+    body = {"depot": {"lat": c["depot"]["lat"], "lon": c["depot"]["lon"]},
             "stops": [{"id": f"p{i + 1}", "lat": s["lat"], "lon": s["lon"]} for i, s in enumerate(c["stops"])],
-            "scenario_id": c.get("scenario_id", "baseline"), "blocked_edge_ids": c.get("blocked_edge_ids", [])}, c
+            "scenario_id": c.get("scenario_id", "baseline"), "blocked_edge_ids": c.get("blocked_edge_ids", [])}
+    if "keep_order" in c:                     # case dựng sẵn bước 10: UI gửi đúng trường này (review 14/11, PM-3)
+        body["keep_order"] = c["keep_order"]
+    return body, c
 
 
 def test_real_close_mid_edge_of_tour_keeps_and_reorders(demo_client):
@@ -310,6 +313,23 @@ def test_real_demo_closure_edge_1666_matches_case(demo_client):
     assert r["chosen"] == exp["chosen"]
     assert c["nearest_neighbor_2opt"]["cost_s"] == pytest.approx(exp["nearest_neighbor_2opt"], abs=0.05)
     assert c["nearest_neighbor_2opt"]["stop_order"] == exp["nn_2opt_order"]
+
+
+def test_preset_step10_case_matches_closure_numbers(demo_client):
+    """PM-3: case dựng sẵn cho bước 10 phải ra đúng số của expected.close_edge_1666, không cần bấm trúng cạnh."""
+    body, case = demo_case("kho-5-diem-dong-ben-bach-dang")
+    _, base = demo_case("kho-5-diem")
+    exp = base["expected"]["close_edge_1666"]
+    assert case["stops"] == base["stops"] and case["depot"] == base["depot"]
+    assert body["blocked_edge_ids"] == exp["blocked_edge_ids"]
+    assert body["keep_order"] == base["expected"]["baseline"]["nn_2opt_order"]   # thứ tự tour trước khi đóng
+    r = demo_client.post("/api/tour", json=body).json()
+    c = r["candidates"]
+    assert c["kept_order"]["cost_s"] == pytest.approx(exp["kept_order"], abs=0.05)
+    assert c["nearest_neighbor_2opt"]["cost_s"] == pytest.approx(exp["nearest_neighbor_2opt"], abs=0.05)
+    assert r["chosen"] == exp["chosen"]
+    assert c["kept_order"]["cost_s"] == pytest.approx(case["expected"]["kept_order"], abs=0.05)
+    assert c["nearest_neighbor_2opt"]["cost_s"] == pytest.approx(case["expected"]["nearest_neighbor_2opt"], abs=0.05)
 
 
 def test_real_infeasible_case_names_unreachable_stop(demo_client):

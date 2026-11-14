@@ -18,6 +18,8 @@ export interface DemoCase {
   stops?: NamedPoint[]
   scenario_id?: string
   blocked_edge_ids?: number[]
+  // Thứ tự id điểm giao trước khi đóng đường (case dựng sẵn bước 10): gửi kèm để API trả "Giữ thứ tự cũ".
+  keep_order?: string[]
 }
 
 export const DEMO_DATASET_ID: string = data.dataset_id
