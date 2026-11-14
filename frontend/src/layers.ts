@@ -231,29 +231,44 @@ export class MapLayers {
     return best
   }
 
-  // Đoạn đang bị đóng: đỏ, nét đứt (DEMO mục 1.2).
+  // Đoạn đang bị đóng: đỏ, nét đứt (DEMO mục 1.2). Gồm cả đoạn người dùng bấm lẫn cạnh đóng sẵn của case.
   setClosed(segments: RouteSegment[]) {
     this.closed.clearLayers()
     for (const seg of segments) {
       L.polyline(seg.latlngs, { color: this.palette.closed, weight: 6, dashArray: '6 6', interactive: false })
-        .bindTooltip('Đoạn đường bị đóng do người dùng đánh dấu')
+        .bindTooltip('Đoạn đường đang đóng')
         .addTo(this.closed)
     }
   }
 
-  /** Kho và điểm giao; `order` là thứ tự id điểm giao của phương án đang chọn (đánh số 1, 2, …). */
-  setTourPoints(depot: TourPoint | null, stops: TourPoint[], order?: string[]) {
+  /**
+   * Kho và điểm giao; `order` là thứ tự id điểm giao của phương án đang chọn (đánh số 1, 2, …).
+   * `broken`: id điểm (kể cả 'depot') không đi tới được hoặc không đi ra được khi tour không khả thi; tô đỏ
+   * và ghi tên cố định để người xem thấy ngay điểm nào hỏng (review 14/11, UX-4).
+   */
+  setTourPoints(depot: TourPoint | null, stops: TourPoint[], order?: string[], broken: ReadonlySet<string> = new Set()) {
     this.points.clearLayers()
-    if (depot) this.marker(depot, 'Kho', this.palette.source, depot.label !== 'Kho' ? depot.label : undefined)
+    if (depot) {
+      const color = broken.has(depot.id) ? this.palette.closed : this.palette.source
+      this.marker(depot, 'Kho', color, depot.label !== 'Kho' ? depot.label : undefined)
+    }
     stops.forEach((s, i) => {
       const n = order ? order.indexOf(s.id) + 1 : i + 1
+      const bad = broken.has(s.id)
       L.marker([s.lat, s.lon], {
-        icon: L.divIcon({ className: 'tour-stop', html: String(n), iconSize: [24, 24] }),
+        icon: L.divIcon({ className: bad ? 'tour-stop tour-stop-broken' : 'tour-stop', html: String(n), iconSize: [24, 24] }),
         title: s.label,
       })
-        .bindTooltip(s.label, { direction: 'top', offset: [0, -12] })
+        .bindTooltip(s.label, { direction: 'top', offset: [0, -12], permanent: bad })
         .addTo(this.points)
     })
+  }
+
+  /** Thu phóng cho vừa các điểm (kết quả mới hoặc case vừa nạp); không gọi khi chỉ đóng thêm một đoạn. */
+  fitTo(points: L.LatLng[]) {
+    if (!points.length) return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    this.map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 17, animate: !reduce })
   }
 
   /** Vẽ phương án tour đang chọn; có `onSegmentClick` thì bấm được từng cạnh để đóng đoạn (R1 C5). */

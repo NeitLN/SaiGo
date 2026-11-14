@@ -12,6 +12,7 @@ from app.algorithms.heuristics import make_geo_heuristic
 from app.algorithms.result import SearchResult
 from app.api.schemas import (
     AlgorithmRouteResult,
+    BlockedEdge,
     GeometryLineString,
     RouteRequest,
     RouteResponse,
@@ -61,6 +62,11 @@ def edge_coords(graph: Graph, meta: GraphMeta, e: int) -> list[list[float]]:
         return geom
     u, v = graph.edge_u[e], graph.edge_v[e]
     return [[graph.node_lon[u], graph.node_lat[u]], [graph.node_lon[v], graph.node_lat[v]]]
+
+
+def blocked_edges(graph: Graph, meta: GraphMeta, blocked_edge_ids: list[int]) -> list[BlockedEdge]:
+    """Hình học các cạnh đóng của request, theo thứ tự gửi lên, bỏ trùng (id đã kiểm ở request_snapshot)."""
+    return [BlockedEdge(edge_id=e, geometry=edge_coords(graph, meta, e)) for e in dict.fromkeys(blocked_edge_ids)]
 
 
 def network_lines(graph: Graph, meta: GraphMeta, twins: list[int | None]) -> list[list[list[float]]]:
@@ -247,4 +253,5 @@ def route(
         results=results,
         costs_match=costs_match,
         warnings=_alt_warnings(results) + _bidijkstra_warnings(results),
+        blocked_edges=blocked_edges(graph, meta, req.blocked_edge_ids),
     )
