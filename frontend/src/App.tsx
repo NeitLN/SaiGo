@@ -21,7 +21,8 @@ import { DEMO_CASES, DEMO_DATASET_ID } from './cases'
 import { toLatLngs, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
-import TourResults, { unreachableGroups } from './TourResults'
+import TourResults from './TourResults'
+import { unreachableGroups } from './tourIssues'
 
 type Mode = 'route' | 'tour'
 
@@ -35,9 +36,13 @@ const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((
 // Đóng đoạn = cạnh được bấm và cạnh đối của nó (DATA_MODEL 4.2); bỏ trùng, giữ thứ tự để so sánh được.
 const blockedIds = (preset: number[], segs: RouteSegment[]) =>
   [...new Set([...preset, ...segs.flatMap((s) => (s.twinId === null ? [s.edgeId] : [s.edgeId, s.twinId]))])]
-// Đoạn đóng để vẽ: lấy từ response (gồm cả cạnh đóng sẵn của case, QA-3); chưa có response thì vẽ đoạn đã bấm.
-const closedToDraw = (fromRes: BlockedEdge[] | undefined, clicked: RouteSegment[]): RouteSegment[] =>
-  fromRes ? fromRes.map((b) => ({ edgeId: b.edge_id, twinId: null, latlngs: toLatLngs(b.geometry) })) : clicked
+// Đoạn đóng để vẽ: cạnh đóng trong response (gồm cả cạnh đóng sẵn của case, QA-3) cộng các đoạn vừa bấm mà
+// response chưa có, để nét đỏ hiện ngay khi bấm, không chờ request về (review #135).
+const closedToDraw = (fromRes: BlockedEdge[] | undefined, clicked: RouteSegment[]): RouteSegment[] => {
+  const drawn = (fromRes ?? []).map((b) => ({ edgeId: b.edge_id, twinId: null, latlngs: toLatLngs(b.geometry) }))
+  const ids = new Set(drawn.map((s) => s.edgeId))
+  return [...drawn, ...clicked.filter((s) => !ids.has(s.edgeId))]
+}
 
 export default function App() {
   const layersRef = useRef<MapLayers | null>(null)
@@ -142,6 +147,7 @@ export default function App() {
       })
       .catch((e: Error) => {
         if (ctl.signal.aborted) return
+        pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
         setRoute(null)
         setError(`Lỗi: ${e.message}`)
         checkServer()
@@ -174,6 +180,7 @@ export default function App() {
       })
       .catch((e: Error) => {
         if (ctl.signal.aborted) return
+        pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
         setTour(null)
         setError(`Lỗi: ${e.message}`)
         checkServer()

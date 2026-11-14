@@ -9,30 +9,10 @@ import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { TOUR_METHOD_LABEL, type TourMethod, type TourResponse } from './api'
 import { num, seconds } from './RouteResults'
+import { describeIssue, unreachableGroups } from './tourIssues'
 
 // kept_order chỉ có sau khi đóng đường (R1 C6): thứ tự cũ đi lại trên đường hiện tại, để so với việc sắp lại.
 const METHODS: TourMethod[] = ['input', 'nearest_neighbor', 'nearest_neighbor_2opt', 'kept_order']
-
-type Pair = { from_id: string; to_id: string }
-export interface UnreachableGroup { id: string; dir: 'to' | 'from'; others: string[] }
-
-/**
- * Gom các cặp không đi được (R1 C4) thành ít dòng nhất (review 14/11, QA-14): gom theo điểm đến hoặc theo
- * điểm đi, cách nào ra ít nhóm hơn. Một điểm bị cô lập thường là đích của mọi cặp hỏng, nên chỉ còn một dòng
- * thay cho n dòng "Không đi được: X → Y". `id` của mỗi nhóm là điểm cần tô đỏ trên bản đồ.
- */
-export function unreachableGroups(pairs: Pair[]): UnreachableGroup[] {
-  const group = (key: (p: Pair) => string, other: (p: Pair) => string) => {
-    const m = new Map<string, string[]>()
-    for (const p of pairs) m.set(key(p), [...(m.get(key(p)) ?? []), other(p)])
-    return m
-  }
-  const byTo = group((p) => p.to_id, (p) => p.from_id)
-  const byFrom = group((p) => p.from_id, (p) => p.to_id)
-  return byTo.size <= byFrom.size
-    ? [...byTo].map(([id, others]) => ({ id, dir: 'to' as const, others }))
-    : [...byFrom].map(([id, others]) => ({ id, dir: 'from' as const, others }))
-}
 
 export default function TourResults({ res, labels, selected, onSelect, scenarioLabel }: {
   res: TourResponse
@@ -47,20 +27,13 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
   }
   if (res.status === 'infeasible_under_model') {
     const others = Object.keys(res.snapped).length - 1   // số điểm khác một điểm cho trước (gồm kho)
-    const line = (g: UnreachableGroup) => {
-      const all = g.others.length === others
-      if (g.dir === 'to') {
-        return all ? `Không điểm nào đi tới được ${name(g.id)}.` : `Không đi tới được ${name(g.id)} từ: ${g.others.map(name).join(', ')}.`
-      }
-      return all ? `Từ ${name(g.id)} không đi được tới điểm nào.` : `Từ ${name(g.id)} không đi tới được: ${g.others.map(name).join(', ')}.`
-    }
     return (
       <VStack gap={3}>
         <Banner status="error" title="Không lập được tour đầy đủ" collapsible={false}
           description="Có chặng không đi được trong kịch bản này, nên không hiện tour thiếu điểm. Điểm hỏng được tô đỏ trên bản đồ.">
           <VStack gap={1}>
             {unreachableGroups(res.unreachable).map((g) => (
-              <Text key={`${g.dir}-${g.id}`} type="body" weight="semibold">{line(g)}</Text>
+              <Text key={g.id} type="body" weight="semibold">{describeIssue(g, others, name)}</Text>
             ))}
           </VStack>
         </Banner>
