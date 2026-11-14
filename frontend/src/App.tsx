@@ -14,6 +14,7 @@ import { Spinner } from '@astryxdesign/core/Spinner'
 import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
+import { useMediaQuery } from '@astryxdesign/core/hooks'
 import {
   BASELINE, MAX_TOUR_STOPS, getDataset, getHealth, postRoute, postTour,
   type BlockedEdge, type LatLon, type RouteResponse, type Scenario, type TourMethod, type TourResponse,
@@ -73,10 +74,14 @@ const closedToDraw = (fromRes: BlockedEdge[] | undefined, clicked: RouteSegment[
 }
 
 export default function App() {
+  const narrow = useMediaQuery('(max-width: 767px)')
+  const medium = useMediaQuery('(max-width: 1279px)')
   const layersRef = useRef<MapLayers | null>(null)
   const [mapReady, setMapReady] = useState(0)
   const onMapReady = useCallback((l: MapLayers) => {
     layersRef.current = l
+    // Bản đồ được tạo lại khi đổi bố cục (breakpoint): thu phóng lại cho vừa kết quả đang hiện.
+    pendingFit.current = true
     setMapReady((n) => n + 1)
   }, [])
 
@@ -599,34 +604,67 @@ export default function App() {
       previous={prevTour ? { res: prevTour.res, label: runLabel(prevTour) } : null} />
       : <Text type="supporting">Chưa có kết quả.</Text>)
 
+  const resultsBlock = (
+    <VStack gap={3}>
+      <Heading level={2}>Kết quả đo được</Heading>
+      {results}
+    </VStack>
+  )
+  const map = <MapView onReady={onMapReady} onClick={onMapClick} />
+  const header = (
+    <LayoutHeader hasDivider>
+      <HStack gap={3} vAlign="center" hAlign="between">
+        <HStack gap={2} vAlign="center">
+          <Heading level={1}>SaiGo</Heading>
+          {!narrow && <Text type="supporting">Lập kế hoạch lộ trình giao hàng</Text>}
+        </HStack>
+        <Badge variant={server.ok === null ? 'neutral' : server.ok ? 'success' : 'error'}
+          label={narrow && server.ok ? 'Sẵn sàng' : server.text} />
+      </HStack>
+    </LayoutHeader>
+  )
+
+  // Bố cục theo độ rộng (review 14/11 đợt 2, FE-1/UX-6/QA-10): trước đây hai cột cố định 320 + 380 px, nên máy
+  // chiếu 1024 px chỉ còn ~324 px cho bản đồ và điện thoại 390 px thì bản đồ rộng 0.
+  if (narrow) {
+    // < 768 px: bản đồ ở trên (55% chiều cao), điều khiển và kết quả xếp dọc bên dưới, cả trang cuộn.
+    return (
+      <AppShell height="fill">
+        <Layout
+          header={header}
+          content={
+            <LayoutContent padding={0} isScrollable label="Ứng dụng">
+              <VStack gap={0}>
+                <VStack height="55dvh">{map}</VStack>
+                <VStack gap={6} padding={4}>
+                  {controls}
+                  {resultsBlock}
+                </VStack>
+              </VStack>
+            </LayoutContent>
+          }
+        />
+      </AppShell>
+    )
+  }
   return (
     <AppShell height="fill">
       <Layout
-        header={
-          <LayoutHeader hasDivider>
-            <HStack gap={3} vAlign="center" hAlign="between">
-              <HStack gap={2} vAlign="center">
-                <Heading level={1}>SaiGo</Heading>
-                <Text type="supporting">Lập kế hoạch lộ trình giao hàng</Text>
-              </HStack>
-              <Badge variant={server.ok === null ? 'neutral' : server.ok ? 'success' : 'error'} label={server.text} />
-            </HStack>
-          </LayoutHeader>
-        }
-        start={<LayoutPanel width={320} hasDivider padding={4} label="Bảng điều khiển">{controls}</LayoutPanel>}
-        content={
-          <LayoutContent padding={0} isScrollable={false} label="Bản đồ">
-            <MapView onReady={onMapReady} onClick={onMapClick} />
-          </LayoutContent>
-        }
-        end={
-          <LayoutPanel width={380} hasDivider padding={4} label="Kết quả đo được">
-            <VStack gap={3}>
-              <Heading level={2}>Kết quả đo được</Heading>
-              {results}
-            </VStack>
+        header={header}
+        start={
+          // 768–1279 px (máy chiếu 1024/1280): kết quả gộp xuống dưới điều khiển ở cột trái, bỏ cột phải.
+          <LayoutPanel width={medium ? 360 : 300} hasDivider padding={4} label="Bảng điều khiển">
+            {medium ? <VStack gap={6}>{controls}{resultsBlock}</VStack> : controls}
           </LayoutPanel>
         }
+        content={
+          <LayoutContent padding={0} isScrollable={false} label="Bản đồ">
+            {map}
+          </LayoutContent>
+        }
+        end={medium ? undefined : (
+          <LayoutPanel width={360} hasDivider padding={4} label="Kết quả đo được">{resultsBlock}</LayoutPanel>
+        )}
       />
     </AppShell>
   )
