@@ -19,7 +19,7 @@ export interface RouteRequest {
   algorithms?: Algorithm[]
   scenario_id?: string
   blocked_edge_ids?: number[]
-  trace_limit?: number // > 0: trả thêm 	race (toạ độ node đã mở rộng, theo thứ tự). Chỉ dùng cho lớp node đã mở rộng
+  trace_limit?: number // > 0: trả thêm `trace` (toạ độ node đã mở rộng, theo thứ tự). Chỉ dùng cho lớp node đã mở rộng
 }
 
 export interface SnappedPoint {

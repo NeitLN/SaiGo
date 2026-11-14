@@ -254,6 +254,7 @@ export default function App() {
       setTrace(null)
       return
     }
+    setTrace(null)   // bỏ chấm của truy vấn cũ ngay, không để hiện lẫn tới khi trace mới về (review #139)
     const ctl = new AbortController()
     postRoute({
       source: routeQuery.source, target: routeQuery.target, algorithms: ['dijkstra', 'astar'],

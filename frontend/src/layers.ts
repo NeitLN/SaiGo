@@ -80,6 +80,7 @@ export class MapLayers {
   private network: L.Layer | null = null
   private previous = L.layerGroup()
   private trace = L.layerGroup()
+  private traceRenderer: L.Canvas
   private palette: Palette
   private map: L.Map
 
@@ -99,6 +100,8 @@ export class MapLayers {
     const tracePane = map.createPane('trace')
     tracePane.style.zIndex = '395'
     tracePane.style.pointerEvents = 'none'
+    // Một renderer dùng chung: tạo mới mỗi lần vẽ thì Leaflet giữ lại canvas cũ (review #139: 10 canvas sau vài lần).
+    this.traceRenderer = L.canvas({ pane: 'trace' })
     this.trace.addTo(map)
     this.zones.addTo(map)
     this.routes.addTo(map)
@@ -308,7 +311,7 @@ export class MapLayers {
    */
   setTrace(dijkstra: [number, number][] | null, astar: [number, number][] | null) {
     this.trace.clearLayers()
-    const renderer = L.canvas({ pane: 'trace' })
+    const renderer = this.traceRenderer
     const dots = (coords: [number, number][] | null, color: string, radius: number) => {
       for (const ll of toLatLngs(coords ?? [])) {
         L.circleMarker(ll, { renderer, pane: 'trace', radius, stroke: false, fillColor: color, fillOpacity: 0.55, interactive: false })

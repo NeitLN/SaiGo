@@ -38,7 +38,7 @@ Mọi số hiển thị đều lấy từ response của backend; không có s�
 | Đoạn bị đóng | Đỏ, nét đứt; tooltip "Đoạn đường bị đóng do người dùng đánh dấu" |
 | Nền dự phòng | Khi không tải được tile OSM: mạng đường của vùng demo vẽ nét xám từ chính dữ liệu đồ thị (`/api/network`, T56 R8), kèm dòng báo; vẫn giữ ghi nguồn OSM |
 
-Bấm vào một đoạn **trên tuyến** để đóng (đóng cả cạnh đối nếu có), rồi tìm lại. Không vẽ toàn bộ mạng đường (D12), trừ nền dự phòng. Công tắc **Hiện node đã mở rộng** (thêm 14/11, mặc định tắt) vẽ tĩnh node Dijkstra (chấm xanh) và A* (chấm cam nhỏ) đã mở rộng, lấy bằng một request riêng có 	race_limit để thời gian tính ở bảng không bị đội lên; không có animation. Không vẽ đường thẳng nối hai điểm khi không có đường.
+Bấm vào một đoạn **trên tuyến** để đóng (đóng cả cạnh đối nếu có), rồi tìm lại. Không vẽ toàn bộ mạng đường (D12), trừ nền dự phòng. Công tắc **Hiện node đã mở rộng** (thêm 14/11, mặc định tắt) vẽ tĩnh node Dijkstra (chấm xanh) và A* (chấm cam nhỏ) đã mở rộng, lấy bằng một request riêng có `trace_limit` để thời gian tính ở bảng không bị đội lên; không có animation. Không vẽ đường thẳng nối hai điểm khi không có đường.
 
 ### 1.3. Cột phải — kết quả đo được
 
