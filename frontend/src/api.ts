@@ -203,7 +203,8 @@ export async function getDataset(): Promise<DatasetResponse | null> {
 }
 
 // Lỗi từ API: FastAPI trả `detail` là chuỗi tiếng Việt (dữ liệu sai với đồ thị, 503) hoặc danh sách
-// lỗi kiểm tra kiểu của Pydantic (422, tiếng Anh) — ARCHITECTURE mục 4.
+// lỗi kiểm tra kiểu của Pydantic (422; từ 15/11 backend đã dịch msg sang tiếng Việt kèm tên trường, xem
+// backend/app/api/errors.py) — ARCHITECTURE mục 4.
 function errorMessage(status: number, body: unknown): string {
   const detail = (body as { detail?: unknown } | null)?.detail
   if (typeof detail === 'string') return detail
