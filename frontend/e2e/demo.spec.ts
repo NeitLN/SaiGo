@@ -111,6 +111,10 @@ test('Khung 1280 × 800: không cuộn trang, nút chính và số chính nằm 
   expect(scroll.y, 'trang cuộn dọc').toBeLessThanOrEqual(0)
   await expect(page.getByRole('button', { name: 'Tìm đường', exact: true })).toBeInViewport()
   await expect(page.getByText('Thời gian di chuyển ước tính').first()).toBeInViewport()
+  // Khay phân tích (đợt UI "Bàn điều phối"): thanh node và kết luận chi phí thấy ngay ở 1280 × 800, không cần cuộn.
+  await expect(page.getByText('Chi phí trùng khớp').first()).toBeInViewport()
+  await expect(page.getByRole('progressbar', { name: /Dijkstra: 404 node/ })).toBeInViewport()
+  await expect(page.getByRole('progressbar', { name: /A\*: 106 node/ })).toBeInViewport()
 })
 
 test('Khay phân tích thu gọn được, bản đồ cao lên và vẫn thấy cả tuyến', async ({ page }) => {
