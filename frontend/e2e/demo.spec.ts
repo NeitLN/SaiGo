@@ -34,9 +34,17 @@ async function settled(page: Page) {
   await expect(page.getByText(/Đang tính…|Đang kiểm điểm/)).toHaveCount(0)
 }
 
+/** Số đứng riêng: "404" không khớp vào "1.404", "4040" hay "404,5" (góp ý review #163). */
+const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const exact = (t: string) => new RegExp(`(?<![\\d.,])${escape(t)}(?!\\d|[.,]\\d)`)
+
 async function expectAll(page: Page, texts: (string | RegExp)[]) {
   await settled(page)
-  for (const t of texts) await expect(body(page)).toContainText(t)
+  // innerText (không phải textContent) để các ô bảng cạnh nhau có dấu tách, vd. "1.762<tab>1.762" chứ không "1.7621.762".
+  for (const t of texts) {
+    const want = typeof t === 'string' ? (/^[+\d]/.test(t) ? exact(t) : new RegExp(escape(t))) : t
+    await expect.poll(() => body(page).innerText(), { message: `trang có ${want}` }).toMatch(want)
+  }
 }
 
 test.beforeEach(async ({ page, request }) => {
