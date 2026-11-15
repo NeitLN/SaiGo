@@ -110,8 +110,8 @@ export interface SnapCheck {
   ok: boolean
 }
 
-export async function getSnap(p: LatLon): Promise<SnapCheck> {
-  const res = await fetch(`/api/snap?lat=${p.lat}&lon=${p.lon}`)
+export async function getSnap(p: LatLon, signal?: AbortSignal): Promise<SnapCheck> {
+  const res = await fetch(`/api/snap?lat=${p.lat}&lon=${p.lon}`, { signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

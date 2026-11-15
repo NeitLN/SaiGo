@@ -11,9 +11,14 @@ const A = { lat: 10.77, lon: 106.69 }
 const B = { lat: 10.78, lon: 106.70, name: 'Bitexco' }
 
 test('nextRoutePoint: điểm đi, điểm đến, đủ hai điểm thì bắt đầu lại', () => {
-  assert.deepEqual(nextRoutePoint(null, null, A), { source: A, target: null, restart: true })
-  assert.deepEqual(nextRoutePoint(A, null, B), { source: A, target: B, restart: false })
-  assert.deepEqual(nextRoutePoint(A, B, B), { source: B, target: null, restart: true })
+  assert.deepEqual(nextRoutePoint(null, null, A), { kind: 'ok', source: A, target: null, restart: true })
+  assert.deepEqual(nextRoutePoint(A, null, B), { kind: 'ok', source: A, target: B, restart: false })
+  assert.deepEqual(nextRoutePoint(A, B, B), { kind: 'ok', source: B, target: null, restart: true })
+})
+
+test('nextRoutePoint: điểm đến trùng điểm đi thì từ chối (R-9)', () => {
+  assert.deepEqual(nextRoutePoint(B, null, { lat: B.lat, lon: B.lon }),
+    { kind: 'error', text: 'Điểm đến trùng điểm đi (Bitexco). Hãy chọn một điểm khác.' })
 })
 
 test('fmt: có tên thì hiện tên, không thì toạ độ 5 chữ số, rỗng là gạch', () => {

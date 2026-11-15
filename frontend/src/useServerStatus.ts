@@ -23,9 +23,13 @@ export function useServerStatus() {
       .catch(() => setServer(DOWN))
   }, [])
 
+  // Đã đọc được /api/dataset (hoặc biết API không có). Lần đầu đọc lỗi thì nhịp kiểm 10 s đọc lại (test lại 15/11,
+  // C-3: trước đây chỉ đọc lại khi server từ tắt sang bật, nên lỗi một lần lúc mở trang thì mất danh sách kịch bản).
+  const datasetRead = useRef(false)
   const loadDataset = useCallback(() => {
     getDataset()
       .then((d) => {
+        datasetRead.current = true
         if (d === null) {
           setScenarioNote('API chưa có /api/dataset (T51); chỉ có kịch bản cơ sở.')
           return
@@ -43,7 +47,7 @@ export function useServerStatus() {
   const serverOk = useRef(server.ok)
   serverOk.current = server.ok
   const markServerUp = useCallback(() => {
-    if (serverOk.current === true) return
+    if (serverOk.current === true && datasetRead.current) return
     checkServer()
     loadDataset()
   }, [checkServer, loadDataset])
@@ -59,7 +63,7 @@ export function useServerStatus() {
     const tick = () => {
       getHealth()
         .then((h) => {
-          if (h.dataset_loaded && serverOk.current !== true) loadDataset()
+          if (h.dataset_loaded && (serverOk.current !== true || !datasetRead.current)) loadDataset()
           setServer(badgeFrom(h.dataset_loaded, h.dataset_id))
         })
         .catch(() => setServer(DOWN))
