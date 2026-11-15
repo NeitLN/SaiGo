@@ -523,7 +523,7 @@ export class MapLayers {
       pane: 'previous', stroke: false, fillColor: this.palette.casing, fillOpacity: 0.08, interactive: false,
     }).addTo(this.area)
     L.rectangle([[b.south, b.west], [b.north, b.east]], {
-      pane: 'previous', color: this.palette.road, weight: 1.5, opacity: 0.7, fill: false, interactive: false,
+      pane: 'previous', color: this.palette.road, weight: 1.5, opacity: 0.4, fill: false, interactive: false,
     }).addTo(this.area)
     this.map.setMaxBounds(L.latLngBounds([b.south, b.west], [b.north, b.east]).pad(0.6))
     this.map.setMinZoom(13)

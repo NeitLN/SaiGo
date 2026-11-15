@@ -215,3 +215,11 @@
   padding: 2px 10px;
   font-size: 12px;
 }
+
+/* Dòng ghi nguồn gọn hơn trên điện thoại (đợt UI 15/11): giữ đủ nội dung theo điều khoản, chỉ thu cỡ chữ. */
+@media (max-width: 767px) {
+  .map-frame .leaflet-control-attribution {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+}

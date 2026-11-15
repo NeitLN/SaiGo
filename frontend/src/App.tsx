@@ -27,7 +27,7 @@ import {
 import { DEMO_CASES, DEMO_DATASET_ID, NAMED_PLACES } from './cases'
 import { costDelta, deltaText } from './compare'
 import { Grid } from '@astryxdesign/core/Grid'
-import Kpi, { km, metersRaw, minutes, secondsRaw } from './Kpi'
+import Kpi, { km, metersRaw, minutes, minutesText, secondsRaw } from './Kpi'
 import { routeSegments, segmentLength, toLatLngs, zoneLegend, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
@@ -706,6 +706,12 @@ export default function App() {
           {summaryKpi.delta && (
             <Text type="body" weight="semibold">
               So với lần trước{mode === 'tour' ? ', phương án được chọn' : ''}: {summaryKpi.delta}
+            </Text>
+          )}
+          {/* Bước 10 của DEMO: số "Giữ thứ tự cũ" thấy ngay ở máy chiếu, không phải cuộn tới danh sách phương án. */}
+          {mode === 'tour' && tour?.candidates.kept_order && (
+            <Text type="body" hasTabularNumbers>
+              Giữ thứ tự cũ: {minutesText(tour.candidates.kept_order.cost_s)} · {secondsRaw(tour.candidates.kept_order.cost_s)}
             </Text>
           )}
           <Text type="supporting">Chi tiết ở mục Kết quả đo được bên dưới.</Text>
