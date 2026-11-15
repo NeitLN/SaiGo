@@ -159,7 +159,7 @@ Ví dụ request/response của `/api/route`:
 
 Các số trong ví dụ chỉ để minh họa cấu trúc, **không phải kết quả**. `costs_match` là `|cost_dijkstra − cost_astar| ≤ 1e-6 · max(1, cost_dijkstra)`.
 
-Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo tiếng Việt; `blocked_edge_ids` không tồn tại → 422. 422 có hai dạng `detail`: **chuỗi** tiếng Việt khi dữ liệu sai với đồ thị đang nạp (điểm quá xa, kịch bản/cạnh không có), và **danh sách** lỗi của Pydantic khi sai kiểu (thiếu trường, `"abc"` thay vì số, `true` trong `blocked_edge_ids`); thông báo của Pydantic là tiếng Anh. UI phải xử lý cả hai.
+Lỗi: tọa độ ngoài vùng hoặc snap > 150 m → 422 với thông báo tiếng Việt; `blocked_edge_ids` không tồn tại → 422. 422 có hai dạng `detail`: **chuỗi** tiếng Việt khi dữ liệu sai với đồ thị đang nạp (điểm quá xa, kịch bản/cạnh không có), và **danh sách** lỗi của Pydantic khi sai kiểu (thiếu trường, `"abc"` thay vì số, `true` trong `blocked_edge_ids`). Từ 15/11 (`backend/app/api/errors.py`) danh sách này giữ cấu trúc của Pydantic (`type`, `loc`, `ctx`) nhưng `msg` là tiếng Việt kèm tên trường (vd. `"target: thiếu trường bắt buộc"`), không còn tiền tố `"Value error, "`; số không hữu hạn (NaN, Infinity, 1e400) trong body cũng thành 422 thay vì 500. Toạ độ `true`/`false` bị từ chối; `blocked_edge_ids` tối đa 10.000 phần tử. `/api/snap` báo `ok` bằng đúng phép so của `/api/route` (khoảng cách chưa làm tròn). UI phải xử lý cả hai dạng.
 
 **Bổ sung ở T51 (chỉ thêm, không đổi trường v1):**
 

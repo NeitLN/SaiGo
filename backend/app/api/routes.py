@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from app.api.schemas import (BBox, DatasetResponse, HealthResponse, NetworkResponse, RouteRequest, RouteResponse,
                              SnapCheckResponse, TourRequest, TourResponse)
 from app.graph.model import Graph, GraphMeta
-from app.graph.snap import nearest_node
+from app.graph.snap import SnapError, nearest_node
 from app.services.routing import SNAP_MAX_M, RouteInputError, route
 from app.services.tour import plan_tour
 
@@ -55,15 +55,21 @@ def dataset(request: Request) -> DatasetResponse:
 
 
 @router.get("/snap", response_model=SnapCheckResponse)
-def snap_check(request: Request, lat: float = Query(..., ge=-90, le=90),
-               lon: float = Query(..., ge=-180, le=180)) -> SnapCheckResponse:
+def snap_check(request: Request, lat: float = Query(..., ge=-90, le=90, allow_inf_nan=False),
+               lon: float = Query(..., ge=-180, le=180, allow_inf_nan=False)) -> SnapCheckResponse:
     """Node gần nhất của một điểm và có đạt ngưỡng snap không (review UI 14/11, PM-7). UI gọi lúc người dùng bấm
     đặt điểm, để từ chối điểm quá xa đường ngay, không đợi tới lúc tìm đường hay lập tour."""
     graph, meta = _loaded(request)
     s = nearest_node(graph, meta, lat, lon, max_m=None)
+    # "ok" dùng đúng phép so của /api/route, /api/tour (khoảng cách chưa làm tròn): so số đã làm tròn 2 chữ số thì
+    # điểm cách 150,003 m được báo ok mà tìm đường lại bị từ chối (test lại 15/11, P-2).
+    try:
+        nearest_node(graph, meta, lat, lon, max_m=SNAP_MAX_M)
+        ok = True
+    except SnapError:
+        ok = False
     return SnapCheckResponse(node_id=s.node_id, lat=graph.node_lat[s.node_id], lon=graph.node_lon[s.node_id],
-                             snap_distance_m=s.snap_distance_m, max_m=SNAP_MAX_M,
-                             ok=s.snap_distance_m <= SNAP_MAX_M)
+                             snap_distance_m=s.snap_distance_m, max_m=SNAP_MAX_M, ok=ok)
 
 
 @router.get("/network", response_model=NetworkResponse)

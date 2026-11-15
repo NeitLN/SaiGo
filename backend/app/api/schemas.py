@@ -8,6 +8,10 @@ from typing import Literal
 from pydantic import BaseModel, Field, StrictInt, field_validator, model_validator
 
 
+# Số cạnh đóng tối đa trong một request (test lại 15/11, P-6): đủ cho mọi vùng đã dựng, chặn danh sách vô hạn.
+MAX_BLOCKED = 10_000
+
+
 class HealthResponse(BaseModel):
     """Thông tin trạng thái server và dataset đang nạp."""
 
@@ -21,6 +25,14 @@ class LatLon(BaseModel):
 
     lat: float = Field(..., description="Vĩ độ trong khoảng [-90, 90]")
     lon: float = Field(..., description="Kinh độ trong khoảng [-180, 180]")
+
+    @field_validator("lat", "lon", mode="before")
+    @classmethod
+    def reject_bool(cls, v: object) -> object:
+        # Chế độ lax đổi true/false thành 1.0/0.0 trước validator bên dưới (test lại 15/11, P-4).
+        if isinstance(v, bool):
+            raise ValueError("toạ độ phải là số, không phải true/false")
+        return v
 
     @field_validator("lat")
     @classmethod
@@ -48,7 +60,7 @@ class RouteRequest(BaseModel):
     target: LatLon
     algorithms: list[str] = Field(default_factory=lambda: ["dijkstra"])
     scenario_id: str | None = "baseline"
-    blocked_edge_ids: list[StrictInt] = Field(default_factory=list)   # StrictInt: không nhận true/false là id 1/0
+    blocked_edge_ids: list[StrictInt] = Field(default_factory=list, max_length=MAX_BLOCKED)   # StrictInt: không nhận true/false là id 1/0
     trace_limit: int = Field(0, ge=0, le=5000)
 
     @field_validator("algorithms")
@@ -201,7 +213,7 @@ class TourRequest(BaseModel):
     depot: LatLon
     stops: list[TourStop] = Field(..., min_length=1, max_length=MAX_TOUR_STOPS)
     scenario_id: str | None = "baseline"
-    blocked_edge_ids: list[StrictInt] = Field(default_factory=list)   # StrictInt: không nhận true/false là id 1/0
+    blocked_edge_ids: list[StrictInt] = Field(default_factory=list, max_length=MAX_BLOCKED)   # StrictInt: không nhận true/false là id 1/0
     include_optimal: bool = False      # Held–Karp làm đối chứng, chỉ khi tổng số điểm ≤ HELD_KARP_MAX_POINTS (11)
     include_or_opt: bool = False       # Or-opt xen kẽ 2-opt, thêm ứng viên nearest_neighbor_2opt_oropt
     return_to_depot: Literal[True] = True   # chưa hỗ trợ tour mở (TOPIC 15.3): gửi false → 422

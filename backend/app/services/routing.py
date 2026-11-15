@@ -31,13 +31,19 @@ class RouteInputError(ValueError):
     """Request hợp lệ về kiểu nhưng sai với dữ liệu đang nạp (điểm quá xa, kịch bản/cạnh không có) → 422."""
 
 
+def _over(distance_m: float | None) -> str:
+    """Khoảng cách vượt ngưỡng: làm tròn ra đúng 150 m thì ghi "hơn 150 m" (test lại 15/11, P-3: trước đây ghi
+    "cách 150 m, quá ngưỡng 150 m")."""
+    d = distance_m or 0.0
+    return f"hơn {SNAP_MAX_M:.0f} m" if round(d) <= SNAP_MAX_M else f"{d:.0f} m"
+
+
 def _snap(graph: Graph, meta: GraphMeta, lat: float, lon: float, which: str) -> tuple[int, float]:
     try:
         s = nearest_node(graph, meta, lat, lon, max_m=SNAP_MAX_M)
     except SnapError as err:
-        raise RouteInputError(
-            f"{which} cách mạng đường {err.distance_m:.0f} m, quá ngưỡng {SNAP_MAX_M:.0f} m. "
-            "Hãy chọn điểm gần đường hơn.") from None
+        raise RouteInputError(f"{which} cách mạng đường {_over(err.distance_m)}, quá ngưỡng {SNAP_MAX_M:.0f} m. "
+                              "Hãy chọn điểm gần đường hơn.") from None
     return s.node_id, s.snap_distance_m
 
 

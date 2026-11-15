@@ -7,9 +7,11 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.algorithms.heuristics import geo_scale
+from app.api.errors import validation_error_handler
 from app.api.routes import router
 from app.graph.closures import reverse_twins
 from app.graph.model import load_graph
@@ -72,4 +74,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="SaiGo API", version="0.1.0", lifespan=lifespan)
 # Nén response từ 1 KB khi client nhận gzip (review UI 14/11 đợt 3, FE-9): /api/network ~283 KB không nén.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+# Lỗi 422 tiếng Việt, không thành 500 khi body có NaN/Infinity (test lại 15/11, P-1, P-5).
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.include_router(router, prefix="/api")
