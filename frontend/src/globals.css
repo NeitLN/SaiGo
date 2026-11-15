@@ -4,6 +4,12 @@
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 
+/* Header nền mực ở cả hai chế độ (đợt UI "Bàn điều phối"): App.tsx bọc LayoutHeader trong <Theme mode="dark">,
+   theme lồng chỉ đổi token màu (lớp bọc là display: contents) nên tô nền phần tử header bằng token của chế độ tối. */
+[data-astryx-theme][data-theme="dark"] > [data-divider]:has(h1) {
+  background: var(--color-background-body);
+}
+
 /* Phần dưới chỉ dành cho phần tử do Leaflet tạo ra (không phải component của Astryx), dùng token của theme. */
 
 .map-frame {

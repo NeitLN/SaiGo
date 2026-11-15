@@ -2,7 +2,6 @@
 // Chế độ "Tìm đường hai điểm" (T14, T52, T53, đóng đoạn đường T54) và "Tour" (T73).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppShell } from '@astryxdesign/core/AppShell'
-import { Avatar } from '@astryxdesign/core/Avatar'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Collapsible } from '@astryxdesign/core/Collapsible'
@@ -18,6 +17,7 @@ import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
 import { Tooltip } from '@astryxdesign/core/Tooltip'
+import { Theme } from '@astryxdesign/core/theme'
 import { VStack } from '@astryxdesign/core/VStack'
 import { useAnnounce, useMediaQuery } from '@astryxdesign/core/hooks'
 import {
@@ -39,6 +39,8 @@ import {
   type Run,
 } from './appLogic'
 import { useServerStatus } from './useServerStatus'
+import { Logo } from './Logo'
+import { themes, defaultThemeSlug } from './astryx-themes'
 
 // Mỗi lần gửi request là một query mới (n tăng); effect hủy request cũ nên chỉ kết quả mới nhất được hiện.
 interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; blocked: number[]; n: number }
@@ -858,10 +860,12 @@ export default function App() {
   )
   const map = <MapView onReady={onMapReady} onClick={onMapClick} />
   const header = (
+    // Header nền mực ở cả hai chế độ (đợt UI "Bàn điều phối"): bọc trong theme chế độ tối.
+    <Theme theme={themes[defaultThemeSlug]} mode="dark">
     <LayoutHeader hasDivider>
       <HStack gap={3} vAlign="center" hAlign="between">
         <HStack gap={2} vAlign="center">
-          <Avatar name="Sai Go" shape="rounded" size="sm" tooltip={false} />
+          <Logo />
           <Heading level={1}>SaiGo</Heading>
           {!narrow && <Text type="supporting">Lập kế hoạch lộ trình giao hàng · Khu Bến Thành, TP.HCM</Text>}
         </HStack>
@@ -874,6 +878,7 @@ export default function App() {
         </Tooltip>
       </HStack>
     </LayoutHeader>
+    </Theme>
   )
 
   // Bố cục theo độ rộng (review 14/11 đợt 2, FE-1/UX-6/QA-10): trước đây hai cột cố định 320 + 380 px, nên máy
