@@ -139,6 +139,6 @@
 
 /* Viền ô chọn và rãnh công tắc đang tắt chỉ đạt 1,48:1 trên nền trắng (A-8): đậm hơn để đạt 3:1. */
 :root,
-[class] {
+[data-astryx-theme] {
   --color-border-emphasized: light-dark(#7d8894, #6b7380);
 }
