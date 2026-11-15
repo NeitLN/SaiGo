@@ -4,87 +4,113 @@ Cập nhật 26/10 theo [đề xuất đổi phạm vi](proposals/2026-10-26-pha
 
 **Cập nhật 14/11 (D15, D18):** giao diện là React + Astryx (T56, #103). Bỏ nhật ký snapshot (không thêm bằng chứng cho RQ nào; dòng "Kịch bản: …" trong khối kết quả ghi kịch bản và số cạnh đang đóng). Thêm bước 10–11: lập lại tour sau khi đóng đường, đúng câu chuyện "một kho, 5 điểm giao, một đường bị đóng" của proposal. Hai bước này làm ở R1 ([phiếu R1](tasks/R1-tour-closure.md)).
 
+**Cập nhật 15/11 (test lại toàn app, 6 tester):** mục 1 viết lại theo giao diện hiện tại (tên nút, ô chọn, thẻ Held–Karp, công tắc Phần mở rộng, bố cục theo độ rộng). Mục 2: bước 5 làm ở chiều ban đầu (sau bước 4 phải bấm Đảo chiều lần nữa, nếu không tuyến không đổi); bước 6 đóng một đoạn cố định để số lặp lại được; thêm thời lượng từng bước. Số trong file đo trên `hcm-benthanh-r2000-20261024`.
+
 Mọi số hiển thị đều lấy từ response của backend; không có số viết tay.
 
 ## 1. Bố cục giao diện
 
+Bố cục đổi theo độ rộng cửa sổ:
+
+| Độ rộng | Bố cục |
+|---|---|
+| ≥ 1440 px | Ba cột: điều khiển (300 px) · bản đồ · kết quả (360 px) |
+| 768–1439 px (máy chiếu 1024/1280, laptop 1366) | Hai cột: cột trái 360 px gồm điều khiển rồi kết quả, bản đồ bên phải. Có **dòng tóm tắt kết quả** ngay dưới chọn chế độ (vd. "Tìm xong: 186,1 giây, 1.565 mét. Dijkstra mở 404 node, A* mở 106 node. So với lần trước: …"), nên người xem thấy số mà không cần cuộn |
+| < 768 px | Bản đồ ở trên, điều khiển và kết quả xếp dưới |
+
 ```
+≥ 1440 px
 ┌──────────────┬──────────────────────────────────┬────────────────┐
-│ Bảng điều    │                                  │ Kết quả        │
-│ khiển        │   Bản đồ Leaflet (nền tile OSM)  │ đo được        │
-│              │                                  │                │
-│ Chế độ       │  điểm đi, điểm đến, tuyến,       │ Dijkstra / A*  │
-│ Case demo    │  kho + điểm giao (chế độ tour),  │ Thẻ tour       │
-│ Kịch bản     │  vùng ùn tắc, đoạn bị đóng       │                │
-│ [Tìm đường]  │                                  │ Kịch bản và    │
-│ [Mở lại hết] │                                  │ cạnh đang đóng │
+│ Chế độ       │                                  │ Kết quả        │
+│ Case demo    │   Bản đồ Leaflet (nền tile OSM   │ đo được        │
+│ Kịch bản     │   hoặc nền dự phòng)             │ Dijkstra / A*  │
+│ Địa danh     │   điểm, tuyến, vùng ùn tắc,      │ Thẻ tour       │
+│ Nút, công tắc│   đoạn đóng, chú giải nổi        │ So với lần trước│
 └──────────────┴──────────────────────────────────┴────────────────┘
 ```
 
-### 1.1. Cột trái — bảng điều khiển
+### 1.1. Bảng điều khiển
 
-- Chế độ: **Tìm đường hai điểm** (mặc định) / **Tour**.
-- Case demo chọn sẵn: "Hai điểm qua trung tâm", "Không còn đường", "Kho + 5 điểm giao", "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (bước 10, thêm 14/11), "Tour không còn khả thi" (R1). Chọn case là app tự chạy và tự thu phóng vừa kết quả.
-- Kịch bản: Bình thường / Cao điểm mô phỏng — trung tâm (`peak-center`).
-- Đặt điểm từ địa danh (thêm 14/11): chọn Dinh Độc Lập, Chợ Bến Thành, Nhà thờ Đức Bà… thay vì bấm bản đồ; đi qua cùng bước kiểm khoảng cách, dùng được bằng bàn phím.
-- Nút **Tìm đường** (chạy cả Dijkstra và A*), nút **Mở lại các đoạn đã đóng**.
+- Chế độ: **Tìm đường** (mặc định) / **Tour**.
+- Case demo (5 case): "Hai điểm qua trung tâm", "Không còn đường", "Kho + 5 điểm giao", "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (bước 10), "Tour không còn khả thi" (bước 11). Chọn case là app tự chạy, tự thu phóng, và đặt kịch bản về cơ sở. Ô case nhớ riêng theo chế độ; Đảo chiều hay Mở lại tất cả làm ô về trống vì kết quả không còn là case đó.
+- Kịch bản (3): **Cơ sở — không ùn tắc, không đóng đường**, **Cao điểm mô phỏng — trung tâm** (`peak-center`), **Cao điểm mô phỏng — vòng xoay Bến Thành**. Kịch bản giữ nguyên khi bấm Xóa.
+- **Đặt điểm từ địa danh**: chọn Dinh Độc Lập, Chợ Bến Thành, Nhà thờ Đức Bà… thay vì bấm bản đồ. Mỗi điểm (bấm hay chọn) được kiểm ngay (`/api/snap`): xa đường quá 150 m thì bị từ chối kèm khoảng cách; trong lúc kiểm có dòng "Đang kiểm điểm vừa chọn…" và các nút tìm/lập bị khoá.
+- Tìm đường: nút **Tìm đường** (chạy Dijkstra và A*), **Đảo chiều**, **Xóa**. Tour: **Lập tour**, **Bỏ điểm cuối**, **Xóa**.
+- Khi có cạnh đóng: dòng "Đang đóng N cạnh" và nút **Mở lại tất cả**.
+- Ô **Đóng một đoạn trên tuyến / tour**: liệt kê từng đoạn ("Đoạn 10/18: … m, bắt đầu cách điểm đi … m"); chọn một đoạn như bấm vào nó trên bản đồ. Dùng được bằng bàn phím.
+- Công tắc **Hiện node đã mở rộng** (chế độ Tìm đường, mặc định tắt) và **Phần mở rộng** (mặc định tắt; thêm ALT, Dijkstra hai chiều vào bảng phụ, và thẻ NN + 2-opt + Or-opt cho tour). Phần mở rộng **giữ trạng thái khi đổi chế độ**: nhớ tắt trước bước 9 nếu đã bật khi hỏi đáp.
 
-### 1.2. Giữa — bản đồ
+### 1.2. Bản đồ
 
 | Thành phần | Cách hiển thị |
 |---|---|
-| Điểm đi, điểm đến | Marker tại node đã snap; tooltip ghi khoảng cách snap |
-| Tuyến | Đường xanh theo hình học thật của cạnh (`[lon, lat]` đổi sang `[lat, lon]`) |
-| Vùng ùn tắc | Hình tròn tô màu nhạt khi chọn kịch bản cao điểm |
-| Đoạn bị đóng | Đỏ, nét đứt; tooltip "Đoạn đường bị đóng do người dùng đánh dấu" |
-| Nền dự phòng | Khi không tải được tile OSM: mạng đường của vùng demo vẽ nét xám từ chính dữ liệu đồ thị (`/api/network`, T56 R8), kèm dòng báo; vẫn giữ ghi nguồn OSM |
+| Điểm đi, điểm đến | Vòng tròn xanh lá "Đi", đỏ "Đến" tại node đã snap; nhãn ghi khoảng cách snap |
+| Tuyến | Dijkstra và A* trùng nhau: một nét xanh viền cam, có viền tối; khác nhau: Dijkstra nét xanh, A* nét cam đứt |
+| Tuyến lần trước | Nét xám mờ khi cùng hai điểm mà đổi kịch bản hoặc cạnh đóng; khi lần này không còn đường, nét xám là tuyến cũ nay không đi được |
+| Vùng ùn tắc | Hình tròn tô vàng nhạt, viền nâu đứt; nhãn phía trong mép trên, vd. "Cao điểm mô phỏng · ×2 · đường chính, đường cấp 2" |
+| Đoạn đang đóng | Đỏ nét đứt có viền sáng, nằm trên tuyến và dưới marker; hiện ngay khi bấm, không chờ kết quả |
+| Tour | Nét tím có mũi tên chỉ chiều; kho là ô vuông xanh "K"; điểm giao là vòng tím đánh số theo thẻ đang xem, tên đặt cạnh số |
+| Điểm không đi được | Marker tô đỏ (tour không khả thi); app tự thu phóng vào điểm hỏng và đoạn đóng |
+| Viền vùng có dữ liệu | Khung nét đứt xám: đặt điểm trong khung này mới snap được |
+| Chú giải | Góc dưới trái, chỉ liệt kê những gì đang vẽ |
+| Nền dự phòng | Khi không tải được tile OSM: mạng đường vẽ nét xám từ dữ liệu đồ thị (`/api/network`), kèm dòng báo; vẫn ghi nguồn OSM |
 
-Bấm vào một đoạn **trên tuyến** để đóng (đóng cả cạnh đối nếu có), rồi tìm lại. Không vẽ toàn bộ mạng đường (D12), trừ nền dự phòng. Công tắc **Hiện node đã mở rộng** (thêm 14/11, mặc định tắt) vẽ tĩnh node Dijkstra (chấm xanh) và A* (chấm cam nhỏ) đã mở rộng, lấy bằng một request riêng có `trace_limit` để thời gian tính ở bảng không bị đội lên; không có animation. Không vẽ đường thẳng nối hai điểm khi không có đường.
+Rê chuột lên tuyến thì đoạn sẽ đóng tô đỏ kèm "Bấm để đóng đoạn đang tô đỏ"; **bấm một lần là đóng** (không có nút xác nhận), cả cạnh đối nếu có, rồi tìm lại. Bấm trượt ra ngoài tuyến khi đang có kết quả không xoá gì (chỉ hiện gợi ý bấm Xóa). Bản đồ luôn dùng màu sáng, kể cả khi máy để chế độ tối. Không vẽ đường thẳng nối hai điểm khi không có đường.
 
-### 1.3. Cột phải — kết quả đo được
+### 1.3. Kết quả đo được
 
-**Khối Dijkstra / A\*** (trả lời RQ1): thời gian di chuyển ước tính, quãng đường, số node mở rộng, thời gian tính toán, và dòng "Chi phí trùng khớp: có/không".
+**Khối Dijkstra / A\*** (RQ1): thời gian di chuyển ước tính (theo kịch bản), quãng đường, số node mở rộng, thời gian tính toán (1 lần chạy); dòng "Chi phí trùng khớp: có/không" và "Ở truy vấn này, A* mở …% số node của Dijkstra". Khi bật Phần mở rộng có bảng phụ ALT / Hai chiều.
 
-**Thẻ so sánh tour** (chế độ tour, RQ2): Thứ tự nhập / Nearest Neighbor / NN + 2-opt; mỗi thẻ có thời gian di chuyển ước tính, quãng đường, mức cải thiện so với thứ tự nhập. Marker điểm giao đánh số theo thẻ đang chọn. Sau khi bấm đóng một đoạn trên tour có thêm thẻ **Giữ thứ tự cũ** (R1).
+**So với lần trước** (cùng điểm, khác kịch bản hoặc cạnh đóng): "186,1 s → 246,1 s: +60,0 s (+32,2%)", dòng phụ ghi kịch bản lần trước và lần này. Lưu ý: so với **lần ngay trước**, không phải với Cơ sở.
 
-**Dòng kịch bản**: "Kịch bản: <tên kịch bản>", thêm "; đóng thêm N cạnh" khi đang đóng cạnh. (Nhật ký snapshot đã bỏ ngày 14/11, D18.)
+**Thẻ tour** (RQ2): Thứ tự nhập · Nearest Neighbor · NN + 2-opt (phương án được chọn) · **Held–Karp (tối ưu, chỉ để đối chứng)** khi tổng số điểm ≤ 11 · NN + 2-opt + Or-opt khi bật Phần mở rộng. Badge "Rẻ nhất" gắn mọi thẻ có chi phí thấp nhất, nên thẻ Held–Karp cũng có thể mang badge. Mỗi thẻ có nút **Xem trên bản đồ**. Sau khi đóng đường có thêm thẻ **Giữ thứ tự cũ** và dòng "Cùng thứ tự, trước khi đóng" (chỉ khi lần này cùng kịch bản và chỉ đóng thêm đoạn).
+
+**Dòng kịch bản**: "Kịch bản: <tên>", thêm "; đóng N cạnh" khi đang đóng cạnh.
 
 ### 1.4. Nhãn bắt buộc
 
 - Tách **Thời gian di chuyển ước tính theo kịch bản** và **Thời gian tính toán**; không có nhãn "Time" chung.
 - Kịch bản cao điểm ghi "Cao điểm mô phỏng".
-- Ghi tên thuật toán cụ thể (Dijkstra, A*, NN, 2-opt).
+- Ghi tên thuật toán cụ thể (Dijkstra, A*, NN, 2-opt, Held–Karp).
 
 ### 1.5. Không đưa vào
 
 - Số liệu không do hệ thống đo (độ tin cậy dự báo, % giảm ùn tắc, …).
 - Giao thông thời gian thực, điều khiển đèn tín hiệu, bản tin giao thông.
-- Animation trace (đã cắt 26/10). Lớp chấm node đã mở rộng quay lại 14/11 ở dạng tĩnh, có công tắc, mặc định tắt (review UI 14/11: giảng viên cần thấy vùng Dijkstra lan đều còn A* kéo về phía đích).
+- Animation trace (đã cắt 26/10). Lớp chấm node đã mở rộng ở dạng tĩnh, có công tắc, mặc định tắt.
 
 ## 2. Kịch bản demo khoảng 4 phút
 
-Giữ đúng số bước của [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 7; bước 3 đã cắt. Mọi case phải chạy thử trước trên đúng snapshot sẽ dùng và được ghi rõ là case minh họa.
+Giữ đúng số bước của [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 7; bước 3 đã cắt. Mọi case phải chạy thử trước trên đúng snapshot sẽ dùng và được ghi rõ là case minh họa. Máy chiếu 1280 × 800 dùng bố cục hai cột: số chính nằm ở dòng tóm tắt đầu cột trái; bảng chi tiết phải cuộn cột trái xuống.
 
-| Bước | Thao tác | Giao diện hiển thị | Người xem hiểu |
-|---|---|---|---|
-| 1 | Chọn case "Hai điểm qua trung tâm" | Nền OSM vùng demo, 2 marker đã snap | Bài toán: đồ thị có hướng thật, chi phí là giây |
-| 2 | (Case đã tự chạy khi chọn ở bước 1; chỉ bấm **Tìm đường** khi đặt điểm bằng tay) | Tuyến; khối Dijkstra/A*: chi phí bằng nhau, A* mở rộng ít node hơn | A* cho cùng chi phí tối ưu (RQ1) |
-| 4 | Đảo chiều đi/đến | Tuyến và chi phí khác chiều ban đầu | Đường một chiều: A→B ≠ B→A |
-| 5 | Chọn kịch bản "Cao điểm mô phỏng — trung tâm" | Vùng ùn tắc; tuyến đổi sang đường vòng; chi phí tăng | Ùn tắc theo vùng làm đổi lựa chọn (RQ3) |
-| 6 | Bấm vào một đoạn trên tuyến → **Đóng đoạn đường** | Đoạn đỏ; tuyến mới; dòng kịch bản ghi "đóng thêm … cạnh" | Lập lại tuyến, không dùng cạnh bị đóng (RQ3) |
-| 7 | Chọn case "Không còn đường" | Thông báo không có đường; không vẽ đường thẳng | Hệ thống báo đúng giới hạn (RQ3) |
-| 8 | Chuyển sang slide biểu đồ tăng quy mô | `expanded` và thời gian theo `|V|` (4 kích thước, fixed trips) | Số đo thật (RQ1b) |
-| 9 | Chuyển sang chế độ tour, case "Kho + 5 điểm giao"; chọn lần lượt 3 thẻ | Thứ tự giao đổi; chi phí trước/sau | Tầng thứ hai của bài toán (RQ2) |
-| 10 | Chọn case "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (đóng sẵn cạnh 1666, gửi kèm thứ tự tour trước khi đóng; thêm 14/11 để khỏi phải bấm trúng cạnh). Vẫn làm tay được: ở case "Kho + 5 điểm giao", thu nhỏ một mức, bấm đoạn gần Bến Bạch Đằng | Đoạn đỏ; thẻ "Giữ thứ tự cũ" 962,7 s đứng đầu; NN + 2-opt sắp lại 692,5 s, thứ tự mới, badge "Rẻ nhất"; dòng Held–Karp: sau khi đóng, 692,5 s là tối ưu | Đóng đường làm đổi cả tuyến lẫn thứ tự; tách công của thuật toán tìm đường khỏi công của việc sắp lại (RQ3). Nói rõ: sắp lại rẻ hơn tour cũ vì tour cũ là cực trị địa phương kém, không phải vì đóng đường có lợi |
-| 11 | Chọn case "Tour không còn khả thi" | "Không điểm nào đi tới được Nhà hát Thành phố."; marker Nhà hát Thành phố tô đỏ, đoạn đóng vẽ đỏ; không vẽ tour một phần | Hệ thống không bỏ điểm giao âm thầm (RQ3) |
+| Bước | Thao tác | Giao diện hiển thị | Người xem hiểu | Thời lượng |
+|---|---|---|---|---|
+| 1–2 | Chọn case "Hai điểm qua trung tâm" (app tự chạy) | 2 marker đã snap, tuyến; 186,1 s, 1.565 m; Dijkstra 404 node, A* 106 node; "Chi phí trùng khớp: có" | Đồ thị có hướng thật, chi phí là giây; A* cùng chi phí tối ưu, mở ít node hơn (RQ1) | ~45 s |
+| 4 | Bấm **Đảo chiều** | 193,0 s, 1.417 m; 477 / 108 node | Đường một chiều: A→B ≠ B→A | ~20 s |
+| 5 | Bấm **Đảo chiều** lần nữa (về Dinh Độc Lập → Bitexco), rồi chọn kịch bản "Cao điểm mô phỏng — trung tâm" | Vùng ùn tắc; tuyến đổi sang đường vòng, tuyến cũ vẽ xám; "186,1 s → 246,1 s: +60,0 s (+32,2%)", 1.748 m | Ùn tắc theo vùng làm đổi lựa chọn (RQ3). Nếu quên đảo lại thì tuyến chiều ngược không đổi (193,0 → 300,0 s) | ~35 s |
+| 6 | Ở ô **Đóng một đoạn trên tuyến**, chọn "Đoạn 10/18" (hoặc bấm đoạn đó trên bản đồ) | Đoạn đỏ; tuyến mới 302,3 s, 2.118 m; "246,1 s → 302,3 s"; "Đang đóng 1 cạnh" | Lập lại tuyến, không dùng cạnh bị đóng (RQ3) | ~25 s |
+| 7 | Chọn case "Không còn đường" | Thông báo không có đường; không vẽ đường thẳng; Dijkstra và A* cùng mở 1.762 node | Hệ thống báo đúng giới hạn (RQ3); khi không còn đường, A* duyệt như Dijkstra | ~20 s |
+| 8 | Chuyển sang slide biểu đồ tăng quy mô | `expanded` và thời gian theo `|V|` (4 kích thước, fixed trips) | Số đo thật (RQ1b) | ~30 s |
+| 9 | Chế độ **Tour**, case "Kho + 5 điểm giao"; bấm **Xem trên bản đồ** ở thẻ Thứ tự nhập rồi NN + 2-opt | 1.066,0 s → 898,1 s, thứ tự giao đổi; thẻ Held–Karp 627,8 s mang "Rẻ nhất", NN + 2-opt "đắt hơn tối ưu 43,0%" | Tầng thứ hai của bài toán (RQ2). Câu chuẩn bị sẵn: "Held–Karp chỉ để đối chứng, không dùng để chọn tour" | ~45 s |
+| 10 | Chọn case "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (đóng sẵn cạnh 1666, gửi kèm thứ tự trước khi đóng) | Đoạn đỏ; thẻ "Giữ thứ tự cũ" 962,7 s đứng đầu, "Cùng thứ tự, trước khi đóng: 898,1 → 962,7 s (+7,2%)"; NN + 2-opt sắp lại 692,5 s (p5 p1 p2 p4 p3) | Đóng đường làm đổi cả tuyến lẫn thứ tự (RQ3). Sắp lại rẻ hơn tour cũ vì tour cũ là cực trị địa phương kém, không phải vì đóng đường có lợi | ~40 s |
+| 11 | Chọn case "Tour không còn khả thi" | "Không điểm nào đi tới được Nhà hát Thành phố."; bản đồ phóng vào Nhà hát, marker đỏ, đoạn đóng đỏ; không vẽ tour một phần | Hệ thống không bỏ điểm giao âm thầm (RQ3) | ~20 s |
+
+Tổng khoảng 4 phút 40 giây nếu nói đủ; để vừa 4 phút: ở bước 9 chỉ bấm hai thẻ như trên, bước 10 nói hai câu, bước 6 làm liền sau bước 5 (không mở lại). Đổi lại bước 8 sang cuối nếu cần cắt.
+
+Mẹo khi trình bày:
+- Một người cầm chuột. Lăn chuột trên cột trái là cuộn cột, trên bản đồ là thu phóng.
+- Bấm trượt lên tuyến là đóng đoạn ngay; lỡ tay thì bấm **Mở lại tất cả**.
+- Chọn lại case là kịch bản về Cơ sở; bấm Xóa thì kịch bản giữ nguyên.
+- Lớp node đã mở rộng: ở mức thu phóng của case, vùng Dijkstra lan ra ngoài khung, thu nhỏ một mức thì thấy rõ.
 
 Khoản cắt 4 của đề xuất phạm vi 26/10 (đóng đường qua API/CLI thay vì bản đồ) không còn cần: đóng đoạn trên bản đồ đã có (T54, T56).
 
 ## 3. Checklist trước buổi demo
 
-- [ ] Ba case demo đã chạy trên đúng snapshot sẽ dùng và cho kết quả như kịch bản.
+- [ ] Năm case demo đã chạy trên đúng snapshot sẽ dùng và cho kết quả như mục 2.
 - [ ] Số trong khối Dijkstra/A* và thẻ tour khớp với response API, không có số viết tay.
-- [ ] Đóng đoạn rồi bấm **Mở lại** trả về đúng tuyến ban đầu.
+- [ ] Đóng đoạn rồi bấm **Mở lại tất cả** trả về đúng tuyến ban đầu.
+- [ ] Công tắc Phần mở rộng và Hiện node đã mở rộng đang tắt khi bắt đầu.
 - [ ] Ghi nguồn © OpenStreetMap contributors hiển thị trên bản đồ.
 - [ ] Có bản quay màn hình dự phòng nếu máy demo lỗi.
 - [ ] Đã thử mở app khi mạng chặn tile OSM: nền dự phòng hiện, demo vẫn chạy trọn.
