@@ -4,6 +4,12 @@
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 
+/* Header nền mực ở cả hai chế độ (đợt UI "Bàn điều phối"): App.tsx bọc LayoutHeader trong <Theme mode="dark">,
+   theme lồng chỉ đổi token màu (lớp bọc là display: contents) nên tô nền phần tử header bằng token của chế độ tối. */
+[data-astryx-theme][data-theme="dark"] > [data-divider]:has(h1) {
+  background: var(--color-background-body);
+}
+
 /* Phần dưới chỉ dành cho phần tử do Leaflet tạo ra (không phải component của Astryx), dùng token của theme. */
 
 .map-frame {
@@ -192,12 +198,6 @@
 /* Nhãn trên bản đồ (tên điểm, khoảng cách snap, vùng ùn tắc): Leaflet mặc định 12 px, nhỏ khi trình chiếu (A-10). */
 .leaflet-tooltip {
   font-size: 13px;
-}
-
-/* Viền ô chọn và rãnh công tắc đang tắt chỉ đạt 1,48:1 trên nền trắng (A-8): đậm hơn để đạt 3:1. */
-:root,
-[data-astryx-theme] {
-  --color-border-emphasized: light-dark(#7d8894, #6b7380);
 }
 
 /* Đợt UI 15/11: nền khung bản đồ khi dùng nền rút gọn tự vẽ (layers.setNetwork): xám nhạt như ô phố, đường trắng. */

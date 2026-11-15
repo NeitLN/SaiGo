@@ -41,7 +41,7 @@ Ba ý chính:
 | Tải dữ liệu đường | OSMnx (chỉ trong `scripts/`) | Tải mạng đường có hướng từ OSM, giữ đường một chiều, cạnh song song `(u,v,key)` | Overpass API thủ công: tốn công, dễ sai |
 | Đối chứng | NetworkX (chỉ trong `tests/`) | Có `dijkstra_path_length` đáng tin để so chi phí | — |
 | Backend | FastAPI + uvicorn | Đã có trong khung; schema Pydantic kiểm tra input | Flask: phải tự validate |
-| Frontend | React 19 + Astryx (theme neutral) + Vite + Leaflet dùng trực tiếp (từ 13/11, D15; trước đó TypeScript thuần, D6) | Gộp T54, T73 vào một giao diện mới thay vì vá giao diện TS thuần; Leaflet đủ cho polyline/marker, không cần `react-leaflet` | Giữ TS thuần: phải tự dựng bảng điều khiển, thẻ, trạng thái |
+| Frontend | React 19 + Astryx (theme riêng `saigo` kế thừa neutral, `frontend/src/themes/saigo`, từ 16/11) + Vite + Leaflet dùng trực tiếp (từ 13/11, D15; trước đó TypeScript thuần, D6) | Gộp T54, T73 vào một giao diện mới thay vì vá giao diện TS thuần; Leaflet đủ cho polyline/marker, không cần `react-leaflet` | Giữ TS thuần: phải tự dựng bảng điều khiển, thẻ, trạng thái |
 | Test | pytest | Đã có trong khung và CI | — |
 | Biểu đồ | Matplotlib | Xuất PNG/SVG cho essay và slide | — |
 | Lưu trữ | File JSON/CSV | Không cần database; dữ liệu chỉ đọc | SQLite: thừa |
