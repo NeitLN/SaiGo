@@ -122,8 +122,8 @@ test('Khay phân tích thu gọn được, bản đồ cao lên và vẫn thấy
   await expectAll(page, ['186,1'])
   const map = page.locator('.map-frame')
   const before = (await map.boundingBox())!.height
-  await page.getByRole('button', { name: 'Thu gọn', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Mở rộng', exact: true })).toHaveAttribute('aria-expanded', 'false')
+  await page.getByRole('button', { name: 'Ẩn khay', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Hiện khay', exact: true })).toHaveAttribute('aria-expanded', 'false')
   // aria-controls trỏ tới phần tử có thật, ẩn khi thu gọn (góp ý review #165).
   await expect(page.locator('#tray-body')).toBeHidden()
   await expect(page.locator('#tray-body')).toHaveCount(1)
@@ -135,8 +135,8 @@ test('Khay phân tích thu gọn được, bản đồ cao lên và vẫn thấy
     const b = (await m.boundingBox())!
     expect(b.y >= box.y && b.y + b.height <= box.y + box.height, 'marker trong khung bản đồ').toBe(true)
   }
-  await page.getByRole('button', { name: 'Mở rộng', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Thu gọn', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  await page.getByRole('button', { name: 'Hiện khay', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Ẩn khay', exact: true })).toHaveAttribute('aria-expanded', 'true')
   await expect(page.locator('#tray-body')).toBeVisible()
 })
 
@@ -213,4 +213,32 @@ test('Điều khiển: chip điều kiện bằng phím mũi tên, danh sách m�
   await expectAll(page, ['898,1'])
   await expect(page.locator('path.route-hit')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Chặn trên bản đồ' })).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('So với Cơ sở khi đổi giữa hai kiểu cao điểm; bấm ngoài vùng có dữ liệu thì báo rõ', async ({ page }) => {
+  await choose(page, 'Lộ trình mẫu', 'Hai điểm qua trung tâm')
+  await expectAll(page, ['186,1'])
+  await choose(page, 'Điều kiện giao thông', /Cao điểm — trung tâm/)
+  await expectAll(page, ['246,1', 'So với Cơ sở (không ùn tắc, không đóng đường): 186,1 s → 246,1 s: +60,0 s (+32,2%)'])
+  // Đổi điều kiện thì bản đồ thu phóng lại vừa tuyến mới: hai marker nằm trong khung bản đồ.
+  await page.waitForTimeout(800)
+  const frame = (await page.locator('.map-frame').boundingBox())!
+  for (const name of ['Điểm đi: Dinh Độc Lập', 'Điểm đến: Bitexco']) {
+    const m = (await page.getByRole('img', { name }).boundingBox())!
+    expect(m.y >= frame.y && m.y + m.height <= frame.y + frame.height, `${name} trong khung`).toBe(true)
+  }
+  // Sang cao điểm khác: "lần trước" là cao điểm trung tâm, nhưng dòng Cơ sở vẫn so với giờ bình thường.
+  await choose(page, 'Điều kiện giao thông', /Cao điểm — Bến Thành/)
+  await expect(page.getByText(/So với Cơ sở \(không ùn tắc, không đóng đường\): 186,1 s → /)).toBeVisible()
+  await expect(page.getByText(/So với Cơ sở[^\n]*: 186,1 s → [\d.,]+ s: \+/)).toBeVisible()
+  // Bấm ngoài khung vùng có dữ liệu: thu nhỏ tới mức xa nhất (z13, khung chỉ còn ở giữa), rồi bấm góc trên trái.
+  await page.getByRole('button', { name: 'Xóa', exact: true }).click()
+  const zoomOut = page.getByRole('button', { name: 'Thu nhỏ' })
+  for (let i = 0; i < 8 && (await zoomOut.getAttribute('aria-disabled')) !== 'true'; i++) {
+    await zoomOut.click()
+    await page.waitForTimeout(400)   // Leaflet bỏ qua lệnh zoom trong lúc đang chạy hiệu ứng zoom trước
+  }
+  const b = (await page.locator('.map-frame').boundingBox())!
+  await page.mouse.click(b.x + 40, b.y + 40)
+  await expect(page.getByText('Điểm này nằm ngoài vùng có dữ liệu')).toBeVisible()
 })

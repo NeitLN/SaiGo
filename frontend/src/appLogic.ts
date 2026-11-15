@@ -61,10 +61,13 @@ export function closedMore(prev: { scenarioId: string; blocked: number[] } | nul
   return cur.size > new Set(prev.blocked).size && prev.blocked.every((id) => cur.has(id))
 }
 
-/** Nhãn kịch bản kèm số cạnh đóng; nhãn cơ sở ghi "không đóng đường" nên bỏ vế đó khi có cạnh đóng (T-7). */
+/**
+ * Nhãn kịch bản kèm đường đóng; nhãn cơ sở ghi "không đóng đường" nên bỏ vế đó khi có cạnh đóng (T-7). Đếm theo cạnh
+ * có hướng (một đoạn hai chiều là 2 cạnh), ghi rõ để người xem không tưởng là 2 đoạn (góp ý người dùng thử 16/11).
+ */
 export function runLabel(scenarioLabel: string, blockedCount: number): string {
   if (blockedCount === 0) return scenarioLabel
-  return `${scenarioLabel.replace(/, không đóng đường$/, '')}; đóng ${blockedCount} cạnh`
+  return `${scenarioLabel.replace(/, không đóng đường$/, '')}; đóng đường (${blockedCount} cạnh có hướng)`
 }
 
 /**
@@ -161,4 +164,10 @@ export function traceLegend(r: RouteResponse): string {
  *  "Cao điểm — Bến Thành". Câu đầy đủ vẫn ở title của chip và ở chú giải. */
 export function shortScenario(label: string): string {
   return label.replace(/^Cơ sở — .*$/, 'Cơ sở').replace('Cao điểm mô phỏng — ', 'Cao điểm — ').replace('vòng xoay ', '')
+}
+
+/** Điểm nằm trong khung vùng có dữ liệu (bbox của /api/dataset); không biết khung thì coi như nằm trong. */
+export function insideArea(p: { lat: number; lon: number }, b: { south: number; west: number; north: number; east: number } | null): boolean {
+  if (!b) return true
+  return p.lat >= b.south && p.lat <= b.north && p.lon >= b.west && p.lon <= b.east
 }
