@@ -81,3 +81,31 @@ export function PickList({ id, label, options, value, onPick, isDisabled, disabl
     </VStack>
   )
 }
+
+/**
+ * Danh sách đoạn để đóng (đánh giá dùng thử 16/11): thay ô chọn của Astryx, vì ô chọn không báo mục đang rê nên
+ * không xem trước được. Rê chuột / Tab tới một dòng thì `onPreview(i)` (bản đồ tô đỏ đoạn đó); bấm hay Enter là đóng,
+ * vẫn một bước như trước. Danh sách cuộn trong khung thấp để không đẩy panel dài ra.
+ */
+export function SegmentList({ id, label, items, onPick, onPreview }: {
+  id: string
+  label: string
+  items: string[]
+  onPick: (i: number) => void
+  onPreview: (i: number | null) => void
+}) {
+  return (
+    <VStack gap={2}>
+      <Text type="label" id={`${id}-label`}>{label}</Text>
+      <div role="group" aria-labelledby={`${id}-label`} className="segment-list" onMouseLeave={() => onPreview(null)}>
+        {items.map((text, i) => (
+          <button key={text} type="button" className="pick segment-pick"
+            onMouseEnter={() => onPreview(i)} onFocus={() => onPreview(i)} onBlur={() => onPreview(null)}
+            onClick={() => { onPreview(null); onPick(i) }}>
+            {text}
+          </button>
+        ))}
+      </div>
+    </VStack>
+  )
+}

@@ -159,6 +159,7 @@ export class MapLayers {
   private legendEl: HTMLDivElement
   private legendCollapsed = false
   private stopMarkers = new Map<string, L.Marker>()
+  private listPreview = L.layerGroup()
   private highlighted: string | null = null
   private legendBtn: HTMLButtonElement
   private legendRows: HTMLDivElement
@@ -245,6 +246,7 @@ export class MapLayers {
     this.routes.addTo(map)
     this.closed.addTo(map)
     this.points.addTo(map)
+    this.listPreview.addTo(map)
   }
 
   /**
@@ -406,18 +408,7 @@ export class MapLayers {
    */
   private addHitSegments(segs: RouteSegment[], onSegmentClick: (seg: RouteSegment) => void, source: object) {
     const preview = L.layerGroup().addTo(this.routes)
-    const showPreview = (seg: RouteSegment | null) => {
-      preview.clearLayers()
-      if (seg) {
-        L.polyline(seg.latlngs, { color: this.palette.closed, weight: 9, opacity: 0.55, interactive: false }).addTo(preview)
-        // Cạnh chỉ dài vài pixel thì nét tô gần như không thấy: thêm chấm ở giữa cạnh để vẫn nhận ra.
-        const mid = seg.latlngs[Math.floor(seg.latlngs.length / 2)]
-        const first = seg.latlngs[0]
-        const at = seg.latlngs.length === 2 ? L.latLng((first.lat + mid.lat) / 2, (first.lng + mid.lng) / 2) : mid
-        L.circleMarker(at, { radius: 7, color: this.palette.closed, weight: 3, fillColor: this.palette.surface, fillOpacity: 1, interactive: false })
-          .addTo(preview)
-      }
-    }
+    const showPreview = (seg: RouteSegment | null) => this.drawPreview(preview, seg)
     const hits: L.Polyline[] = []
     for (const seg of segs) {
       const hit = L.polyline(seg.latlngs, { weight: 18, opacity: 0, className: 'route-hit' })
@@ -439,6 +430,27 @@ export class MapLayers {
         })
         .addTo(this.routes)
     }
+  }
+
+  /** Tô trước đoạn sẽ đóng: nét đỏ mờ, thêm chấm ở giữa để cạnh rất ngắn vẫn nhận ra. */
+  private drawPreview(group: L.LayerGroup, seg: RouteSegment | null) {
+    group.clearLayers()
+    if (!seg) return
+    L.polyline(seg.latlngs, { color: this.palette.closed, weight: 9, opacity: 0.55, interactive: false }).addTo(group)
+    // Cạnh chỉ dài vài pixel thì nét tô gần như không thấy: thêm chấm ở giữa cạnh để vẫn nhận ra.
+    const mid = seg.latlngs[Math.floor(seg.latlngs.length / 2)]
+    const first = seg.latlngs[0]
+    const at = seg.latlngs.length === 2 ? L.latLng((first.lat + mid.lat) / 2, (first.lng + mid.lng) / 2) : mid
+    L.circleMarker(at, { radius: 7, color: this.palette.closed, weight: 3, fillColor: this.palette.surface, fillOpacity: 1, interactive: false })
+      .addTo(group)
+  }
+
+  /**
+   * Tô trước một đoạn từ danh sách đóng đoạn ở panel trái (rê chuột / focus dòng, đánh giá dùng thử 16/11), cùng kiểu với
+   * khi rê chuột lên tuyến ở chế độ chặn; null thì bỏ. Không thu phóng để bản đồ không nhảy khi dò danh sách.
+   */
+  previewSegment(seg: RouteSegment | null) {
+    this.drawPreview(this.listPreview, seg)
   }
 
   /** Cạnh có hình học gần điểm `p` (toạ độ màn hình) nhất. */
@@ -689,6 +701,7 @@ export class MapLayers {
 
   clearRoutes() {
     this.routes.clearLayers()
+    this.listPreview.clearLayers()
     this.setFitButton(false)
   }
 

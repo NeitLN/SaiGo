@@ -41,7 +41,7 @@ import {
 } from './appLogic'
 import { useServerStatus } from './useServerStatus'
 import { Logo } from './Logo'
-import { ChipRadioGroup, PickList } from './Chips'
+import { ChipRadioGroup, PickList, SegmentList } from './Chips'
 import { themes, defaultThemeSlug } from './astryx-themes'
 
 // Mỗi lần gửi request là một query mới (n tăng); effect hủy request cũ nên chỉ kết quả mới nhất được hiện.
@@ -945,12 +945,12 @@ export default function App() {
               </HStack>
             )}
             {keySegs.length > 0 && (
-              <Selector
+              <SegmentList
+                id="close-segment"
                 label={mode === 'route' ? 'Đóng một đoạn trên tuyến' : 'Đóng một đoạn trên tour'}
-                placeholder="Chọn đoạn (thay cho bấm trên bản đồ)"
-                options={keyLabels.map((label, i) => ({ value: String(i), label }))}
-                value=""
-                onChange={closeByKey}
+                items={keyLabels}
+                onPick={(i) => closeByKey(String(i))}
+                onPreview={(i) => layersRef.current?.previewSegment(i === null ? null : keySegs[i] ?? null)}
               />
             )}
           </VStack>
