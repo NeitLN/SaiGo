@@ -190,6 +190,9 @@ export class MapLayers {
       + '<path d="M3 7.5 6 4.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     this.legendRows = L.DomUtil.create('div', '', this.legendEl) as HTMLDivElement
     this.legendRows.id = 'map-legend-rows'
+    // Bản đồ hẹp (điện thoại): chú giải mở sẵn che nửa bản đồ, nên thu gọn sẵn (góp ý người dùng thử 16/11).
+    const w = map.getSize().x
+    this.legendCollapsed = w > 0 && w < 600
     const paintLegend = () => {
       const open = !this.legendCollapsed
       this.legendBtn.setAttribute('aria-expanded', String(open))
@@ -593,10 +596,11 @@ export class MapLayers {
     const outer: L.LatLngTuple[] = [[b.south - pad, b.west - pad], [b.north + pad, b.west - pad],
       [b.north + pad, b.east + pad], [b.south - pad, b.east + pad]]
     L.polygon([outer, inner], {
-      pane: 'previous', stroke: false, fillColor: this.palette.casing, fillOpacity: 0.08, interactive: false,
+      // Đậm hơn (0,08 → 0,18) để thấy ngay đâu là ngoài vùng có dữ liệu (góp ý người dùng thử 16/11).
+      pane: 'previous', stroke: false, fillColor: this.palette.casing, fillOpacity: 0.18, interactive: false,
     }).addTo(this.area)
     L.rectangle([[b.south, b.west], [b.north, b.east]], {
-      pane: 'previous', color: this.palette.road, weight: 1.5, opacity: 0.4, fill: false, interactive: false,
+      pane: 'previous', color: this.palette.road, weight: 1.5, opacity: 0.7, fill: false, interactive: false,
     }).addTo(this.area)
     this.map.setMaxBounds(L.latLngBounds([b.south, b.west], [b.north, b.east]).pad(0.6))
     this.map.setMinZoom(13)

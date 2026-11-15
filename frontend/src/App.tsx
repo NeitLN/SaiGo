@@ -36,7 +36,7 @@ import TourResults, { TourItinerary } from './TourResults'
 import { unreachableGroups } from './tourIssues'
 import {
   TRACE_LIMIT, addTourPoint, blockedIds, distanceText, fmt, latLon, nextPrevious, nextRoutePoint, removeLastTourPoint,
-  closedMore, renameIds, routeAnnouncement, routePoints, runLabel as scenarioRunLabel, sameIdList, segmentLabels, tourAnnouncement, tourPoints, traceLegend, shortScenario, type Mode, type Pt,
+  closedMore, renameIds, routeAnnouncement, routePoints, runLabel as scenarioRunLabel, sameIdList, segmentLabels, tourAnnouncement, tourPoints, traceLegend, shortScenario, insideArea, type Mode, type Pt,
   type Run,
 } from './appLogic'
 import { useServerStatus } from './useServerStatus'
@@ -66,6 +66,17 @@ const closedToDraw = (ids: number[], geom: Map<number, BlockedEdge>, clicked: Ro
 const SNAP_TIMEOUT_MS = 4000
 // Khay phân tích dưới bản đồ khi mở (đợt UI "Bàn điều phối"): đủ cho thanh node hoặc bốn dòng phương án ở 1280 × 800.
 const TRAY_HEIGHT = 220
+
+/** Mũi tên lên (chậm hơn) / xuống (nhanh hơn) cạnh dòng chênh lệch; không chỉ dựa vào màu. */
+function DeltaIcon({ diff }: { diff: number | null | undefined }) {
+  if (!diff) return null
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+      strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d={diff > 0 ? 'M12 19V5M5 12l7-7 7 7' : 'M12 5v14M5 12l7 7 7-7'} />
+    </svg>
+  )
+}
 
 export default function App() {
   const narrow = useMediaQuery('(max-width: 767px)')
@@ -170,6 +181,9 @@ export default function App() {
   // Bật khi nạp case, bấm Tìm đường hoặc Lập tour: kết quả kế tiếp sẽ được thu phóng cho vừa (QA-2). Không bật
   // khi đóng đoạn hay đổi kịch bản, để bản đồ không nhảy giữa lúc thao tác.
   const pendingFit = useRef(false)
+  // Đổi điều kiện giao thông: thu phóng lại khi kết quả MỚI về (không phải lúc vẽ lại tuyến cũ ngay sau khi đổi, lúc đó
+  // pendingFit sẽ bị dùng mất cho tuyến cũ). Góp ý giảng viên và người dùng thử 16/11.
+  const fitOnResult = useRef(false)
   // Kết quả đang hiện, đọc trong .then để chọn mốc so trước/sau mà không đưa state vào deps của effect gọi API.
   const routeRef = useRef(route)
   routeRef.current = route
@@ -205,12 +219,14 @@ export default function App() {
         const next = { res, scenarioId: routeQuery.scenarioId, blocked: routeQuery.blocked }
         setPrevRoute(nextPrevious(routeRef.current ?? carriedRoute.current, next, routePoints, prevRouteRef.current))
         carriedRoute.current = null
+        if (fitOnResult.current) { pendingFit.current = true; fitOnResult.current = false }
         setRoute(next)
         markServerUp()
       })
       .catch((e: Error) => {
         if (ctl.signal.aborted) return
         pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
+        fitOnResult.current = false
         setRoute(null)
         setErrorState({ mode: 'route', text: `Lỗi: ${e.message}` })
         checkServer()
@@ -242,6 +258,7 @@ export default function App() {
         const next = { res, scenarioId: tourQuery.scenarioId, blocked: tourQuery.blocked }
         setPrevTour(nextPrevious(tourRunRef.current ?? carriedTour.current, next, tourPoints, prevTourRef.current))
         carriedTour.current = null
+        if (fitOnResult.current) { pendingFit.current = true; fitOnResult.current = false }
         setTour(res)
         setTourScenario({ scenarioId: tourQuery.scenarioId, blocked: tourQuery.blocked })
         markServerUp()
@@ -250,6 +267,7 @@ export default function App() {
       .catch((e: Error) => {
         if (ctl.signal.aborted) return
         pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
+        fitOnResult.current = false
         setTour(null)
         // API gọi điểm bằng id nội bộ ('p2', 'depot'); đổi sang tên trên marker (QA-13).
         const msg = renameIds(e.message, tourQuery.stops)
@@ -402,6 +420,45 @@ export default function App() {
   }, [mapReady, mode, scenario, scenarios, tourScenario, route, prevRoute, trace, source, target, closed, blocked, closeSegment, blockTool, tour, tourMethod, depot,
     stops, tourClosed, tourBlocked, closeTourSegment])
 
+  // Mốc "Cơ sở" (góp ý người dùng thử 16/11): "So với lần trước" so với lần tính ngay trước, nên đổi từ cao điểm này sang
+  // cao điểm khác có thể ra "nhanh hơn" dù vẫn chậm hơn giờ bình thường. Khi lần chạy không phải Cơ sở hoặc có đường
+  // đóng, tính thêm cùng các điểm ở điều kiện Cơ sở, không đóng đường (một request nhỏ, ~1 ms ở backend), để ghi
+  // "So với Cơ sở". Kết quả gắn với đúng lần chạy (`of`), lần chạy khác thì bỏ.
+  const [routeBase, setRouteBase] = useState<{ of: Run<RouteResponse>; cost: number | null } | null>(null)
+  useEffect(() => {
+    if (!route || (route.scenarioId === 'baseline' && route.blocked.length === 0)) return
+    const { source: s, target: t } = route.res.snapped
+    const ctl = new AbortController()
+    postRoute({ source: latLon(s), target: latLon(t), algorithms: ['astar'], scenario_id: 'baseline', blocked_edge_ids: [] }, ctl.signal)
+      .then((r) => {
+        const a = r.results.astar
+        setRouteBase({ of: route, cost: a?.status === 'ok' ? a.cost_s : null })
+      })
+      .catch(() => { /* chỉ là dòng phụ: lỗi thì không hiện */ })
+    return () => ctl.abort()
+  }, [route])
+  const [tourBase, setTourBase] = useState<{ of: TourResponse; cost: number | null } | null>(null)
+  useEffect(() => {
+    if (!tour || tour.status !== 'ok' || !tourScenario
+      || (tourScenario.scenarioId === 'baseline' && tourScenario.blocked.length === 0)) return
+    const pts = Object.entries(tour.snapped)
+    const d = pts.find(([id]) => id === 'depot')
+    const order = tour.chosen ? tour.candidates[tour.chosen]?.stop_order : undefined
+    if (!d || !order) return
+    const ctl = new AbortController()
+    // So CÙNG thứ tự giao của phương án được chọn ở điều kiện Cơ sở (keep_order → kept_order), không so với tour mà
+    // heuristic tự sắp ở Cơ sở: hai lần NN + 2-opt có thể ra thứ tự khác nhau, làm cao điểm trông "nhanh hơn" giờ
+    // bình thường (góp ý review #171: Kho + 5 điểm 898,1 → 705,3 s).
+    postTour({
+      depot: latLon(d[1]),
+      stops: pts.filter(([id]) => id !== 'depot').map(([id, p]) => ({ id, lat: p.lat, lon: p.lon })),
+      scenario_id: 'baseline', blocked_edge_ids: [], include_optimal: false, keep_order: order,
+    }, ctl.signal)
+      .then((r) => setTourBase({ of: tour, cost: r.status === 'ok' ? r.candidates.kept_order?.cost_s ?? null : null }))
+      .catch(() => { /* chỉ là dòng phụ */ })
+    return () => ctl.abort()
+  }, [tour, tourScenario])
+
   // --- Thao tác ---
 
   const resetRoute = () => {
@@ -507,8 +564,10 @@ export default function App() {
         // Đặt đúng toạ độ node vừa snap (T-5, R-8): marker nằm trên đường, ô điểm hiện toạ độ thật dùng để tìm, và
         // hai cú bấm vào cùng node bị chặn trùng ngay. Tên địa danh (nếu có) giữ nguyên.
         if (s.ok) placePointRef.current({ ...p, lat: s.lat, lon: s.lon })
+        else if (!insideArea(p, dataArea)) setError('Điểm này nằm ngoài vùng có dữ liệu (khung quanh Bến Thành, phần ngoài khung tô xám). '
+          + 'App chỉ có đường trong khung, hãy bấm vào bên trong.')
         else setError(`Điểm vừa bấm cách đường đi được gần nhất ${distanceText(s.snap_distance_m)}, quá ngưỡng ${s.max_m} m nên không được đặt. `
-          + 'Hãy bấm gần đường hơn, trong viền vùng có dữ liệu.')
+          + 'Có thể đó là công viên, sông hay khu không có đường xe; hãy bấm gần một con đường hơn.')
       } catch {
         if (gen === clickGen.current) placePointRef.current(p)
       } finally {
@@ -596,6 +655,8 @@ export default function App() {
 
   const changeScenario = (id: string) => {
     setScenarioId(id)
+    // Tuyến/tour mới có thể vòng ra ngoài khung đang xem: thu phóng lại khi kết quả về.
+    if (routeQuery || tourQuery) fitOnResult.current = true
     setRouteQuery((q) => (q ? { ...q, scenarioId: id, n: q.n + 1 } : q))
     setTourQuery((q) => (q ? { ...q, scenarioId: id, n: q.n + 1 } : q))
   }
@@ -686,6 +747,12 @@ export default function App() {
       + (prevTour ? ` So với lần trước: ${deltaText(costDelta(tourCost(prevTour.res), tourCost(tour)), 'tour')}.` : '') : null)
 
   const viewedTour = tour?.status === 'ok' && tourMethod ? tour.candidates[tourMethod] : undefined
+  const baseDelta = mode === 'route'
+    ? (route && routeBase?.of === route ? costDelta(routeBase.cost, routeCost(route.res)) : null)
+    : (tour && tourBase?.of === tour ? costDelta(tourBase.cost, tourCost(tour)) : null)
+  const baseLine = baseDelta && baseDelta.kind !== 'both-none'
+    ? { text: deltaText(baseDelta, mode === 'route' ? 'route' : 'tour'), diff: baseDelta.diff }
+    : null
   const summaryKpi = mode === 'route'
     ? (route && routeCost(route.res) !== null
       ? {
@@ -737,7 +804,10 @@ export default function App() {
         {(mode === 'route' ? busyRoute : busyTour)
           ? <Badge variant="neutral" label="Đang tính…" />
           : errorState && errorState.mode === mode ? <Badge variant="error" label="Lỗi" />
-            : (mode === 'route' ? route : tour) ? <Badge variant="success" label="Đã tính" /> : null}
+            // Tính xong nhưng không có kết quả dùng được thì không báo xanh (góp ý người dùng thử 16/11).
+            : mode === 'tour' && tour?.status === 'infeasible_under_model' ? <Badge variant="error" label="Không lập được" />
+              : mode === 'route' && noPath ? <Badge variant="error" label="Không có đường" />
+                : (mode === 'route' ? route : tour) ? <Badge variant="success" label="Đã tính" /> : null}
       </HStack>
       {runTitle && (
         <HStack gap={2} vAlign="center" wrap="wrap">
@@ -746,7 +816,7 @@ export default function App() {
             <Badge variant={run && run.scenarioId !== 'baseline' ? 'yellow' : 'neutral'}
               label={shortScenario(runScenario)} />
           )}
-          {run && run.blocked.length > 0 && <Badge variant="neutral" label={`Đóng ${run.blocked.length} cạnh`} />}
+          {run && run.blocked.length > 0 && <Badge variant="neutral" label="Có đường đóng" />}
         </HStack>
       )}
       {summaryKpi ? (
@@ -761,13 +831,15 @@ export default function App() {
           {summaryKpi.delta && (
             <Text type="body" weight="semibold"
               className={summaryKpi.diff ? (summaryKpi.diff > 0 ? 'delta delta-slow' : 'delta delta-fast') : 'delta'}>
-              {summaryKpi.diff ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
-                  strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d={summaryKpi.diff > 0 ? 'M12 19V5M5 12l7-7 7 7' : 'M12 5v14M5 12l7 7 7-7'} />
-                </svg>
-              ) : null}
+              <DeltaIcon diff={summaryKpi.diff} />
               So với lần trước{mode === 'tour' ? ', phương án được chọn' : ''}: {summaryKpi.delta}
+            </Text>
+          )}
+          {baseLine && (
+            <Text type="body" weight="semibold"
+              className={baseLine.diff ? (baseLine.diff > 0 ? 'delta delta-slow' : 'delta delta-fast') : 'delta'}>
+              <DeltaIcon diff={baseLine.diff} />
+              So với Cơ sở (không ùn tắc, không đóng đường){mode === 'tour' ? ', cùng thứ tự giao' : ''}: {baseLine.text}
             </Text>
           )}
           {/* Bước 10 của DEMO: số "Giữ thứ tự cũ" thấy ngay ở máy chiếu, không phải cuộn tới danh sách phương án. */}
@@ -860,7 +932,7 @@ export default function App() {
           <VStack gap={3}>
             {(mode === 'route' ? blocked : tourBlocked).length > 0 && (
               <HStack gap={2} vAlign="center" hAlign="between">
-                <Text type="supporting">Đang đóng {(mode === 'route' ? blocked : tourBlocked).length} cạnh</Text>
+                <Text type="supporting">Đang đóng đường ({(mode === 'route' ? blocked : tourBlocked).length} cạnh có hướng)</Text>
                 <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
               </HStack>
             )}
@@ -970,9 +1042,9 @@ export default function App() {
           description={narrow ? 'Chấm xám: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng.' : undefined} />
       )}
       <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
-        description={narrow ? (mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).') : undefined} />
+        description={narrow ? (mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng so sánh.' : 'Thêm phương án NN + 2-opt + Or-opt vào danh sách.') : undefined} />
       {!narrow && (
-        <Button label={trayOpen ? 'Thu gọn' : 'Mở rộng'} variant="ghost" size="sm" aria-expanded={trayOpen}
+        <Button label={trayOpen ? 'Ẩn khay' : 'Hiện khay'} variant="ghost" size="sm" aria-expanded={trayOpen}
           aria-controls="tray-body" onClick={toggleTray} />
       )}
       </HStack>

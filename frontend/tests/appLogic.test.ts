@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   addTourPoint, blockedIds, closedMore, runLabel, distanceText, fmt, nextPrevious, nextRoutePoint, removeLastTourPoint, renameIds,
-  routeAnnouncement, sameIdList, segmentLabels, shortScenario, tourAnnouncement, traceLegend, type Run, type TourPt,
+  insideArea, routeAnnouncement, sameIdList, segmentLabels, shortScenario, tourAnnouncement, traceLegend, type Run, type TourPt,
 } from '../src/appLogic.ts'
 import type { RouteResponse, TourResponse } from '../src/api.ts'
 
@@ -122,8 +122,8 @@ test('closedMore: cùng kịch bản và chỉ đóng thêm thì mới so "trư�
 
 test('runLabel: bỏ vế "không đóng đường" khi có cạnh đóng (T-7)', () => {
   assert.equal(runLabel('Cơ sở — không ùn tắc, không đóng đường', 0), 'Cơ sở — không ùn tắc, không đóng đường')
-  assert.equal(runLabel('Cơ sở — không ùn tắc, không đóng đường', 1), 'Cơ sở — không ùn tắc; đóng 1 cạnh')
-  assert.equal(runLabel('Cao điểm mô phỏng — trung tâm', 2), 'Cao điểm mô phỏng — trung tâm; đóng 2 cạnh')
+  assert.equal(runLabel('Cơ sở — không ùn tắc, không đóng đường', 1), 'Cơ sở — không ùn tắc; đóng đường (1 cạnh có hướng)')
+  assert.equal(runLabel('Cao điểm mô phỏng — trung tâm', 2), 'Cao điểm mô phỏng — trung tâm; đóng đường (2 cạnh có hướng)')
 })
 
 test('segmentLabels: thứ tự, độ dài, khoảng cách từ điểm đầu (A-1)', () => {
@@ -139,4 +139,12 @@ test('shortScenario: nhãn chip điều kiện giao thông', () => {
   assert.equal(shortScenario('Cao điểm mô phỏng — trung tâm'), 'Cao điểm — trung tâm')
   assert.equal(shortScenario('Cao điểm mô phỏng — vòng xoay Bến Thành'), 'Cao điểm — Bến Thành')
   assert.equal(shortScenario('Kịch bản khác'), 'Kịch bản khác')
+})
+
+test('insideArea: trong khung, ngoài khung, chưa biết khung', () => {
+  const b = { south: 10.76, west: 106.68, north: 10.79, east: 106.71 }
+  assert.equal(insideArea({ lat: 10.775, lon: 106.70 }, b), true)
+  assert.equal(insideArea({ lat: 10.80, lon: 106.70 }, b), false)
+  assert.equal(insideArea({ lat: 10.775, lon: 106.72 }, b), false)
+  assert.equal(insideArea({ lat: 0, lon: 0 }, null), true)
 })

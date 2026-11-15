@@ -236,7 +236,7 @@ export default function RouteResults({ res, scenarioLabel, previous, hasSummary 
       {!hasSummary && <Text type="supporting">Điều kiện giao thông: {scenarioLabel}</Text>}
       {extAlgos.length > 0 && (
         <VStack gap={2}>
-          <Text type="body" weight="semibold">Phần mở rộng (ngoài proposal)</Text>
+          <Text type="body" weight="semibold">Phần mở rộng</Text>
           <Table<Row>
             data={extData}
             idKey="metric"
@@ -252,7 +252,7 @@ export default function RouteResults({ res, scenarioLabel, previous, hasSummary 
             {extAlgos.every((a) => res.results[a]?.status === 'no_path') && res.results.dijkstra?.status === 'no_path'
               ? 'Cả bốn thuật toán cùng báo không có đường.'
               : `Cùng chi phí với Dijkstra: ${extAlgos.every((a) => sameCost(res.results[a], res.results.dijkstra)) ? 'có' : 'không'}.`}
-            {' '}Số đo trên nhiều cặp điểm nằm ở phần thí nghiệm của báo cáo.
+            {' '}Số đo trên nhiều cặp điểm ở thí nghiệm E2b.
           </Text>
         </VStack>
       )}
