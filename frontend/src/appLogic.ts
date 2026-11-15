@@ -43,14 +43,22 @@ export function nextPrevious<T>(prev: Run<T> | null, next: Run<T>, pts: (r: T) =
   return prev
 }
 
+/** Cùng toạ độ (điểm đã kiểm được đặt đúng toạ độ node nên hai cú bấm vào cùng node trùng toạ độ). */
+export const samePlace = (a: LatLon, b: LatLon) => Math.abs(a.lat - b.lat) < 1e-7 && Math.abs(a.lon - b.lon) < 1e-7
+
+export type NextRoutePoint =
+  | { kind: 'error'; text: string }
+  | { kind: 'ok'; source: Pt; target: Pt | null; restart: boolean }
+
 /**
  * Điểm vừa đặt ở chế độ tìm đường: lần 1 là điểm đi, lần 2 là điểm đến; đã đủ hai điểm (chưa tìm) thì bắt đầu lại
- * từ điểm đi (`restart`: App xoá tuyến, đoạn đóng, lỗi như resetRoute).
+ * từ điểm đi (`restart`: App xoá tuyến, đoạn đóng, lỗi như resetRoute). Điểm đến trùng điểm đi thì từ chối (test
+ * lại 15/11, R-9: trước đây ra tuyến 0 s, 0 m mà không báo gì; tour đã chặn trùng từ #145).
  */
-export function nextRoutePoint(source: Pt | null, target: Pt | null, p: Pt):
-  { source: Pt; target: Pt | null; restart: boolean } {
-  if (!source || target) return { source: p, target: null, restart: true }
-  return { source, target: p, restart: false }
+export function nextRoutePoint(source: Pt | null, target: Pt | null, p: Pt): NextRoutePoint {
+  if (!source || target) return { kind: 'ok', source: p, target: null, restart: true }
+  if (samePlace(source, p)) return { kind: 'error', text: `Điểm đến trùng điểm đi (${fmt(source)}). Hãy chọn một điểm khác.` }
+  return { kind: 'ok', source, target: p, restart: false }
 }
 
 export type AddTourPoint =
@@ -61,12 +69,12 @@ export type AddTourPoint =
 /**
  * Thêm một điểm vào tour đang dựng: điểm đầu là kho, sau đó là điểm giao p1, p2, …; giữ tên địa danh nếu có.
  * Từ chối khi đã đủ `max` điểm giao (QA-12) hoặc trùng toạ độ một điểm đã có (góp ý #145: chặn lúc chọn thay vì
- * để tới Lập tour mới báo "trùng node"); điểm chọn từ danh sách có toạ độ node chính xác nên so bằng toạ độ.
+ * để tới Lập tour mới báo "trùng node"); điểm chọn từ danh sách và điểm bấm đã kiểm (App đặt đúng toạ độ node
+ * vừa snap, test lại 15/11 T-5) đều có toạ độ node, nên so bằng toạ độ là so node.
  */
 export function addTourPoint(depot: TourPt | null, stops: TourPt[], p: Pt, max: number): AddTourPoint {
   if (depot && stops.length >= max) return { kind: 'error', text: `Tối đa ${max} điểm giao.` }
-  const same = [...(depot ? [depot] : []), ...stops]
-    .find((q) => Math.abs(q.lat - p.lat) < 1e-7 && Math.abs(q.lon - p.lon) < 1e-7)
+  const same = [...(depot ? [depot] : []), ...stops].find((q) => samePlace(q, p))
   if (same) return { kind: 'error', text: `"${same.label}" đã có trong tour.` }
   if (!depot) return { kind: 'depot', depot: { ...latLon(p), id: 'depot', label: p.name ?? 'Kho' } }
   const n = stops.length + 1

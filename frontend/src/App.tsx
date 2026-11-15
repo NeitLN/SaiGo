@@ -37,13 +37,21 @@ interface RouteQuery { source: LatLon; target: LatLon; scenarioId: string; block
 // keepOrder (R1): thứ tự điểm giao trước khi đóng đường, để API trả thêm phương án "Giữ thứ tự cũ".
 interface TourQuery { depot: TourPoint; stops: TourPoint[]; scenarioId: string; blocked: number[]; keepOrder?: string[]; n: number }
 
-// Đoạn đóng để vẽ: cạnh đóng trong response (gồm cả cạnh đóng sẵn của case, QA-3) cộng các đoạn vừa bấm mà
-// response chưa có, để nét đỏ hiện ngay khi bấm, không chờ request về (review #135).
-const closedToDraw = (fromRes: BlockedEdge[] | undefined, clicked: RouteSegment[]): RouteSegment[] => {
-  const drawn = (fromRes ?? []).map((b) => ({ edgeId: b.edge_id, twinId: null, latlngs: toLatLngs(b.geometry) }))
-  const ids = new Set(drawn.map((s) => s.edgeId))
-  return [...drawn, ...clicked.filter((s) => !ids.has(s.edgeId))]
+// Đoạn đóng để vẽ: cạnh đang đóng đã có hình học từ một response trước (gồm cả cạnh đóng sẵn của case, QA-3) cộng
+// các đoạn vừa bấm mà response chưa có, để nét đỏ hiện ngay khi bấm, không chờ request về (review #135). Hình học
+// nhớ qua các response (test lại 15/11, T-4): trước đây Bỏ điểm cuối hay request lỗi làm mất nét đỏ của cạnh đóng
+// sẵn trong khi cạnh đó vẫn được gửi lên API.
+const closedToDraw = (ids: number[], geom: Map<number, BlockedEdge>, clicked: RouteSegment[]): RouteSegment[] => {
+  const drawn = ids.flatMap((id) => {
+    const b = geom.get(id)
+    return b ? [{ edgeId: id, twinId: null, latlngs: toLatLngs(b.geometry) }] : []
+  })
+  const known = new Set(drawn.map((s) => s.edgeId))
+  return [...drawn, ...clicked.filter((s) => !known.has(s.edgeId))]
 }
+
+// Kiểm điểm quá thời gian này thì coi như không kiểm được và vẫn đặt (test lại 15/11, C-2).
+const SNAP_TIMEOUT_MS = 4000
 
 export default function App() {
   const narrow = useMediaQuery('(max-width: 767px)')
@@ -134,6 +142,9 @@ export default function App() {
   // điểm (vd. bước 9 → bước 10 của DEMO), response đó vẫn so được với kết quả trước khi đóng đường.
   const carriedRoute = useRef<Run<RouteResponse> | null>(null)
   const carriedTour = useRef<Run<TourResponse> | null>(null)
+  // Hình học các cạnh đóng đã gặp trong response (id cạnh → BlockedEdge); xem closedToDraw.
+  const edgeGeom = useRef(new Map<number, BlockedEdge>())
+  const rememberEdges = (edges: BlockedEdge[] | undefined) => edges?.forEach((b) => edgeGeom.current.set(b.edge_id, b))
 
   // --- Gọi API ---
 
@@ -149,6 +160,7 @@ export default function App() {
     }, ctl.signal)
       .then((res) => {
         announceRef.current(routeAnnouncement(res))
+        rememberEdges(res.blocked_edges)
         const next = { res, scenarioId: routeQuery.scenarioId, blocked: routeQuery.blocked }
         setPrevRoute(nextPrevious(routeRef.current ?? carriedRoute.current, next, routePoints, prevRouteRef.current))
         carriedRoute.current = null
@@ -185,6 +197,7 @@ export default function App() {
     }, ctl.signal)
       .then((res) => {
         announceRef.current(tourAnnouncement(res))
+        rememberEdges(res.blocked_edges)
         const next = { res, scenarioId: tourQuery.scenarioId, blocked: tourQuery.blocked }
         setPrevTour(nextPrevious(tourRunRef.current ?? carriedTour.current, next, tourPoints, prevTourRef.current))
         carriedTour.current = null
@@ -272,7 +285,7 @@ export default function App() {
     const legend: LegendItem[] = []
     if (scenario.rules.length) legend.push({ kind: 'zone', label: 'Vùng cao điểm mô phỏng' })
     if (mode === 'route') {
-      layers.setClosed(closedToDraw(route?.res.blocked_edges, closed))
+      layers.setClosed(closedToDraw(blocked, edgeGeom.current, closed))
       // Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng) vẽ mờ làm mốc, chỉ khi khác tuyến hiện tại.
       const before = prevRoute?.res.results.dijkstra
       const now = route?.res.results.dijkstra
@@ -286,10 +299,12 @@ export default function App() {
         if (a?.status === 'ok') legend.unshift({ kind: 'astar', label: 'Tuyến A* (nét đứt)' })
         if (d?.status === 'ok') legend.unshift({ kind: 'dijkstra', label: 'Tuyến Dijkstra' })
       }
-      if (closedToDraw(route?.res.blocked_edges, closed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
+      if (closedToDraw(blocked, edgeGeom.current, closed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
       if (route && moved) legend.push({ kind: 'previous', label: 'Tuyến lần trước' })
-      if (trace) legend.push({ kind: 'trace', label: 'Node đã mở rộng: Dijkstra, A*' })
-      layers.setTrace(trace?.results.dijkstra?.trace ?? null, trace?.results.astar?.trace ?? null)
+      // Chỉ vẽ node đã mở rộng khi có kết quả: request chính lỗi mà trace về được thì không vẽ (test lại 15/11, C-4).
+      const shownTrace = route ? trace : null
+      if (shownTrace) legend.push({ kind: 'trace', label: 'Node đã mở rộng: Dijkstra, A*' })
+      layers.setTrace(shownTrace?.results.dijkstra?.trace ?? null, shownTrace?.results.astar?.trace ?? null)
       if (route) {
         layers.setSnapped(route.res)
         layers.drawRoutes(route.res, closeSegment)
@@ -306,12 +321,12 @@ export default function App() {
     } else {
       layers.setPrevious(null)
       layers.setTrace(null, null)
-      layers.setClosed(closedToDraw(tour?.blocked_edges, tourClosed))
+      layers.setClosed(closedToDraw(tourBlocked, edgeGeom.current, tourClosed))
       const cand = tour && tourMethod ? tour.candidates[tourMethod] : undefined
       const broken = new Set(tour?.status === 'infeasible_under_model' ? unreachableGroups(tour.unreachable).map((g) => g.id) : [])
       layers.setTourPoints(depot, stops, cand?.stop_order, broken)
       if (cand) legend.unshift({ kind: 'tour', label: 'Tour đang xem' })
-      if (closedToDraw(tour?.blocked_edges, tourClosed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
+      if (closedToDraw(tourBlocked, edgeGeom.current, tourClosed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
       if (broken.size) legend.push({ kind: 'broken', label: 'Điểm không đi được' })
       if (cand) layers.drawTour(cand, closeTourSegment)
       else layers.clearRoutes()
@@ -322,8 +337,8 @@ export default function App() {
       }
     }
     layers.setLegend(legend)
-  }, [mapReady, mode, scenario, route, prevRoute, trace, source, target, closed, closeSegment, tour, tourMethod, depot, stops,
-    tourClosed, closeTourSegment])
+  }, [mapReady, mode, scenario, route, prevRoute, trace, source, target, closed, blocked, closeSegment, tour, tourMethod, depot,
+    stops, tourClosed, tourBlocked, closeTourSegment])
 
   // --- Thao tác ---
 
@@ -356,10 +371,14 @@ export default function App() {
         setNotice('Đang hiện kết quả nên điểm mới không được đặt. Bấm Xóa để chọn điểm mới.')
         return
       }
+      const next = nextRoutePoint(source, target, p)
+      if (next.kind === 'error') {
+        setError(next.text)
+        return
+      }
       setCaseId('')
       setNotice(null)
       setError(null)
-      const next = nextRoutePoint(source, target, p)
       if (next.restart) resetRoute()
       setSource(next.source)
       setTarget(next.target)
@@ -386,33 +405,52 @@ export default function App() {
 
   // Kiểm điểm ngay lúc bấm (review 14/11 đợt 2, PM-7): điểm cách đường quá ngưỡng bị từ chối tại chỗ, kèm
   // khoảng cách, thay vì được đặt rồi làm hỏng cả tuyến/tour lúc gửi (trước đây lỗi 'p2' sau khi đặt 12 điểm).
-  // Mỗi lần chỉ kiểm một cú bấm; không kiểm được (server lỗi) thì vẫn đặt, /api/route, /api/tour sẽ báo như cũ.
-  const checking = useRef(false)
-  // Tăng khi nạp case, đổi chế độ, Xóa hay Bỏ điểm cuối: kết quả kiểm về sau những thao tác đó bị bỏ, để điểm
-  // không bị đặt vào case vừa nạp hay sang chế độ kia (góp ý #142).
+  // Không kiểm được (server lỗi, hoặc quá SNAP_TIMEOUT_MS) thì vẫn đặt, /api/route, /api/tour sẽ báo như cũ.
+  // Các cú bấm kiểm lần lượt theo hàng đợi (test lại 15/11, C-2/R-6: trước đây cú bấm trong lúc đang kiểm bị bỏ
+  // lặng lẽ, và một lần kiểm treo khoá mọi cách đặt điểm tới khi tải lại trang).
+  const snapQueue = useRef<Promise<void>>(Promise.resolve())
+  const snapCtl = useRef<AbortController | null>(null)
+  const [checkingPoints, setCheckingPoints] = useState(0)
+  // Tăng khi nạp case, đổi chế độ, Xóa, Bỏ điểm cuối, Tìm đường, Lập tour hay Đảo chiều: kết quả kiểm về sau những
+  // thao tác đó bị bỏ, để điểm không bị đặt vào case vừa nạp hay sang chế độ kia (góp ý #142), và không xoá
+  // request vừa gửi (test lại 15/11, C-1: kiểm về sau Tìm đường từng bắt đầu lại từ điểm đi và huỷ lặng lẽ request).
   const clickGen = useRef(0)
+  const dropPendingClicks = () => {
+    clickGen.current += 1
+    snapCtl.current?.abort()
+  }
   const onMapClick = (p: Pt) => {
     if ((mode === 'route' && route) || (mode === 'tour' && tour)) {
       placePoint(p)            // chỉ hiện gợi ý "Bấm Xóa", không đặt gì
       return
     }
-    if (checking.current) return
-    checking.current = true
     const gen = clickGen.current
-    getSnap(p)
-      .then((s) => {
+    setCheckingPoints((n) => n + 1)
+    snapQueue.current = snapQueue.current.then(async () => {
+      const ctl = new AbortController()
+      const timer = window.setTimeout(() => ctl.abort(), SNAP_TIMEOUT_MS)
+      snapCtl.current = ctl
+      try {
         if (gen !== clickGen.current) return
-        if (s.ok) placePointRef.current(p)
+        const s = await getSnap(p, ctl.signal)
+        if (gen !== clickGen.current) return
+        // Đặt đúng toạ độ node vừa snap (T-5, R-8): marker nằm trên đường, ô điểm hiện toạ độ thật dùng để tìm, và
+        // hai cú bấm vào cùng node bị chặn trùng ngay. Tên địa danh (nếu có) giữ nguyên.
+        if (s.ok) placePointRef.current({ ...p, lat: s.lat, lon: s.lon })
         else setError(`Điểm vừa bấm cách đường ${distanceText(s.snap_distance_m)}, quá ngưỡng ${s.max_m} m nên không được đặt. `
           + 'Hãy bấm gần đường hơn, trong viền vùng có dữ liệu.')
-      })
-      .catch(() => { if (gen === clickGen.current) placePointRef.current(p) })
-      .finally(() => { checking.current = false })
+      } catch {
+        if (gen === clickGen.current) placePointRef.current(p)
+      } finally {
+        window.clearTimeout(timer)
+        setCheckingPoints((n) => n - 1)
+      }
+    })
   }
 
   // Bỏ điểm cuối (PM-7, U-2): bỏ điểm giao vừa thêm, hết điểm giao thì bỏ kho; không phải xoá cả tour làm lại.
   const removeLastPoint = () => {
-    clickGen.current += 1
+    dropPendingClicks()
     setCaseId('')
     setNotice(null)
     resetTour()
@@ -424,12 +462,14 @@ export default function App() {
   const findRoute = () => {
     setNotice(null)
     if (!source || !target) return
+    dropPendingClicks()
     pendingFit.current = true
     setRouteQuery({ source, target, scenarioId, blocked, n: Date.now() })
   }
 
   const buildTour = () => {
     if (!depot) return
+    dropPendingClicks()
     pendingFit.current = true
     setTourQuery({ depot, stops, scenarioId, blocked: tourBlocked, n: Date.now() })
   }
@@ -437,6 +477,7 @@ export default function App() {
   // Chưa tìm đường thì chỉ đổi chỗ hai điểm; trước đây nhánh này gọi resetRoute() nên mất điểm đến (QA-4).
   const swap = () => {
     if (!source || !target) return
+    dropPendingClicks()
     setSource(target)
     setTarget(source)
     // Đã gửi request (kể cả khi chưa về) thì phải tìm lại theo chiều mới; nếu chỉ đổi state, request cũ về sau
@@ -445,7 +486,7 @@ export default function App() {
   }
 
   const changeMode = (v: Mode) => {
-    clickGen.current += 1
+    dropPendingClicks()
     setMode(v)
     // Không xoá lỗi: lỗi đã gắn theo chế độ, chỉ hiện ở chế độ sinh ra nó, quay lại vẫn thấy (góp ý #147).
     setNotice(null)
@@ -454,7 +495,7 @@ export default function App() {
   }
 
   const clearAll = () => {
-    clickGen.current += 1
+    dropPendingClicks()
     setNotice(null)
     setCaseId('')
     if (mode === 'route') {
@@ -487,7 +528,7 @@ export default function App() {
   }
 
   const loadCase = (id: string) => {
-    clickGen.current += 1
+    dropPendingClicks()
     const c = DEMO_CASES.find((x) => x.id === id)
     if (!c) return
     setCaseId(id)
@@ -532,6 +573,9 @@ export default function App() {
     }
   }
 
+  // Đang kiểm điểm vừa chọn thì chưa cho Tìm đường / Lập tour / Đảo chiều (góp ý #150): bấm lúc đó sẽ bỏ điểm đang
+  // kiểm, nên tour hay tuyến thiếu điểm người dùng vừa thêm.
+  const checking = checkingPoints > 0
   const caseDisabled = datasetId !== null && datasetId !== DEMO_DATASET_ID
   const noPath = route && Object.values(route.res.results).some((r) => r?.status === 'no_path')
   const tourLabels = Object.fromEntries([...(depot ? [depot] : []), ...stops].map((p) => [p.id, p.label]))
@@ -596,8 +640,8 @@ export default function App() {
           <Text type="supporting">Điểm đi: {fmt(source)}</Text>
           <Text type="supporting">Điểm đến: {fmt(target)}</Text>
           <HStack gap={2}>
-            <Button label="Tìm đường" variant="primary" isDisabled={!(source && target)} onClick={findRoute} />
-            <Button label="Đảo chiều" isDisabled={!(source && target)} onClick={swap} />
+            <Button label="Tìm đường" variant="primary" isDisabled={!(source && target) || checking} onClick={findRoute} />
+            <Button label="Đảo chiều" isDisabled={!(source && target) || checking} onClick={swap} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
           {blocked.length > 0 && (
@@ -608,7 +652,7 @@ export default function App() {
           )}
           <Switch label="Hiện node đã mở rộng" value={showTrace} onChange={setShowTrace}
             description="Chấm xanh: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng." />
-          {showTrace && trace && <Text type="supporting">{traceLegend(trace)}</Text>}
+          {showTrace && route && trace && <Text type="supporting">{traceLegend(trace)}</Text>}
         </VStack>
       ) : (
         <VStack gap={2}>
@@ -616,7 +660,7 @@ export default function App() {
             {!depot ? 'Chưa đặt kho' : depot.label === 'Kho' ? 'Đã đặt kho' : `Kho: ${depot.label}`} · {stops.length} điểm giao
           </Text>
           <HStack gap={2}>
-            <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0} onClick={buildTour} />
+            <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0 || checking} onClick={buildTour} />
             <Button label="Bỏ điểm cuối" isDisabled={!depot} onClick={removeLastPoint} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
@@ -630,6 +674,7 @@ export default function App() {
       )}
       <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
         description={mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).'} />
+      {checkingPoints > 0 && <Spinner label="Đang kiểm điểm vừa chọn…" />}
       {(mode === 'route' ? busyRoute : busyTour) && <Spinner label="Đang tính…" />}
       {notice && <Banner status="info" title={notice} />}
       {/* role="alert": lỗi được đọc ngay cho người dùng trình đọc màn hình (FE-3). */}
