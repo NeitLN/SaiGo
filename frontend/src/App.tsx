@@ -573,6 +573,9 @@ export default function App() {
     }
   }
 
+  // Đang kiểm điểm vừa chọn thì chưa cho Tìm đường / Lập tour / Đảo chiều (góp ý #150): bấm lúc đó sẽ bỏ điểm đang
+  // kiểm, nên tour hay tuyến thiếu điểm người dùng vừa thêm.
+  const checking = checkingPoints > 0
   const caseDisabled = datasetId !== null && datasetId !== DEMO_DATASET_ID
   const noPath = route && Object.values(route.res.results).some((r) => r?.status === 'no_path')
   const tourLabels = Object.fromEntries([...(depot ? [depot] : []), ...stops].map((p) => [p.id, p.label]))
@@ -637,8 +640,8 @@ export default function App() {
           <Text type="supporting">Điểm đi: {fmt(source)}</Text>
           <Text type="supporting">Điểm đến: {fmt(target)}</Text>
           <HStack gap={2}>
-            <Button label="Tìm đường" variant="primary" isDisabled={!(source && target)} onClick={findRoute} />
-            <Button label="Đảo chiều" isDisabled={!(source && target)} onClick={swap} />
+            <Button label="Tìm đường" variant="primary" isDisabled={!(source && target) || checking} onClick={findRoute} />
+            <Button label="Đảo chiều" isDisabled={!(source && target) || checking} onClick={swap} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
           {blocked.length > 0 && (
@@ -657,7 +660,7 @@ export default function App() {
             {!depot ? 'Chưa đặt kho' : depot.label === 'Kho' ? 'Đã đặt kho' : `Kho: ${depot.label}`} · {stops.length} điểm giao
           </Text>
           <HStack gap={2}>
-            <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0} onClick={buildTour} />
+            <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0 || checking} onClick={buildTour} />
             <Button label="Bỏ điểm cuối" isDisabled={!depot} onClick={removeLastPoint} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
