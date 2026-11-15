@@ -7,7 +7,7 @@ import { arrowPoints } from './geometry'
 // Màu lấy từ token của theme Astryx (đọc trên phần tử bản đồ, nằm trong <Theme>), không viết mã màu cứng.
 type Palette = {
   dijkstra: string; astar: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string
-  road: string; casing: string
+  road: string; casing: string; zoneBorder: string
 }
 
 function readPalette(el: HTMLElement): Palette {
@@ -27,6 +27,8 @@ function readPalette(el: HTMLElement): Palette {
     closed: v('--color-error'),
     // Vùng ùn tắc dùng màu cảnh báo, không dùng cam của A* (review 14/11 đợt 3, UX-2: hai nghĩa cùng một màu).
     zone: v('--color-warning'),
+    // Viền vùng: vàng cảnh báo trên nền xám chỉ 1,09:1; viền dùng token viền cảnh báo (~4:1) (test lại 15/11, A-2).
+    zoneBorder: v('--color-border-warning'),
     tour: v('--color-data-categorical-purple'),
     surface: v('--color-background-card'),
     road: v('--color-text-secondary'),
@@ -35,6 +37,12 @@ function readPalette(el: HTMLElement): Palette {
   }
   probe.remove()
   return palette
+}
+
+// Tên loại đường OSM trong luật ùn tắc, ghi tiếng Việt trên nhãn vùng (D-8).
+const ROAD_KIND: Record<string, string> = {
+  motorway: 'cao tốc', trunk: 'trục chính', primary: 'đường chính', secondary: 'đường cấp 2', tertiary: 'đường cấp 3',
+  residential: 'đường nội khu', unclassified: 'đường nhỏ',
 }
 
 export type LegendKind = 'dijkstra' | 'astar' | 'same' | 'zone' | 'closed' | 'previous' | 'trace' | 'tour' | 'broken'
@@ -123,6 +131,17 @@ export class MapLayers {
     // Một renderer dùng chung: tạo mới mỗi lần vẽ thì Leaflet giữ lại canvas cũ (review #139: 10 canvas sau vài lần).
     this.traceRenderer = L.canvas({ pane: 'trace' })
     this.trace.addTo(map)
+    // Mũi tên chiều của tour: trên tuyến, dưới mọi marker (test lại 15/11, T-2: chung markerPane thì mũi tên xếp theo
+    // vĩ độ và đè lên số "3", ô "K").
+    const arrowPane = map.createPane('arrows')
+    arrowPane.style.zIndex = '420'
+    arrowPane.style.pointerEvents = 'none'
+    // Đoạn đóng: trên tuyến và mũi tên, dưới marker (R-1, T-3): trước đây chung overlayPane nên tuyến vẽ sau che nét
+    // đỏ trong lúc chờ kết quả. Không đặt trên marker vì sẽ che số điểm giao (góp ý #152); cạnh ngắn sát một điểm thì
+    // tour không khả thi tự thu phóng vào đó (App) nên vẫn thấy.
+    const closedPane = map.createPane('closed')
+    closedPane.style.zIndex = '440'
+    closedPane.style.pointerEvents = 'none'
     this.zones.addTo(map)
     this.routes.addTo(map)
     this.closed.addTo(map)
@@ -152,15 +171,16 @@ export class MapLayers {
       const z = rule.zone
       if (z.type !== 'circle') continue // chỉ biết vẽ vùng tròn (CongestionZone)
       // Gộp primary/primary_link thành một tên cho nhãn ngắn (luật vẫn áp đúng danh sách gốc).
-      const kinds = [...new Set((rule.highway ?? []).map((h) => h.replace(/_link$/, '')))]
+      const kinds = [...new Set((rule.highway ?? []).map((h) => ROAD_KIND[h.replace(/_link$/, '')] ?? h))]
       const roads = kinds.length ? ` · ${kinds.join(', ')}` : ''
       L.circle([z.lat, z.lon], {
-        radius: z.radius_m, color: this.palette.zone, weight: 2, dashArray: '6 6', fillColor: this.palette.zone, fillOpacity: 0.1,
+        radius: z.radius_m, color: this.palette.zoneBorder, weight: 3, dashArray: '8 6', fillColor: this.palette.zone, fillOpacity: 0.12,
         interactive: false,
       }).addTo(this.zones)
-      // Nhãn ở mép trên vòng tròn thay vì ở tâm, để không đè lên tuyến đi qua giữa vùng (UX-2).
+      // Nhãn ở mép trên vòng tròn thay vì ở tâm, để không đè lên tuyến đi qua giữa vùng (UX-2); nằm phía trong vòng
+      // (direction bottom) để không lọt ra ngoài mép trên bản đồ, dưới thanh header (test lại 15/11, D-8).
       const topLat = z.lat + z.radius_m / 111_320
-      L.tooltip({ permanent: true, direction: 'top', className: 'zone-label', interactive: false })
+      L.tooltip({ permanent: true, direction: 'bottom', className: 'zone-label', interactive: false })
         .setLatLng([topLat, z.lon])
         .setContent(`Cao điểm mô phỏng · ×${rule.alpha.toLocaleString('vi-VN')}${roads}`)
         .addTo(this.zones)
@@ -202,7 +222,8 @@ export class MapLayers {
     const d = res.results.dijkstra
     const a = res.results.astar
     const casing = (ll: L.LatLng[], weight: number) =>
-      L.polyline(ll, { color: this.palette.casing, weight, opacity: 0.35, interactive: false }).addTo(this.routes)
+      // Đậm hơn (0,35 → 0,6): viền mờ chỉ đạt 2,36:1 trên nền xám (A-2). Màu luôn tối vì bản đồ dùng color-scheme light.
+      L.polyline(ll, { color: this.palette.casing, weight, opacity: 0.6, interactive: false }).addTo(this.routes)
     if (sameRoute(d, a)) {
       const latlngs = toLatLngs(d!.geometry.coordinates)
       casing(latlngs, 13)
@@ -278,8 +299,10 @@ export class MapLayers {
   setClosed(segments: RouteSegment[]) {
     this.closed.clearLayers()
     for (const seg of segments) {
-      L.polyline(seg.latlngs, { color: this.palette.closed, weight: 6, dashArray: '6 6', interactive: false })
-        .bindTooltip('Đoạn đường đang đóng')
+      // Viền sáng dưới nét đỏ để nét đứt vẫn đọc được khi đè lên tuyến hay marker.
+      L.polyline(seg.latlngs, { pane: 'closed', color: this.palette.surface, weight: 9, opacity: 0.9, interactive: false })
+        .addTo(this.closed)
+      L.polyline(seg.latlngs, { pane: 'closed', color: this.palette.closed, weight: 6, dashArray: '6 6', interactive: false })
         .addTo(this.closed)
     }
   }
@@ -291,26 +314,35 @@ export class MapLayers {
    */
   setTourPoints(depot: TourPoint | null, stops: TourPoint[], order?: string[], broken: ReadonlySet<string> = new Set()) {
     this.points.clearLayers()
+    // Tên đọc được cho trình đọc màn hình (A-4): "Điểm 1: Nhà hát Thành phố", kho cũng có tên.
+    const label = (m: L.Marker, text: string, bad: boolean) => {
+      const el = m.getElement()
+      el?.setAttribute('role', 'img')
+      el?.setAttribute('aria-label', bad ? `${text} (không đi được)` : text)
+    }
     if (depot) {
       // Kho dùng ô vuông riêng, không còn là vòng tròn xanh giống hệt "Điểm đi" (review 14/11 đợt 3, UX-9).
       const bad = broken.has(depot.id)
-      L.marker([depot.lat, depot.lon], {
+      const dm = L.marker([depot.lat, depot.lon], {
         icon: L.divIcon({ className: bad ? 'tour-depot tour-stop-broken' : 'tour-depot', html: 'K', iconSize: [26, 26] }),
         title: depot.label, keyboard: false,
       })
         .bindTooltip(depot.label !== 'Kho' ? `Kho · ${depot.label}` : 'Kho', { permanent: true, direction: 'top', offset: [0, -14] })
         .addTo(this.points)
+      label(dm, depot.label !== 'Kho' ? `Kho: ${depot.label}` : 'Kho', bad)
     }
     stops.forEach((s, i) => {
       const n = order ? order.indexOf(s.id) + 1 : i + 1
       const bad = broken.has(s.id)
-      L.marker([s.lat, s.lon], {
+      // keyboard: false: marker không làm gì khi bấm, nên không để là nút nhận Tab với tên "1" (test lại 15/11, A-4).
+      const sm = L.marker([s.lat, s.lon], {
         icon: L.divIcon({ className: bad ? 'tour-stop tour-stop-broken' : 'tour-stop', html: String(n), iconSize: [24, 24] }),
-        title: s.label,
+        title: s.label, keyboard: false,
       })
         // Điểm có tên (case demo) thì hiện tên cố định cạnh số; tên mặc định "Điểm n" thì chỉ hiện khi rê chuột.
         .bindTooltip(s.label, { direction: 'right', offset: [12, 0], permanent: bad || !/^Điểm \d+$/.test(s.label), className: 'stop-label' })
         .addTo(this.points)
+      label(sm, `Điểm ${n}: ${s.label}`, bad)
     })
   }
 
@@ -332,10 +364,12 @@ export class MapLayers {
       L.polyline(toLatLngs(coords), { color: this.palette.tour, weight: 5, opacity: 0.85, interactive: false }).addTo(this.routes)
       // Mũi tên chỉ chiều mỗi ~200 m (UX-9): đoạn đi và về chồng lên nhau vẫn đọc được chiều.
       for (const a of arrowPoints(coords, 200)) {
-        L.marker([a.lat, a.lon], {
+        const m = L.marker([a.lat, a.lon], {
           icon: L.divIcon({ className: 'tour-arrow', html: `<span style="transform:rotate(${a.bearing.toFixed(0)}deg)">▲</span>`, iconSize: [14, 14] }),
-          interactive: false, keyboard: false,
+          interactive: false, keyboard: false, pane: 'arrows',
         }).addTo(this.routes)
+        // Trình đọc màn hình không đọc từng "▲" (A-4).
+        m.getElement()?.setAttribute('aria-hidden', 'true')
       }
     }
     if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick)
@@ -389,7 +423,7 @@ export class MapLayers {
       astar: this.swatchLine(this.palette.astar, true),
       same: this.swatchLine(this.palette.dijkstra, false, this.palette.astar),
       // Tô nhạt như trên bản đồ (fillOpacity 0.1), viền đậm (góp ý #143).
-      zone: `<i class="legend-area" style="border-color:${this.palette.zone};background:color-mix(in srgb, ${this.palette.zone} 15%, transparent)"></i>`,
+      zone: `<i class="legend-area" style="border-color:${this.palette.zoneBorder};background:color-mix(in srgb, ${this.palette.zone} 15%, transparent)"></i>`,
       closed: this.swatchLine(this.palette.closed, true),
       previous: this.swatchLine(this.palette.road),
       trace: `<i class="legend-dot" style="background:${this.palette.dijkstra}"></i><i class="legend-dot" style="background:${this.palette.astar}"></i>`,
