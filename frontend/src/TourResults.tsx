@@ -4,6 +4,7 @@ import { Badge } from '@astryxdesign/core/Badge'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Card } from '@astryxdesign/core/Card'
+import { Heading } from '@astryxdesign/core/Heading'
 import { HStack } from '@astryxdesign/core/HStack'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
@@ -12,6 +13,7 @@ import { num, seconds } from './RouteResults'
 import { describeIssue, unreachableGroups } from './tourIssues'
 import { costDelta, deltaText, orderChanged } from './compare'
 import { Grid } from '@astryxdesign/core/Grid'
+import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import Kpi, { km, kmText, metersRaw, minutes, minutesText, secondsRaw } from './Kpi'
 
 /** Chi phí của phương án được chọn, hoặc null khi tour không khả thi. */
@@ -32,6 +34,42 @@ function improvementText(pct: number): string {
   if (Math.abs(pct) < 0.05) return 'Bằng thứ tự nhập'
   // "Nhanh hơn / chậm hơn" thay "rẻ / đắt": đại lượng là thời gian, không phải tiền (đợt UI 15/11).
   return pct > 0 ? `Nhanh hơn thứ tự nhập ${num(pct)}%` : `Chậm hơn thứ tự nhập ${num(-pct)}%`
+}
+
+/**
+ * Lịch trình của phương án đang xem cho panel trái (đợt UI "Bàn điều phối"): Kho → 1 … n → về kho, số khớp marker
+ * trên bản đồ, cột phải ghi thứ tự nhập. Rê chuột hoặc focus một dòng thì marker tương ứng nổi lên và hiện tên
+ * (`onHover`), nên người dùng bàn phím cũng thấy tên điểm. Không có giờ đến từng điểm: API chỉ trả tổng cả tour.
+ */
+export function TourItinerary({ res, method, labels, onHover }: {
+  res: TourResponse
+  method: TourMethod | null
+  labels: Record<string, string>
+  onHover: (id: string | null) => void
+}) {
+  const view = res.status === 'ok' && method ? res.candidates[method] : undefined
+  if (!view || !method) return null
+  const input = res.candidates.input?.stop_order ?? view.stop_order
+  const depot = labels.depot && labels.depot !== 'Kho' ? labels.depot : 'Kho'
+  const row = (key: string, id: string | null, mark: string, isDepot: boolean, title: string, note: string) => (
+    <li key={key} className="itin-row" tabIndex={id ? 0 : undefined} aria-label={`${mark === 'K' ? 'Kho' : `Điểm ${mark}`}: ${title}`}
+      onMouseEnter={id ? () => onHover(id) : undefined} onMouseLeave={id ? () => onHover(null) : undefined}
+      onFocus={id ? () => onHover(id) : undefined} onBlur={id ? () => onHover(null) : undefined}>
+      <span className={isDepot ? 'itin-mark itin-depot' : 'itin-mark'} aria-hidden="true">{mark}</span>
+      <Text type="body" weight="medium">{title}</Text>
+      <Text type="supporting" hasTabularNumbers>{note}</Text>
+    </li>
+  )
+  return (
+    <VStack gap={2}>
+      <Heading level={3}>Lịch trình · {TOUR_METHOD_LABEL[method]}</Heading>
+      <ol className="itin">
+        {row('start', 'depot', 'K', true, depot, 'xuất phát')}
+        {view.stop_order.map((id, i) => row(id, id, String(i + 1), false, labels[id] ?? id, `nhập #${input.indexOf(id) + 1}`))}
+        {row('end', null, 'K', true, depot === 'Kho' ? 'Về kho' : `Về ${depot}`, 'kết thúc')}
+      </ol>
+    </VStack>
+  )
 }
 
 export default function TourResults({ res, labels, selected, onSelect, scenarioLabel, previous, hasSummary = false }: {
@@ -131,6 +169,73 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
       )}
     </>
   )
+  if (hasSummary) {
+    // Khay "So sánh phương án": mỗi phương án một dòng, thanh thời gian cùng trục, vạch Held–Karp khi có. Chỉ gọi là
+    // "tối ưu" khi Held–Karp chạy trong chính response này (cùng điều kiện); không có thì so với phương án tốt nhất
+    // đã tính (phủ quyết của vai phản biện).
+    const axis = Math.max(...shown.map((c) => c.cost_s)) * 1.04
+    const opt = res.optimal?.cost_s ?? null
+    const gapText = (m: TourMethod, cost: number) => {
+      if (opt !== null) {
+        if (m === 'optimal') return 'tối ưu, cùng điều kiện'
+        const g = (100 * (cost - opt)) / opt
+        return g < 0.05 ? 'bằng tối ưu' : `chậm hơn tối ưu ${num(g)}%`
+      }
+      const g = (100 * (cost - best)) / best
+      return g < 0.05 ? 'nhanh nhất đã tính' : `chậm hơn phương án tốt nhất đã tính ${num(g)}%`
+    }
+    return (
+      <VStack gap={3}>
+        <ul className="plan-list" aria-label="Các phương án">
+          {methods.map((m) => {
+            const c = res.candidates[m]
+            if (!c) return null
+            const isSelected = m === viewKey
+            return (
+              // Lưới CSS (globals.css): khay rộng thì một hàng tên | thanh | số | nút; khay hẹp (< 600 px, container query)
+              // thì tên + nút ở trên, thanh ở giữa, số ở dưới, để thanh không co về 0 px (góp ý review #168).
+              <li key={m} className={isSelected ? 'plan-row is-selected' : 'plan-row'}>
+                <HStack gap={1} vAlign="center" wrap="wrap" className="plan-name">
+                  <Text type="body" weight="semibold">{TOUR_METHOD_LABEL[m]}</Text>
+                  {m === res.chosen && <Badge variant="purple" label="Được chọn" />}
+                </HStack>
+                <VStack className={isSelected ? 'plan-bar is-selected' : 'plan-bar'}>
+                  <ProgressBar label={`${TOUR_METHOD_LABEL[m]}: ${minutesText(c.cost_s)}`} isLabelHidden value={c.cost_s} max={axis}
+                    variant="neutral" marks={opt !== null ? [{ value: opt, label: 'Tối ưu (Held–Karp)' }] : undefined} />
+                </VStack>
+                <VStack gap={0} className="plan-num">
+                  <Text type="body" hasTabularNumbers>
+                    <Text type="inherit" weight="bold">{minutesText(c.cost_s)}</Text> · {secondsRaw(c.cost_s)}
+                  </Text>
+                  <Text type="supporting" hasTabularNumbers>{gapText(m, c.cost_s)}</Text>
+                </VStack>
+                <VStack className="plan-btn">
+                  <Button label={isSelected ? 'Đang hiển thị' : 'Xem trên bản đồ'} size="sm"
+                    variant={isSelected ? 'primary' : 'secondary'} onClick={() => onSelect(m)} />
+                </VStack>
+              </li>
+            )
+          })}
+        </ul>
+        {view && viewKey && note(viewKey, view)}
+        {previous && (
+          <VStack gap={0.5}>
+            {orderChanged(chosenStops(previous.res), chosenStops(res)) && (
+              <Text type="body">
+                Thứ tự giao đã đổi, nên chênh lệch so với lần trước gồm cả phần do sắp lại, không chỉ do điều kiện giao
+                thông hay đường đóng.{res.candidates.kept_order ? ' Ảnh hưởng của riêng việc đóng đường: xem dòng "Giữ thứ tự cũ".' : ''}
+              </Text>
+            )}
+            <Text type="supporting">Lần trước: {previous.label}. Lần này: {scenarioLabel}.</Text>
+          </VStack>
+        )}
+        <Text type="supporting">
+          Thời gian tính toán (1 lần chạy): ma trận {num(res.matrix_runtime_ms, 2)} ms, sắp thứ tự {num(res.order_runtime_ms ?? 0, 2)} ms.
+          {opt !== null ? ' Held–Karp chỉ để đối chứng, không dùng để chọn tour.' : ''}
+        </Text>
+      </VStack>
+    )
+  }
   return (
     <VStack gap={3}>
       {view && viewKey && (
