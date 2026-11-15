@@ -136,10 +136,11 @@ export class MapLayers {
     const arrowPane = map.createPane('arrows')
     arrowPane.style.zIndex = '420'
     arrowPane.style.pointerEvents = 'none'
-    // Đoạn đóng: trên tuyến và trên cả marker (R-1, T-3): trước đây chung overlayPane nên tuyến vẽ sau che nét đỏ
-    // trong lúc chờ kết quả, và cạnh ngắn sát một điểm giao nằm dưới marker 24 px.
+    // Đoạn đóng: trên tuyến và mũi tên, dưới marker (R-1, T-3): trước đây chung overlayPane nên tuyến vẽ sau che nét
+    // đỏ trong lúc chờ kết quả. Không đặt trên marker vì sẽ che số điểm giao (góp ý #152); cạnh ngắn sát một điểm thì
+    // tour không khả thi tự thu phóng vào đó (App) nên vẫn thấy.
     const closedPane = map.createPane('closed')
-    closedPane.style.zIndex = '620'
+    closedPane.style.zIndex = '440'
     closedPane.style.pointerEvents = 'none'
     this.zones.addTo(map)
     this.routes.addTo(map)
