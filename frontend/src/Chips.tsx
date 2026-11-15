@@ -1,7 +1,7 @@
 // Nhóm chip một lựa chọn và danh sách bấm một lần (đợt UI "Bàn điều phối", họp thiết kế 9 vai).
 // Astryx chưa có nhóm chip xuống dòng được (SegmentedControl không xuống dòng, nhãn dài bị cắt ở panel 360 px), nên
 // viết theo mẫu radiogroup của WAI-ARIA: một chip nhận Tab, phím mũi tên chuyển và chọn luôn.
-import { useRef, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 
@@ -78,6 +78,51 @@ export function PickList({ id, label, options, value, onPick, isDisabled, disabl
         })}
       </div>
       {isDisabled && disabledMessage && <Text type="supporting">{disabledMessage}</Text>}
+    </VStack>
+  )
+}
+
+/**
+ * Danh sách đoạn để đóng (đánh giá dùng thử 16/11): thay ô chọn của Astryx, vì ô chọn không báo mục đang rê nên
+ * không xem trước được. Rê chuột / Tab tới một dòng thì `onPreview(i)` (bản đồ tô đỏ đoạn đó); bấm hay Enter là đóng,
+ * vẫn một bước như trước. Danh sách cuộn trong khung thấp để không đẩy panel dài ra.
+ */
+export function SegmentList({ id, label, items, onPick, onPreview }: {
+  id: string
+  label: string
+  items: string[]
+  onPick: (i: number) => void
+  onPreview: (i: number | null) => void
+}) {
+  // Một dòng nhận Tab, phím mũi tên / Home / End chuyển dòng (góp ý review #175: trước đây Tab 21 lần mới qua danh sách).
+  const refs = useRef<(HTMLButtonElement | null)[]>([])
+  const [active, setActive] = useState(0)
+  const current = Math.min(active, Math.max(0, items.length - 1))
+  const go = (i: number) => {
+    const n = Math.max(0, Math.min(items.length - 1, i))
+    setActive(n)
+    refs.current[n]?.focus()
+  }
+  const onKey = (i: number) => (e: KeyboardEvent) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); go(i + 1) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); go(i - 1) }
+    else if (e.key === 'Home') { e.preventDefault(); go(0) }
+    else if (e.key === 'End') { e.preventDefault(); go(items.length - 1) }
+  }
+  return (
+    <VStack gap={2}>
+      <Text type="label" id={`${id}-label`}>{label}</Text>
+      <Text type="supporting">Phím mũi tên để dò, Enter để đóng đoạn.</Text>
+      <div role="group" aria-labelledby={`${id}-label`} className="segment-list" onMouseLeave={() => onPreview(null)}>
+        {items.map((text, i) => (
+          <button key={text} ref={(el) => { refs.current[i] = el }} type="button" className="pick segment-pick"
+            tabIndex={i === current ? 0 : -1} onKeyDown={onKey(i)}
+            onMouseEnter={() => onPreview(i)} onFocus={() => { setActive(i); onPreview(i) }} onBlur={() => onPreview(null)}
+            onClick={() => { onPreview(null); onPick(i) }}>
+            {text}
+          </button>
+        ))}
+      </div>
     </VStack>
   )
 }

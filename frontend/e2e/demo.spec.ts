@@ -258,12 +258,31 @@ test('Tour: so với Cơ sở dùng cùng thứ tự giao, cao điểm không ba
 test('Danh sách đóng đoạn ghi tên đường khi dữ liệu OSM có tên', async ({ page }) => {
   await choose(page, 'Lộ trình mẫu', 'Hai điểm qua trung tâm')
   await expectAll(page, ['186,1'])
-  await page.getByRole('combobox', { name: 'Đóng một đoạn trên tuyến' }).click()
-  const options = page.getByRole('option')
+  const options = page.getByRole('group', { name: 'Đóng một đoạn trên tuyến' }).getByRole('button')
   await expect(options.first()).toBeVisible()
   const labels = await options.allInnerTexts()
   // Có tên thì sau "Đoạn i/n: " là chữ, không phải số mét.
   const named = labels.filter((t) => /^Đoạn \d+\/\d+: [^\d]/.test(t.trim()))
   expect(named.length, labels.join(' | ')).toBeGreaterThan(labels.length / 2)
-  await page.keyboard.press('Escape')
+})
+
+test('Danh sách đóng đoạn: rê chuột hay Tab tới dòng thì bản đồ tô đoạn đó, bấm thì đóng', async ({ page }) => {
+  await choose(page, 'Lộ trình mẫu', 'Hai điểm qua trung tâm')
+  await expectAll(page, ['186,1'])
+  const paths = page.locator('.leaflet-overlay-pane path')
+  const before = await paths.count()
+  const row = page.getByRole('group', { name: 'Đóng một đoạn trên tuyến' }).getByRole('button').nth(9)
+  await row.hover()
+  await expect.poll(() => paths.count()).toBeGreaterThan(before)      // nét đỏ + chấm giữa đoạn
+  await page.mouse.move(5, 5)
+  await expect.poll(() => paths.count()).toBe(before)
+  // Bàn phím: chỉ một dòng nhận Tab, mũi tên xuống chuyển dòng (góp ý review #175).
+  const rows = page.getByRole('group', { name: 'Đóng một đoạn trên tuyến' }).getByRole('button')
+  await expect(rows.locator('xpath=self::*[@tabindex="0"]')).toHaveCount(1)
+  await rows.first().focus()
+  for (let k = 0; k < 9; k++) await page.keyboard.press('ArrowDown')
+  await expect(row).toBeFocused()
+  await expect.poll(() => paths.count()).toBeGreaterThan(before)
+  await page.keyboard.press('Enter')
+  await expectAll(page, ['Đang đóng đường'])
 })
