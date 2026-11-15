@@ -148,3 +148,10 @@ test('insideArea: trong khung, ngoài khung, chưa biết khung', () => {
   assert.equal(insideArea({ lat: 10.775, lon: 106.72 }, b), false)
   assert.equal(insideArea({ lat: 0, lon: 0 }, null), true)
 })
+
+test('segmentLabels: có tên đường thì ghi tên sau số thứ tự đoạn', () => {
+  assert.deepEqual(segmentLabels([120.4, 980], 'điểm đi', ['Lê Lợi', null]), [
+    'Đoạn 1/2: Lê Lợi, 120 m, bắt đầu cách điểm đi 0 m',
+    'Đoạn 2/2: 980 m, bắt đầu cách điểm đi 120 m',
+  ])
+})

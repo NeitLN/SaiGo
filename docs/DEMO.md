@@ -43,7 +43,7 @@ Mọi số hiển thị đều lấy từ response của backend; không có s�
 - **Đặt điểm từ địa danh**: chọn Dinh Độc Lập, Chợ Bến Thành, Nhà thờ Đức Bà… thay vì bấm bản đồ. Mỗi điểm (bấm hay chọn) được kiểm ngay (`/api/snap`): xa đường quá 150 m thì bị từ chối kèm khoảng cách; trong lúc kiểm có dòng "Đang kiểm điểm vừa chọn…" và các nút tìm/lập bị khoá.
 - Tìm đường: nút **Tìm đường** (chạy Dijkstra và A*) và **Xóa** ở đáy panel, **Đảo chiều** dưới hai điểm. Tour: **Lập tour** và **Xóa** ở đáy, **Bỏ điểm cuối** dưới danh sách điểm.
 - Khi có cạnh đóng: dòng "Đang đóng đường (N cạnh có hướng)" (một đoạn hai chiều là 2 cạnh) và nút **Mở lại tất cả**.
-- Ô **Đóng một đoạn trên tuyến / tour**: liệt kê từng đoạn ("Đoạn 10/18: … m, bắt đầu cách điểm đi … m"); chọn một đoạn như bấm vào nó trên bản đồ. Dùng được bằng bàn phím.
+- Ô **Đóng một đoạn trên tuyến / tour**: liệt kê từng đoạn, có tên đường khi dữ liệu OSM có (16/11; khoảng 82% cạnh của vùng demo, hẻm và đường nhánh thường không tên), ví dụ ("Đoạn 10/18: <tên đường>, … m, bắt đầu cách điểm đi … m"); chọn một đoạn như bấm vào nó trên bản đồ. Dùng được bằng bàn phím.
 - Đầu khay phân tích có công tắc **Hiện node đã mở rộng** (chế độ Tìm đường, mặc định tắt) và **Phần mở rộng** (mặc định tắt; thêm ALT, Dijkstra hai chiều vào bảng phụ, và thẻ NN + 2-opt + Or-opt cho tour). Phần mở rộng **giữ trạng thái khi đổi chế độ**: nhớ tắt trước bước 9 nếu đã bật khi hỏi đáp.
 
 ### 1.2. Bản đồ

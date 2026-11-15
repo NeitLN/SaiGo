@@ -121,10 +121,12 @@ export const distanceText = (m: number) =>
  * Nhãn cho danh sách đóng đoạn bằng bàn phím (test lại 15/11, A-1): mỗi đoạn ghi thứ tự, độ dài và khoảng cách từ
  * điểm đầu tuyến/tour, để người không dùng chuột vẫn chọn được đoạn cần đóng.
  */
-export function segmentLabels(lengths: number[], from: string): string[] {
+export function segmentLabels(lengths: number[], from: string, names: (string | null | undefined)[] = []): string[] {
   let before = 0
   return lengths.map((len, i) => {
-    const label = `Đoạn ${i + 1}/${lengths.length}: ${Math.round(len)} m, bắt đầu cách ${from} ${distanceText(before)}`
+    // Tên đường khi dữ liệu OSM có (đánh giá dùng thử 16/11: "Đoạn 6/20" không cho biết là đường nào).
+    const name = names[i] ? `${names[i]}, ` : ''
+    const label = `Đoạn ${i + 1}/${lengths.length}: ${name}${Math.round(len)} m, bắt đầu cách ${from} ${distanceText(before)}`
     before += len
     return label
   })

@@ -158,6 +158,16 @@ class ScenarioOut(BaseModel):
     rules: list[RuleOut]
 
 
+class EdgeNamesResponse(BaseModel):
+    """Tên đường của từng cạnh: `names[i]` là tên của cạnh id `i`, `None` khi dữ liệu OSM không ghi tên.
+
+    Thêm 16/11 (đánh giá dùng thử): để danh sách đóng đoạn ghi tên đường thay vì chỉ số thứ tự và độ dài.
+    """
+
+    dataset_id: str
+    names: list[str | None]
+
+
 class NetworkResponse(BaseModel):
     """Mạng đường của đồ thị đang nạp, để UI vẽ nền khi không tải được tile OSM (T56 R8).
 

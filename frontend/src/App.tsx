@@ -98,7 +98,7 @@ export default function App() {
     setMapReady((n) => n + 1)
   }, [])
 
-  const { server, datasetId, nodeCount, dataArea, scenarios, scenarioNote, checkServer, markServerUp } = useServerStatus()
+  const { server, datasetId, nodeCount, edgeNames, dataArea, scenarios, scenarioNote, checkServer, markServerUp } = useServerStatus()
   const [scenarioId, setScenarioId] = useState('baseline')
   const [mode, setMode] = useState<Mode>('route')
   // Ô Case demo nhớ riêng theo chế độ (test lại 15/11, R-8/T-7): trước đây đổi chế độ rồi quay lại thì ô trống dù
@@ -730,7 +730,8 @@ export default function App() {
   const keySegs = mode === 'route'
     ? (route && !noPath && route.res.results.dijkstra ? routeSegments(route.res.results.dijkstra) : [])
     : (tour?.status === 'ok' && shownCand ? routeSegments(shownCand) : [])
-  const keyLabels = segmentLabels(keySegs.map(segmentLength), mode === 'route' ? 'điểm đi' : 'kho')
+  const keyLabels = segmentLabels(keySegs.map(segmentLength), mode === 'route' ? 'điểm đi' : 'kho',
+    keySegs.map((s) => edgeNames[s.edgeId]))
   const closeByKey = (v: string) => {
     const seg = keySegs[Number(v)]
     if (seg) (mode === 'route' ? closeSegment : closeTourSegment)(seg)
