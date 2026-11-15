@@ -78,7 +78,8 @@ def _where(loc: Any) -> str:
 def translate(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out = []
     for err in errors:
-        where = _where(err.get("loc"))
+        # JSON hỏng: loc là vị trí ký tự trong body (vd. ('body', 1)), không phải tên trường (góp ý #154).
+        where = "" if err.get("type") == "json_invalid" else _where(err.get("loc"))
         text = _message(err)
         item = {k: v for k, v in err.items() if k in ("type", "loc", "input", "ctx")}
         item["msg"] = f"{where}: {text}" if where else text

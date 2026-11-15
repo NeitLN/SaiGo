@@ -55,8 +55,8 @@ def dataset(request: Request) -> DatasetResponse:
 
 
 @router.get("/snap", response_model=SnapCheckResponse)
-def snap_check(request: Request, lat: float = Query(..., ge=-90, le=90),
-               lon: float = Query(..., ge=-180, le=180)) -> SnapCheckResponse:
+def snap_check(request: Request, lat: float = Query(..., ge=-90, le=90, allow_inf_nan=False),
+               lon: float = Query(..., ge=-180, le=180, allow_inf_nan=False)) -> SnapCheckResponse:
     """Node gần nhất của một điểm và có đạt ngưỡng snap không (review UI 14/11, PM-7). UI gọi lúc người dùng bấm
     đặt điểm, để từ chối điểm quá xa đường ngay, không đợi tới lúc tìm đường hay lập tour."""
     graph, meta = _loaded(request)

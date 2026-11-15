@@ -108,3 +108,16 @@ def test_snap_ok_matches_route_at_threshold(client):
     msg = r.json()["detail"]
     assert "hơn 150 m, quá ngưỡng 150 m" in msg and "cách mạng đường 150 m" not in msg
     assert not math.isnan(snap["snap_distance_m"])
+
+
+@pytest.mark.parametrize("bad", ["nan", "inf", "-1e400"])
+def test_snap_query_non_finite(client, bad):
+    r = client.get("/api/snap", params={"lat": bad, "lon": 106.7})
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["msg"] == "lat: phải là số hữu hạn"
+
+
+def test_broken_json_has_no_position_as_field(client):
+    r = _raw(client, "/api/route", '{"source": ')
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["msg"] == "JSON không hợp lệ"
