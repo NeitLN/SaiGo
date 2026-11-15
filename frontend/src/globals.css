@@ -10,6 +10,9 @@
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  /* Nền bản đồ (tile OSM hoặc nền dự phòng #ddd) luôn sáng, nên mọi token trong bản đồ lấy biến thể sáng kể cả khi
+     trang ở chế độ tối (test lại 15/11, A-2/A-3: viền tuyến đổi sang trắng còn 1,12:1, chữ trắng trên đỏ 2,72:1). */
+  color-scheme: light;
 }
 
 .zone-label {
@@ -34,6 +37,7 @@
   color: white;
   border: 2px solid var(--color-background-card);
   font-weight: 700;
+  font-size: 13px;
 }
 
 /* Điểm giao không tới được / không đi ra được khi tour không khả thi (review 14/11, UX-4). */
@@ -84,10 +88,12 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-element);
-  background: var(--color-data-categorical-green);
+  /* Xanh của token success: chữ trắng đạt 5,0:1; xanh categorical chỉ 3,76:1 (test lại 15/11, A-3). */
+  background: var(--color-success);
   color: white;
   border: 2px solid var(--color-background-card);
   font-weight: 700;
+  font-size: 13px;
 }
 
 .tour-arrow {
@@ -111,4 +117,16 @@
 /* Kho hỏng vẫn tô đỏ: .tour-depot khai báo sau .tour-stop-broken cùng độ ưu tiên nên nền xanh đè màu đỏ (review #144). */
 .tour-depot.tour-stop-broken {
   background: var(--color-error);
+}
+
+/* Chế độ tương phản cao của Windows (test lại 15/11, A-5): bản đồ là hình vẽ, màu từng lớp mang nghĩa (Dijkstra, A*,
+   đoạn đóng…), nên giữ nguyên màu thay vì để trình duyệt đổi hết thành một màu chữ; nút giữ viền để thấy được. */
+@media (forced-colors: active) {
+  .map-frame,
+  .map-legend {
+    forced-color-adjust: none;
+  }
+  button:not([role='switch']) {
+    border: 1px solid ButtonText;
+  }
 }

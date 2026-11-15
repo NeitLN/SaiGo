@@ -340,8 +340,15 @@ export default function App() {
       else layers.clearRoutes()
       if (tour && pendingFit.current) {
         pendingFit.current = false
-        const pts = Object.values(tour.snapped).map((p): [number, number] => [p.lon, p.lat])
-        layers.fitTo(toLatLngs([...pts, ...(cand?.geometry.coordinates ?? [])]), 160)
+        // Tour không khả thi: thu phóng vào điểm hỏng và đoạn đang đóng (test lại 15/11, T-3/D-4: ở mức vừa cả tour,
+        // cạnh đóng 24 m sát Nhà hát chỉ còn vài pixel nằm dưới marker).
+        const pts = Object.entries(tour.snapped)
+          .filter(([id]) => !broken.size || broken.has(id))
+          .map(([, p]): [number, number] => [p.lon, p.lat])
+        const extra = broken.size
+          ? closedToDraw(tourBlocked, edgeGeom.current, tourClosed).flatMap((s) => s.latlngs)
+          : toLatLngs(cand?.geometry.coordinates ?? [])
+        layers.fitTo([...toLatLngs(pts), ...extra], 160)
       }
     }
     layers.setLegend(legend)
@@ -445,7 +452,7 @@ export default function App() {
         // Đặt đúng toạ độ node vừa snap (T-5, R-8): marker nằm trên đường, ô điểm hiện toạ độ thật dùng để tìm, và
         // hai cú bấm vào cùng node bị chặn trùng ngay. Tên địa danh (nếu có) giữ nguyên.
         if (s.ok) placePointRef.current({ ...p, lat: s.lat, lon: s.lon })
-        else setError(`Điểm vừa bấm cách đường ${distanceText(s.snap_distance_m)}, quá ngưỡng ${s.max_m} m nên không được đặt. `
+        else setError(`Điểm vừa bấm cách đường đi được gần nhất ${distanceText(s.snap_distance_m)}, quá ngưỡng ${s.max_m} m nên không được đặt. `
           + 'Hãy bấm gần đường hơn, trong viền vùng có dữ liệu.')
       } catch {
         if (gen === clickGen.current) placePointRef.current(p)

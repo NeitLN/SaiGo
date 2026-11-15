@@ -18,7 +18,13 @@ export default function MapView({ onReady, onClick }: {
 
   useEffect(() => {
     // Nút zoom ghi tiếng Việt (trang là lang=vi; review 14/11 đợt 3, FE-4).
-    const map = L.map(el.current!, { zoomControl: false }).setView(CENTER, 16)
+    // Người dùng chọn giảm chuyển động thì tắt hiệu ứng zoom và mờ dần của Leaflet (test lại 15/11, A-11).
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    const map = L.map(el.current!, {
+      zoomControl: false, zoomAnimation: !still, fadeAnimation: !still, markerZoomAnimation: !still,
+    }).setView(CENTER, 16)
+    // Khung bản đồ nhận focus bằng Tab nhưng không có tên (A-9).
+    map.getContainer().setAttribute('aria-label', 'Bản đồ. Phím mũi tên để di chuyển, phím + và − để thu phóng.')
     L.control.zoom({ zoomInTitle: 'Phóng to', zoomOutTitle: 'Thu nhỏ' }).addTo(map)
     // Nền tile OSM chỉ để xem tương tác, không tải hàng loạt (docs/ARCHITECTURE.md mục 6).
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
