@@ -975,11 +975,11 @@ export default function App() {
               <Divider />
               <VStack as="section" aria-label={trayTitle} height={trayOpen ? TRAY_HEIGHT : undefined} gap={0}>
                 <VStack paddingInline={4} paddingBlock={2} gap={0}>{trayHeader}</VStack>
-                {trayOpen && (
-                  <StackItem size="fill" isScrollable>
-                    <VStack id="tray-body" paddingInline={4} paddingBlockEnd={3} gap={0}>{trayBody}</VStack>
-                  </StackItem>
-                )}
+                {/* Luôn render để aria-controls của nút Thu gọn / Mở rộng trỏ tới phần tử có thật; thu gọn thì hidden
+                    (không nhận Tab, trình đọc màn hình bỏ qua). Góp ý review #165. */}
+                <StackItem size="fill" isScrollable id="tray-body" hidden={!trayOpen}>
+                  <VStack paddingInline={4} paddingBlockEnd={3} gap={0}>{trayBody}</VStack>
+                </StackItem>
               </VStack>
             </VStack>
           </LayoutContent>

@@ -120,6 +120,9 @@ test('Khay phân tích thu gọn được, bản đồ cao lên và vẫn thấy
   const before = (await map.boundingBox())!.height
   await page.getByRole('button', { name: 'Thu gọn', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Mở rộng', exact: true })).toHaveAttribute('aria-expanded', 'false')
+  // aria-controls trỏ tới phần tử có thật, ẩn khi thu gọn (góp ý review #165).
+  await expect(page.locator('#tray-body')).toBeHidden()
+  await expect(page.locator('#tray-body')).toHaveCount(1)
   await expect.poll(async () => (await map.boundingBox())!.height).toBeGreaterThan(before + 100)
   // Thu phóng lại sau khi đổi kích thước: hai marker vẫn nằm trong khung bản đồ.
   await page.waitForTimeout(800)
@@ -130,4 +133,5 @@ test('Khay phân tích thu gọn được, bản đồ cao lên và vẫn thấy
   }
   await page.getByRole('button', { name: 'Mở rộng', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Thu gọn', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('#tray-body')).toBeVisible()
 })
