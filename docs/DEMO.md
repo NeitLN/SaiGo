@@ -44,15 +44,15 @@ Bố cục đổi theo độ rộng cửa sổ:
 
 | Thành phần | Cách hiển thị |
 |---|---|
-| Điểm đi, điểm đến | Vòng tròn xanh lá "Đi", đỏ "Đến" tại node đã snap; nhãn ghi khoảng cách snap |
-| Tuyến | Dijkstra và A* trùng nhau: một nét xanh viền cam, có viền tối; khác nhau: Dijkstra nét xanh, A* nét cam đứt |
-| Tuyến lần trước | Nét xám mờ khi cùng hai điểm mà đổi kịch bản hoặc cạnh đóng; khi lần này không còn đường, nét xám là tuyến cũ nay không đi được |
-| Vùng ùn tắc | Hình tròn tô vàng nhạt, viền nâu đứt; nhãn phía trong mép trên, vd. "Cao điểm mô phỏng · ×2 · đường chính, đường cấp 2" |
+| Điểm đi, điểm đến | Pin xanh "Đi", pin đỏ "Đến" tại node đã snap; nhãn chỉ ghi khoảng cách snap khi lớn hơn 15 m |
+| Tuyến | Dijkstra và A* trùng nhau: một nét xanh có viền xanh đậm, chevron trắng chỉ chiều (chú giải ghi "Dijkstra và A* trùng tuyến"); khác nhau: Dijkstra nét xanh liền, A* nét cam đứt |
+| Tuyến lần trước | Nét "rỗng" (viền xám, lõi trắng) khi cùng hai điểm mà đổi kịch bản hoặc cạnh đóng; khi lần này không còn đường, đó là tuyến cũ nay không đi được |
+| Vùng ùn tắc | Hình tròn viền nâu liền, tô vàng rất nhạt; nhãn ngắn "Cao điểm mô phỏng ×2" ở mép trên; hệ số và loại đường đầy đủ ghi ở chú giải |
 | Đoạn đang đóng | Đỏ nét đứt có viền sáng, nằm trên tuyến và dưới marker; hiện ngay khi bấm, không chờ kết quả |
-| Tour | Nét tím có mũi tên chỉ chiều; kho là ô vuông xanh "K"; điểm giao là vòng tím đánh số theo thẻ đang xem, tên đặt cạnh số |
+| Tour | Nét tím có viền, chevron trắng chỉ chiều; kho là ô vuông xanh "K"; điểm giao là vòng tím đánh số theo thẻ đang xem, tên đặt cạnh số |
 | Điểm không đi được | Marker tô đỏ (tour không khả thi); app tự thu phóng vào điểm hỏng và đoạn đóng |
 | Vùng có dữ liệu | Phần ngoài khung phủ mờ, viền mảnh; đặt điểm trong khung mới snap được; bản đồ không kéo xa khỏi vùng |
-| Chú giải | Góc dưới trái, chỉ liệt kê những gì đang vẽ |
+| Chú giải và nút | Chú giải có tiêu đề ở góc dưới trái, chỉ liệt kê những gì đang vẽ; dưới nút zoom có nút "Về toàn tuyến" (thu phóng lại vừa kết quả) |
 | Nền bản đồ | Thứ tự: Esri Light Gray (xám nhạt, có tên đường; ảnh tới zoom 16, phóng to từ đó) → OSM → **nền rút gọn** tự vẽ từ `/api/network` (đường trắng ba cấp theo loại đường, nhãn nhỏ "Nền rút gọn từ dữ liệu đồ thị" góc trên phải; không có tên đường). Nguồn nào lỗi cả lượt tải hoặc treo 6 s thì sang nguồn kế; tile tải lại được thì nền rút gọn tự gỡ. Luôn ghi "Dữ liệu tuyến © OpenStreetMap contributors" cùng nguồn của nền đang dùng |
 
 Rê chuột lên tuyến thì đoạn sẽ đóng tô đỏ kèm "Bấm để đóng đoạn đang tô đỏ"; **bấm một lần là đóng** (không có nút xác nhận), cả cạnh đối nếu có, rồi tìm lại. Bấm trượt ra ngoài tuyến khi đang có kết quả không xoá gì (chỉ hiện gợi ý bấm Xóa). Bản đồ luôn dùng màu sáng, kể cả khi máy để chế độ tối. Không vẽ đường thẳng nối hai điểm khi không có đường.

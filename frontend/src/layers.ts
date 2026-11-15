@@ -7,7 +7,7 @@ import { arrowPoints } from './geometry'
 // Màu lấy từ token của theme Astryx (đọc trên phần tử bản đồ, nằm trong <Theme>), không viết mã màu cứng.
 type Palette = {
   dijkstra: string; astar: string; source: string; target: string; closed: string; zone: string; tour: string; surface: string
-  road: string; casing: string; zoneBorder: string
+  road: string; casing: string; zoneBorder: string; success: string
 }
 
 function readPalette(el: HTMLElement): Palette {
@@ -34,6 +34,8 @@ function readPalette(el: HTMLElement): Palette {
     road: v('--color-text-secondary'),
     // Viền tối dưới tuyến: tuyến cam của A* trên nền xám chỉ đạt 2,29:1, dưới mức 3:1 (FE-5, WCAG 1.4.11).
     casing: v('--color-text-primary'),
+    // Pin điểm đi: xanh của token success (3,47:1 trên nền Esri), không dùng xanh lá categorical (2,77:1) (đợt UI 15/11).
+    success: v('--color-success'),
   }
   probe.remove()
   return palette
@@ -55,7 +57,31 @@ export function roadLevel(kind: string | null): 0 | 1 | 2 {
 // [viền, lõi] (px ở z16) theo cấp đường.
 const ROAD_WIDTH: Record<number, [number, number]> = { 0: [3.5, 2], 1: [5.5, 3.5], 2: [8, 6] }
 
-export type LegendKind = 'dijkstra' | 'astar' | 'same' | 'zone' | 'closed' | 'previous' | 'trace' | 'tour' | 'broken'
+/** Màu đậm hơn cùng sắc (viền tuyến, đợt UI 15/11): nhân kênh RGB với k; nhận "rgb(...)" / "rgba(...)" như readPalette trả. */
+export function shade(color: string, k: number): string {
+  const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (!m) return color
+  const [r, g, b] = m.slice(1, 4).map((x) => Math.round(Number(x) * k))
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+/** Câu đầy đủ của các vùng ùn tắc cho chú giải (trên bản đồ chỉ để nhãn ngắn "×2"). */
+export function zoneLegend(scenario: Scenario): string {
+  const parts = scenario.rules.filter((r) => r.zone.type === 'circle').map((r) => {
+    const kinds = [...new Set((r.highway ?? []).map((h) => ROAD_KIND[h.replace(/_link$/, '')] ?? h))]
+    return `×${r.alpha.toLocaleString('vi-VN')}${kinds.length ? ` ${kinds.join(', ')}` : ''}`
+  })
+  return `Vùng cao điểm mô phỏng${parts.length ? `: ${parts.join('; ')}` : ''}`
+}
+
+// Pin điểm đi/đến (SVG, viền trắng, bóng nhẹ trong globals.css): neo ở mũi pin.
+const pinHtml = (fill: string) => `<svg width="28" height="36" viewBox="0 0 28 36" aria-hidden="true">`
+  + `<path d="M14 34.5s10.5-10.6 10.5-19.5a10.5 10.5 0 1 0-21 0c0 8.9 10.5 19.5 10.5 19.5z" fill="${fill}" stroke="white" stroke-width="2.5"/>`
+  + `<circle cx="14" cy="15" r="4.2" fill="white"/></svg>`
+// Chevron chỉ chiều, trắng, đặt trên nét tuyến (thay ký tự "▲").
+const chevronHtml = (deg: number) => `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="transform:rotate(${deg.toFixed(0)}deg)">`
+  + `<path d="M2.5 8.5 L6 3.5 L9.5 8.5" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+export type LegendKind = 'dijkstra' | 'astar' | 'same' | 'zone' | 'closed' | 'previous' | 'trace' | 'tour' | 'broken' | 'point'
 export interface LegendItem { kind: LegendKind; label: string }
 
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
@@ -143,7 +169,23 @@ export class MapLayers {
     const legendEl = this.legendEl
     const Legend = L.Control.extend({ onAdd: () => legendEl })
     new Legend({ position: 'bottomleft' }).addTo(map)
-    // Node đã mở rộng: dưới tuyến (overlayPane z 400), trên tuyến lần trước; canvas vì có thể vài nghìn chấm.
+    // Nút "Về toàn tuyến" dưới nút zoom; ẩn khi chưa có kết quả.
+    const fitBar = L.DomUtil.create('div', 'leaflet-bar leaflet-control')
+    const fitBtn = L.DomUtil.create('a', 'map-fit', fitBar) as HTMLAnchorElement
+    fitBtn.href = '#'
+    fitBtn.title = 'Về toàn tuyến'
+    fitBtn.setAttribute('role', 'button')
+    fitBtn.setAttribute('aria-label', 'Về toàn tuyến')
+    fitBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    L.DomEvent.disableClickPropagation(fitBar)
+    L.DomEvent.on(fitBtn, 'click', (e) => {
+      L.DomEvent.preventDefault(e)
+      if (this.lastFit) this.fitTo(this.lastFit.points, this.lastFit.rightPad)
+    })
+    fitBar.style.display = 'none'
+    this.fitButton = fitBtn
+    const Fit = L.Control.extend({ onAdd: () => fitBar })
+    new Fit({ position: 'topleft' }).addTo(map)    // Node đã mở rộng: dưới tuyến (overlayPane z 400), trên tuyến lần trước; canvas vì có thể vài nghìn chấm.
     const tracePane = map.createPane('trace')
     tracePane.style.zIndex = '395'
     tracePane.style.pointerEvents = 'none'
@@ -228,11 +270,9 @@ export class MapLayers {
     for (const rule of scenario.rules) {
       const z = rule.zone
       if (z.type !== 'circle') continue // chỉ biết vẽ vùng tròn (CongestionZone)
-      // Gộp primary/primary_link thành một tên cho nhãn ngắn (luật vẫn áp đúng danh sách gốc).
-      const kinds = [...new Set((rule.highway ?? []).map((h) => ROAD_KIND[h.replace(/_link$/, '')] ?? h))]
-      const roads = kinds.length ? ` · ${kinds.join(', ')}` : ''
+      // Đợt UI 15/11: viền liền mảnh, tô rất nhạt để không làm đục bản đồ; nét đứt để dành cho A* và đoạn đóng.
       L.circle([z.lat, z.lon], {
-        radius: z.radius_m, color: this.palette.zoneBorder, weight: 3, dashArray: '8 6', fillColor: this.palette.zone, fillOpacity: 0.12,
+        radius: z.radius_m, color: this.palette.zoneBorder, weight: 2, fillColor: this.palette.zone, fillOpacity: 0.08,
         interactive: false,
       }).addTo(this.zones)
       // Nhãn ở mép trên vòng tròn thay vì ở tâm, để không đè lên tuyến đi qua giữa vùng (UX-2); nằm phía trong vòng
@@ -240,35 +280,43 @@ export class MapLayers {
       const topLat = z.lat + z.radius_m / 111_320
       L.tooltip({ permanent: true, direction: 'bottom', className: 'zone-label', interactive: false })
         .setLatLng([topLat, z.lon])
-        .setContent(`Cao điểm mô phỏng · ×${rule.alpha.toLocaleString('vi-VN')}${roads}`)
+        // Nhãn ngắn; loại đường áp dụng ghi ở chú giải (zoneLegend).
+        .setContent(`Cao điểm mô phỏng ×${rule.alpha.toLocaleString('vi-VN')}`)
         .addTo(this.zones)
     }
   }
 
-  private marker(p: LatLon, label: string, color: string, tooltip?: string) {
-    // Bấm vào marker không lan xuống bản đồ (không chọn lại điểm, không đóng đoạn). Leaflet chỉ dừng lan sự kiện
-    // ở layer có nghe 'click', nên cần cả listener rỗng lẫn bubblingMouseEvents: false.
-    return L.circleMarker([p.lat, p.lon], {
-      radius: 7, color, weight: 3, fillColor: this.palette.surface, fillOpacity: 1, pane: 'points', bubblingMouseEvents: false,
+  private marker(p: LatLon, label: string, color: string, snapM?: number) {
+    // Pin SVG (đợt UI 15/11) thay vòng rỗng 7 px. Bấm vào marker không lan xuống bản đồ (không chọn lại điểm, không
+    // đóng đoạn): marker của Leaflet mặc định không chuyển sự kiện chuột cho bản đồ; listener rỗng để chắc chắn.
+    // Khoảng cách snap chỉ ghi khi đáng kể (> 15 m); "cách 0 m" chỉ gây nhiễu.
+    const far = snapM !== undefined && snapM > 15
+    const m = L.marker([p.lat, p.lon], {
+      icon: L.divIcon({ className: 'map-pin', html: pinHtml(color), iconSize: [28, 36], iconAnchor: [14, 35] }),
+      pane: 'points', keyboard: false, title: label,
     })
       .on('click', () => {})
-      .bindTooltip(tooltip ? `${label} · ${tooltip}` : label, { permanent: true, direction: 'top', offset: [0, -6] })
+      .bindTooltip(far ? `${label} · cách ${snapM.toFixed(0)} m` : label,
+        { permanent: true, direction: 'top', offset: [0, -34], className: 'map-label' })
       .addTo(this.points)
+    m.getElement()?.setAttribute('role', 'img')
+    m.getElement()?.setAttribute('aria-label', label === 'Đi' ? 'Điểm đi' : 'Điểm đến')
+    return m
   }
 
   // Điểm người dùng bấm, trước khi có kết quả.
   setPoints(source: LatLon | null, target: LatLon | null) {
     this.points.clearLayers()
-    if (source) this.marker(source, 'Đi', this.palette.source)
-    if (target) this.marker(target, 'Đến', this.palette.target)
+    if (source) this.marker(source, 'Đi', this.palette.success)
+    if (target) this.marker(target, 'Đến', this.palette.closed)
   }
 
   // Sau khi có kết quả: marker đặt tại node đã snap, tooltip ghi khoảng cách snap.
   setSnapped(res: RouteResponse) {
     this.points.clearLayers()
     const { source: s, target: t } = res.snapped
-    this.marker(s, 'Đi', this.palette.source, `cách ${s.snap_distance_m.toFixed(0)} m`)
-    this.marker(t, 'Đến', this.palette.target, `cách ${t.snap_distance_m.toFixed(0)} m`)
+    this.marker(s, 'Đi', this.palette.success, s.snap_distance_m)
+    this.marker(t, 'Đến', this.palette.closed, t.snap_distance_m)
   }
 
   /**
@@ -279,26 +327,25 @@ export class MapLayers {
     this.routes.clearLayers()
     const d = res.results.dijkstra
     const a = res.results.astar
-    const casing = (ll: L.LatLng[], weight: number) =>
-      // Đậm hơn (0,35 → 0,6): viền mờ chỉ đạt 2,36:1 trên nền xám (A-2). Màu luôn tối vì bản đồ dùng color-scheme light.
-      L.polyline(ll, { color: this.palette.casing, weight, opacity: 0.6, interactive: false }).addTo(this.routes)
+    // Đợt UI 15/11: viền cùng sắc đậm hơn (không còn ba lớp xanh/cam/đen như sợi cáp); trùng tuyến là một nét xanh,
+    // chú giải ghi rõ cả hai thuật toán; chevron trắng chỉ chiều. Viền đậm giữ tương phản ≥ 3:1 trên nền xám.
+    const line = (ll: L.LatLng[], color: string, casingW: number, coreW: number, dash?: string) => {
+      L.polyline(ll, { color: shade(color, 0.55), weight: casingW, interactive: false, lineCap: 'round', lineJoin: 'round' })
+        .addTo(this.routes)
+      L.polyline(ll, { color, weight: coreW, dashArray: dash, interactive: false, lineCap: 'round', lineJoin: 'round' })
+        .addTo(this.routes)
+    }
     if (sameRoute(d, a)) {
-      const latlngs = toLatLngs(d!.geometry.coordinates)
-      casing(latlngs, 13)
-      L.polyline(latlngs, { color: this.palette.astar, weight: 10, opacity: 0.9, interactive: false }).addTo(this.routes)
-      L.polyline(latlngs, { color: this.palette.dijkstra, weight: 5, interactive: false }).addTo(this.routes)
+      line(toLatLngs(d!.geometry.coordinates), this.palette.dijkstra, 10, 6)
+      this.chevrons(d!.geometry.coordinates)
     } else {
       if (d?.status === 'ok') {
-        casing(toLatLngs(d.geometry.coordinates), 9)
-        L.polyline(toLatLngs(d.geometry.coordinates), { color: this.palette.dijkstra, weight: 6, opacity: 0.8, interactive: false })
-          .addTo(this.routes)
+        line(toLatLngs(d.geometry.coordinates), this.palette.dijkstra, 10, 6)
+        this.chevrons(d.geometry.coordinates)
       }
-      if (a?.status === 'ok') {
-        casing(toLatLngs(a.geometry.coordinates), 7)
-        L.polyline(toLatLngs(a.geometry.coordinates), { color: this.palette.astar, weight: 4, dashArray: '8 6', interactive: false })
-          .addTo(this.routes)
-      }
+      if (a?.status === 'ok') line(toLatLngs(a.geometry.coordinates), this.palette.astar, 7, 4, '8 6')
     }
+    this.setFitButton(true)
     if (onSegmentClick && d) this.addHitSegments(routeSegments(d), onSegmentClick, res)
   }
 
@@ -398,7 +445,7 @@ export class MapLayers {
         icon: L.divIcon({ className: bad ? 'tour-depot tour-stop-broken' : 'tour-depot', html: 'K', iconSize: [26, 26] }),
         title: depot.label, keyboard: false,
       })
-        .bindTooltip(depot.label !== 'Kho' ? `Kho · ${depot.label}` : 'Kho', { permanent: true, direction: 'top', offset: [0, -14] })
+        .bindTooltip(depot.label !== 'Kho' ? `Kho · ${depot.label}` : 'Kho', { permanent: true, direction: 'top', offset: [0, -16], className: 'map-label' })
         .addTo(this.points)
       label(dm, depot.label !== 'Kho' ? `Kho: ${depot.label}` : 'Kho', bad)
     }
@@ -427,6 +474,8 @@ export class MapLayers {
       this.map.once('resize', () => this.fitTo(points, rightPad))
       return
     }
+    this.lastFit = { points, rightPad }
+    this.setFitButton(true)
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     // rightPad: chừa chỗ cho nhãn tên điểm đặt bên phải marker (tour), để tên không bị cắt ở mép.
     this.map.fitBounds(L.latLngBounds(points), {
@@ -439,16 +488,13 @@ export class MapLayers {
     this.routes.clearLayers()
     const coords = cand.geometry.coordinates
     if (coords.length) {
-      L.polyline(toLatLngs(coords), { color: this.palette.tour, weight: 5, opacity: 0.85, interactive: false }).addTo(this.routes)
-      // Mũi tên chỉ chiều mỗi ~200 m (UX-9): đoạn đi và về chồng lên nhau vẫn đọc được chiều.
-      for (const a of arrowPoints(coords, 200)) {
-        const m = L.marker([a.lat, a.lon], {
-          icon: L.divIcon({ className: 'tour-arrow', html: `<span style="transform:rotate(${a.bearing.toFixed(0)}deg)">▲</span>`, iconSize: [14, 14] }),
-          interactive: false, keyboard: false, pane: 'arrows',
-        }).addTo(this.routes)
-        // Trình đọc màn hình không đọc từng "▲" (A-4).
-        m.getElement()?.setAttribute('aria-hidden', 'true')
-      }
+      const ll = toLatLngs(coords)
+      L.polyline(ll, { color: shade(this.palette.tour, 0.6), weight: 9, interactive: false, lineCap: 'round', lineJoin: 'round' })
+        .addTo(this.routes)
+      L.polyline(ll, { color: this.palette.tour, weight: 6, interactive: false, lineCap: 'round', lineJoin: 'round' }).addTo(this.routes)
+      // Chevron chỉ chiều mỗi ~200 m (UX-9): đoạn đi và về chồng lên nhau vẫn đọc được chiều.
+      this.chevrons(coords, 200)
+      this.setFitButton(true)
     }
     if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick, cand)
   }
@@ -481,9 +527,12 @@ export class MapLayers {
   setPrevious(coords: [number, number][] | null) {
     this.previous.clearLayers()
     if (!coords?.length) return
-    L.polyline(toLatLngs(coords), {
-      pane: 'previous', color: this.palette.road, weight: 9, opacity: 0.45, lineCap: 'round', interactive: false,
-    }).addTo(this.previous)
+    // Nét "rỗng" (viền xám, lõi trắng): đọc như bóng của tuyến cũ, không như một con đường to (đợt UI 15/11).
+    const ll = toLatLngs(coords)
+    L.polyline(ll, { pane: 'previous', color: this.palette.road, weight: 8, opacity: 0.6, lineCap: 'round', interactive: false })
+      .addTo(this.previous)
+    L.polyline(ll, { pane: 'previous', color: this.palette.surface, weight: 4, lineCap: 'round', interactive: false })
+      .addTo(this.previous)
   }
 
   /**
@@ -509,18 +558,19 @@ export class MapLayers {
    */
   setLegend(items: LegendItem[]) {
     const sw: Record<LegendKind, string> = {
-      dijkstra: this.swatchLine(this.palette.dijkstra),
-      astar: this.swatchLine(this.palette.astar, true),
-      same: this.swatchLine(this.palette.dijkstra, false, this.palette.astar),
+      dijkstra: this.swatchLine(this.palette.dijkstra, false, shade(this.palette.dijkstra, 0.55)),
+      astar: this.swatchLine(this.palette.astar, true, shade(this.palette.astar, 0.55)),
+      same: this.swatchLine(this.palette.dijkstra, false, shade(this.palette.dijkstra, 0.55)),
       // Tô nhạt như trên bản đồ (fillOpacity 0.1), viền đậm (góp ý #143).
       zone: `<i class="legend-area" style="border-color:${this.palette.zoneBorder};background:color-mix(in srgb, ${this.palette.zone} 15%, transparent)"></i>`,
       closed: this.swatchLine(this.palette.closed, true),
-      previous: this.swatchLine(this.palette.road),
+      previous: this.swatchLine(this.palette.surface, false, this.palette.road),
       trace: `<i class="legend-dot" style="background:${this.palette.dijkstra}"></i><i class="legend-dot" style="background:${this.palette.astar}"></i>`,
-      tour: this.swatchLine(this.palette.tour),
+      tour: this.swatchLine(this.palette.tour, false, shade(this.palette.tour, 0.6)),
       broken: `<i class="legend-dot" style="background:${this.palette.closed}"></i>`,
+      point: `<i class="legend-pin" style="background:${this.palette.success}"></i><i class="legend-pin" style="background:${this.palette.closed}"></i>`,
     }
-    this.legendEl.innerHTML = items.map((it) => `<div class="legend-row">${sw[it.kind]}<span>${escapeHtml(it.label)}</span></div>`).join('')
+    this.legendEl.innerHTML = '<div class="legend-title">Chú giải</div>' + items.map((it) => `<div class="legend-row">${sw[it.kind]}<span>${escapeHtml(it.label)}</span></div>`).join('')
     this.legendEl.style.display = items.length ? '' : 'none'
   }
 
@@ -529,8 +579,27 @@ export class MapLayers {
     return `<i class="legend-line" style="${style}"></i>`
   }
 
+  /** Chevron trắng chỉ chiều dọc tuyến (pane arrows: trên tuyến, dưới marker và đoạn đóng). */
+  private chevrons(coords: [number, number][], everyM = 250) {
+    for (const a of arrowPoints(coords, everyM)) {
+      const m = L.marker([a.lat, a.lon], {
+        icon: L.divIcon({ className: 'route-chevron', html: chevronHtml(a.bearing), iconSize: [12, 12] }),
+        interactive: false, keyboard: false, pane: 'arrows',
+      }).addTo(this.routes)
+      m.getElement()?.setAttribute('aria-hidden', 'true')   // trình đọc màn hình không đọc từng mũi tên (A-4)
+    }
+  }
+
+  // Nút "Về toàn tuyến" (đợt UI 15/11): thu phóng lại vừa kết quả đang hiện sau khi người dùng kéo / phóng bản đồ.
+  private lastFit: { points: L.LatLng[]; rightPad: number } | null = null
+  private fitButton: HTMLAnchorElement | null = null
+  private setFitButton(on: boolean) {
+    if (this.fitButton) this.fitButton.parentElement!.style.display = on && this.lastFit ? '' : 'none'
+  }
+
   clearRoutes() {
     this.routes.clearLayers()
+    this.setFitButton(false)
   }
 
   clear() {

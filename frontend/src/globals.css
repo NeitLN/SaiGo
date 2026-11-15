@@ -19,9 +19,10 @@
   background: var(--color-background-card);
   color: var(--color-text-warning);
   border: var(--border-width, 1px) solid var(--color-border-warning);
-  border-radius: var(--radius-element);
-  box-shadow: none;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-low);
   font-weight: 600;
+  padding: 1px 8px;
 }
 
 .route-hit {
@@ -36,6 +37,7 @@
   /* Chữ trắng cố định: dùng màu nền thẻ thì ở chế độ tối thành chữ tối trên tím, chỉ 2,65:1 (FE-5). */
   color: white;
   border: 2px solid var(--color-background-card);
+  box-shadow: var(--shadow-low);
   font-weight: 700;
   font-size: 13px;
 }
@@ -51,7 +53,8 @@
   color: var(--color-text-primary);
   border: var(--border-width, 1px) solid var(--color-border);
   border-radius: var(--radius-element);
-  padding: 6px 10px;
+  box-shadow: var(--shadow-med);
+  padding: 8px 12px;
   /* 14 px: đọc được trên máy chiếu (test lại 15/11, A-10). */
   font-size: 14px;
   line-height: 1.6;
@@ -73,7 +76,7 @@
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px dashed;
+  border: 2px solid;
   border-radius: var(--radius-full);
 }
 
@@ -97,22 +100,76 @@
   font-size: 13px;
 }
 
-.tour-arrow {
+/* Chevron trắng chỉ chiều trên tuyến và tour (thay ký tự "▲", đợt UI 15/11). */
+.route-chevron {
   display: grid;
   place-items: center;
-  color: var(--color-data-categorical-purple);
-  font-size: 12px;
-  line-height: 1;
-  text-shadow: 0 0 2px var(--color-background-card);
   pointer-events: none;
 }
 
-.tour-arrow span {
-  display: inline-block;
+/* Nhãn trên bản đồ (đợt UI 15/11): không mũi tên, bo góc, viền và bóng theo token, như nhãn của sản phẩm bản đồ. */
+.leaflet-tooltip.map-label,
+.leaflet-tooltip.stop-label {
+  background: var(--color-background-card);
+  color: var(--color-text-primary);
+  border: var(--border-width, 1px) solid var(--color-border);
+  border-radius: var(--radius-element);
+  box-shadow: var(--shadow-low);
+  padding: 2px 8px;
+  font-weight: 600;
 }
 
-.stop-label {
+.leaflet-tooltip.map-label::before,
+.leaflet-tooltip.stop-label::before,
+.leaflet-tooltip.zone-label::before {
+  display: none;
+}
+
+/* Pin điểm đi / điểm đến: bóng nhẹ để nổi trên nền. */
+.map-pin {
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+}
+
+.legend-title {
   font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.legend-pin {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-background-card);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+/* Nút zoom và "Về toàn tuyến": 36 px, nền thẻ, viền và bóng theo token, vòng focus rõ. */
+.map-frame .leaflet-bar {
+  border: var(--border-width, 1px) solid var(--color-border);
+  border-radius: var(--radius-element);
+  box-shadow: var(--shadow-med);
+  overflow: hidden;
+}
+
+.map-frame .leaflet-bar a {
+  width: 36px;
+  height: 36px;
+  line-height: 36px;
+  display: grid;
+  place-items: center;
+  background: var(--color-background-card);
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-border);
+}
+
+.map-frame .leaflet-bar a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
 /* Kho hỏng vẫn tô đỏ: .tour-depot khai báo sau .tour-stop-broken cùng độ ưu tiên nên nền xanh đè màu đỏ (review #144). */

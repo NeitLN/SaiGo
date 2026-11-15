@@ -21,7 +21,7 @@ import {
 } from './api'
 import { DEMO_CASES, DEMO_DATASET_ID, NAMED_PLACES } from './cases'
 import { costDelta, deltaText } from './compare'
-import { routeSegments, segmentLength, toLatLngs, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
+import { routeSegments, segmentLength, toLatLngs, zoneLegend, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
 import TourResults from './TourResults'
@@ -306,7 +306,8 @@ export default function App() {
     const zones = scenarios.find((s) => s.id === shownId) ?? scenario
     layers.setZones(zones)
     const legend: LegendItem[] = []
-    if (zones.rules.length) legend.push({ kind: 'zone', label: 'Vùng cao điểm mô phỏng' })
+    // Nhãn trên bản đồ chỉ ghi "×2"; hệ số và loại đường đầy đủ ghi ở chú giải (đợt UI 15/11).
+    if (zones.rules.length) legend.push({ kind: 'zone', label: zoneLegend(zones) })
     if (mode === 'route') {
       layers.setClosed(closedToDraw(blocked, edgeGeom.current, closed))
       // Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng) vẽ mờ làm mốc, chỉ khi khác tuyến hiện tại.
@@ -322,6 +323,7 @@ export default function App() {
         if (a?.status === 'ok') legend.unshift({ kind: 'astar', label: 'Tuyến A* (nét đứt)' })
         if (d?.status === 'ok') legend.unshift({ kind: 'dijkstra', label: 'Tuyến Dijkstra' })
       }
+      if (source) legend.push({ kind: 'point', label: target ? 'Điểm đi, điểm đến' : 'Điểm đi' })
       if (closedToDraw(blocked, edgeGeom.current, closed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
       if (route && moved) legend.push({ kind: 'previous', label: 'Tuyến lần trước' })
       // Chỉ vẽ node đã mở rộng khi có kết quả: request chính lỗi mà trace về được thì không vẽ (test lại 15/11, C-4).
