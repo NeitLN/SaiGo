@@ -559,6 +559,7 @@ export default function App() {
 
   const changeMode = (v: Mode) => {
     dropPendingClicks()
+    setBlockTool(false)   // chế độ chặn chỉ cho kết quả đang xem (góp ý review #169)
     setMode(v)
     // Không xoá lỗi: lỗi đã gắn theo chế độ, chỉ hiện ở chế độ sinh ra nó, quay lại vẫn thấy (góp ý #147).
     setNotice(null)
@@ -566,6 +567,7 @@ export default function App() {
 
   const clearAll = () => {
     dropPendingClicks()
+    setBlockTool(false)   // chế độ chặn chỉ cho kết quả đang xem (góp ý review #169)
     setNotice(null)
     setCaseId('')
     if (mode === 'route') {
@@ -600,6 +602,7 @@ export default function App() {
 
   const loadCase = (id: string) => {
     dropPendingClicks()
+    setBlockTool(false)   // chế độ chặn chỉ cho kết quả đang xem (góp ý review #169)
     const c = DEMO_CASES.find((x) => x.id === id)
     if (!c) return
     // Nạp case bỏ kết quả của chế độ kia (xem dưới), nên ô case của chế độ đó cũng về trống.

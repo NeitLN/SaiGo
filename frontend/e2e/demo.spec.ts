@@ -205,4 +205,12 @@ test('Điều khiển: chip điều kiện bằng phím mũi tên, danh sách m�
   await page.keyboard.press('Escape')
   await expect(tool).toHaveAttribute('aria-pressed', 'false')
   await expect(page.locator('path.route-hit')).toHaveCount(0)
+  // Đổi chế độ thì chế độ chặn tắt: sang Tour mở mẫu, tour không bấm đóng được ngay (góp ý review #169).
+  await tool.click()
+  await expect(tool).toHaveAttribute('aria-pressed', 'true')
+  await mode(page, 'Tour')
+  await choose(page, 'Lộ trình mẫu', 'Kho + 5 điểm giao')
+  await expectAll(page, ['898,1'])
+  await expect(page.locator('path.route-hit')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Chặn trên bản đồ' })).toHaveAttribute('aria-pressed', 'false')
 })
