@@ -71,3 +71,15 @@ export function orderChanged(before: string[] | null | undefined, after: string[
   if (!before || !after) return false
   return before.join(',') !== after.join(',')
 }
+
+/**
+ * So số node A* với Dijkstra cho câu kết luận ở khay thuật toán (đợt UI "Bàn điều phối"). A* có thể mở nhiều hơn
+ * (heuristic kém hoặc đồ thị lạ), nên tách nhánh thay vì in "ít hơn −X%" (góp ý review #167). Phần trăm làm tròn
+ * 0,1 như số in ra; dưới 0,05% coi là bằng.
+ */
+export function nodeComparison(dijkstra: number, astar: number): { kind: 'fewer' | 'more' | 'same'; pct: number } {
+  if (dijkstra <= 0) return { kind: 'same', pct: 0 }
+  const pct = (100 * Math.abs(astar - dijkstra)) / dijkstra
+  if (pct < 0.05) return { kind: 'same', pct: 0 }
+  return { kind: astar < dijkstra ? 'fewer' : 'more', pct }
+}

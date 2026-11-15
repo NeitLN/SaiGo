@@ -1,7 +1,7 @@
 // Review UI 14/11 đợt 2 (PM-1, UX-5, AI-7): chênh lệch trước/sau. Chạy: cd frontend; npm test.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { costDelta, deltaText, orderChanged, sameIds, samePoints } from '../src/compare.ts'
+import { costDelta, deltaText, nodeComparison, orderChanged, sameIds, samePoints } from '../src/compare.ts'
 
 test('tăng chi phí: số giây và phần trăm, có dấu +', () => {
   const d = costDelta(186.1, 300.0)
@@ -54,4 +54,12 @@ test('deltaText: chữ cho tour và phần trăm rất nhỏ (T-7)', () => {
   assert.equal(deltaText(costDelta(898.07, null), 'tour'), '898,1 s → không lập được tour đầy đủ')
   assert.equal(deltaText(costDelta(null, 80.1), 'tour'), 'trước không lập được tour đầy đủ → 80,1 s')
   assert.equal(deltaText(costDelta(1003.3, 1003.6)), '1.003,3 s → 1.003,6 s: +0,3 s (+< 0,1%)')
+})
+
+test('nodeComparison: ít hơn, nhiều hơn, bằng (góp ý review #167)', () => {
+  assert.deepEqual(nodeComparison(442, 111).kind, 'fewer')
+  assert.equal(Math.round(nodeComparison(442, 111).pct * 10) / 10, 74.9)
+  assert.deepEqual(nodeComparison(100, 150), { kind: 'more', pct: 50 })
+  assert.deepEqual(nodeComparison(100, 100), { kind: 'same', pct: 0 })
+  assert.deepEqual(nodeComparison(0, 5), { kind: 'same', pct: 0 })
 })

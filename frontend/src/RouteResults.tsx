@@ -7,7 +7,7 @@ import { Table } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { ALGORITHM_LABEL, type Algorithm, type AlgorithmResult, type RouteResponse } from './api'
-import { costDelta, deltaText } from './compare'
+import { costDelta, deltaText, nodeComparison } from './compare'
 import { Grid } from '@astryxdesign/core/Grid'
 import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import Kpi, { km, metersRaw, minutes, secondsRaw } from './Kpi'
@@ -87,6 +87,7 @@ function NodeBars({ res, nodeCount }: { res: RouteResponse; nodeCount?: number }
   const a = res.results.astar
   const both = d?.status === 'ok' && a?.status === 'ok' && d.expanded > 0
   const none = d?.status === 'no_path' && a?.status === 'no_path'
+  const cmp = both ? nodeComparison(d.expanded, a.expanded) : null
   return (
     <VStack gap={2}>
       <Text type="body" weight="semibold">
@@ -109,10 +110,13 @@ function NodeBars({ res, nodeCount }: { res: RouteResponse; nodeCount?: number }
           </VStack>
         </HStack>
       ))}
-      {both && (
+      {both && cmp && (
         <Text type="body">
-          A* mở ít hơn <Text type="inherit" weight="bold">{num(100 * (1 - a.expanded / d.expanded), 1)}%</Text> node so với Dijkstra
-          {res.costs_match ? ' mà vẫn ra cùng chi phí.' : '.'}
+          {cmp.kind === 'same' ? 'A* mở bằng số node của Dijkstra' : (
+            <>A* mở {cmp.kind === 'fewer' ? 'ít hơn' : 'nhiều hơn'}{' '}
+              <Text type="inherit" weight="bold">{num(cmp.pct, 1)}%</Text> node so với Dijkstra</>
+          )}
+          {res.costs_match ? (cmp.kind === 'fewer' ? ' mà vẫn ra cùng chi phí.' : ', cùng chi phí.') : '.'}
         </Text>
       )}
       {none && <Text type="body">Không có đường: cả hai thuật toán duyệt hết phần đồ thị đi tới được rồi dừng.</Text>}
