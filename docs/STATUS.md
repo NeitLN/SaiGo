@@ -26,7 +26,7 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 - **Phần còn lại cần người:** điền MSSV ở bìa essay, cả nhóm đọc chéo, dàn trang Word để đếm trang thật; tập demo có bấm giờ và quay video dự phòng (T82). R3/T80 và kiểm UI-1 đã xong 15/11.
 
 ## Bị chặn / rủi ro
-- UI-1 đã đạt trên máy Minh (15/11) nhưng mạng vẫn reset một phần tile; khi demo nên có hotspot dự phòng, checklist DEMO mục 3. R8 (nền dự phòng) từ 15/11 xét theo từng lượt tải tile: lượt có ≥ 3 tile lỗi và lỗi nhiều hơn tải được thì bật, lượt sau tải đủ không lỗi thì tự gỡ; nên mạng chập chờn không còn để nền dự phòng đè lên tile thật mãi.
+- UI-1 đã đạt trên máy Minh (15/11) nhưng mạng vẫn reset một phần tile; khi demo nên có hotspot dự phòng, checklist DEMO mục 3. R8 (nền dự phòng) từ 15/11 xét khi mỗi lượt tải tile xong: lượt có ≥ 3 tile lỗi và lỗi nhiều hơn tải được thì bật, lượt sau tải đủ không lỗi thì tự gỡ; nên mạng chập chờn không còn để nền dự phòng đè lên tile thật mãi.
 - MVP 08/11 không đạt đúng hạn (PROGRESS mục 1); không ảnh hưởng kế hoạch mới vì không còn hạn nộp.
 
 ## Quyết định
