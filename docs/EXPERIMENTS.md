@@ -20,12 +20,14 @@ Mọi số dưới đây truy ngược được bằng `run_id` trong `results/`
 
 Tỉ số theo **từng cặp** rồi mới lấy median (EXPERIMENT_PLAN mục 3.2): `r` = expanded_A* / expanded_Dijkstra, `s` = thời gian Dijkstra / thời gian A* (s > 1 nghĩa là A* nhanh hơn).
 
-| Tầng | Median r | Median s | Số cặp A* chậm hơn (s < 1) |
-|---|---:|---:|---:|
-| ngắn | 0,376 | 0,91 | 194 / 333 |
-| trung bình | 0,348 | 1,22 | 116 / 334 |
-| dài | 0,467 | 0,98 | 170 / 333 |
-| tất cả | 0,398 | 1,03 | 480 / 1.000 |
+| Tầng | Median r [CI 95%] | Median s [CI 95%] | Số cặp A* chậm hơn (s < 1) |
+|---|---|---|---:|
+| ngắn | 0,376 [0,362; 0,397] | 0,91 [0,84; 0,97] | 194 / 333 |
+| trung bình | 0,348 [0,331; 0,372] | 1,22 [1,15; 1,29] | 116 / 334 |
+| dài | 0,467 [0,45; 0,488] | 0,98 [0,92; 1,05] | 170 / 333 |
+| tất cả | 0,398 [0,39; 0,411] | 1,03 [0,98; 1,06] | 480 / 1.000 |
+
+Trong ngoặc: khoảng tin cậy 95% của median, bootstrap percentile 10.000 lần lấy mẫu lại các cặp, seed 20261116 (`python scripts/summarize_results.py results/20261031-1556-demo-054f300`, thêm 16/11). Khoảng này chỉ tính độ bất định do chọn cặp, không tính dao động của máy giữa các lần chạy. Ở tầng dài và tất cả, CI của s chứa 1: không phân biệt được A* với Dijkstra về thời gian; ở tầng ngắn, CI nằm dưới 1.
 
 **Tính đúng:** 1.000/1.000 cặp A* và Dijkstra cùng chi phí; `reopened = 0` ở mọi truy vấn A* (heuristic consistent trên dữ liệu thật, khớp T22 và T33).
 
@@ -39,7 +41,7 @@ Tỉ số theo **từng cặp** rồi mới lấy median (EXPERIMENT_PLAN mục 
 Các nhận xét dưới đây chỉ dựa trên những gì lặp lại ở **cả hai** run; chỗ hai run khác nhau thì ghi là chưa kết luận.
 
 - **A* mở ít node hơn nhiều:** median chỉ bằng khoảng 40% số node Dijkstra mở (r = 0,398), ổn định ở mọi tầng và giống hệt trên hai máy (expanded là số xác định, không phụ thuộc máy).
-- **Nhưng thời gian gần như không giảm:** median s chỉ 1,03–1,07, và ở 44–48% số cặp A* còn chậm hơn Dijkstra. Lợi ích rõ chỉ có ở tầng trung bình (s = 1,22–1,26). Giải thích hợp lý (giả thuyết, chưa đo riêng): mỗi lần đẩy một node vào hàng đợi, A* phải tính haversine (lượng giác), đắt hơn nhiều so với phép cộng của Dijkstra; trên đồ thị 1.889 node, mỗi truy vấn chỉ khoảng 1 ms, nên chi phí này ăn gần hết phần tiết kiệm từ việc mở ít node.
+- **Nhưng thời gian gần như không giảm:** median s chỉ 1,03–1,07, và ở 44–48% số cặp A* còn chậm hơn Dijkstra. Lợi ích rõ chỉ có ở tầng trung bình (s = 1,22–1,26). Nguyên nhân **đã đo ở E2c** (16/11): khoảng 38–44% thời gian của A* là để tính heuristic (một lần gọi h ≈ 363 ns, chủ yếu là haversine), nên mỗi node của A* tốn khoảng 2,3 lần node của Dijkstra (1.210 so với 523 ns); trên đồ thị 1.889 node, mỗi truy vấn chỉ khoảng 1 ms, chi phí này ăn gần hết phần tiết kiệm từ việc mở ít node.
 - **Đuôi chậm của A*: thấy ở cả hai run.** p95 của A* cao hơn Dijkstra ở cả hai run (6,29 so với 5,51 ms; 2,09 so với 1,73 ms), rõ nhất ở tầng dài (10,12 so với 8,16 ms). Hai run khác cả máy lẫn phiên bản Python và mới chỉ có hai run, nên đây là quan sát lặp lại, chưa phải kết luận; nguyên nhân chưa được đo tách.
 - **Chưa kết luận:** median s của tầng ngắn và tầng dài dao động quanh 1 (0,91–1,00) giữa các run. Ở mức khoảng 0,1 ms mỗi truy vấn, sai số đo đủ để đổi chiều, nên không nói A* nhanh hay chậm hơn ở hai tầng này.
 - **Trường hợp A* không có lợi:** (1) truy vấn trên vùng nhỏ, nơi chi phí tính heuristic lớn hơn phần tiết kiệm; (2) khi không có đường đi, A* vẫn phải duyệt hết vùng tới được như Dijkstra nên không còn lợi thế (đã đo ở E4, bộ C4: cùng số node mở rộng ở 30/30 cặp, A* chậm hơn).
@@ -67,12 +69,45 @@ Kịch bản `baseline`. Thời gian là median ms trên các cặp; s = thời 
 
 Tiền xử lý ALT: 29,7 ms và 0,24 MB (2 km); 365,9 ms và 1,30 MB (4,5 km). Dưới `peak-center`, thứ tự số node mở rộng giữ nguyên (ALT < A* < hai chiều < Dijkstra ở mọi ô); thời gian xem `summary.csv` (có ô A* chậm hơn Dijkstra, ví dụ 2 km tầng dài 1,362 so với 1,169 ms).
 
+**Khoảng tin cậy của s (16/11, bootstrap như E2, `python scripts/summarize_results.py results/20261113-1327-compare-871bf02`):** tầng "tất cả", median s [CI 95%] so với Dijkstra.
+
+| Đồ thị | Hai chiều | A* | ALT |
+|---|---|---|---|
+| 2 km (500 cặp) | 1,08 [1,02; 1,16] | 1,08 [1,03; 1,15] | 1,23 [1,06; 1,35] |
+| 4,5 km (500 cặp) | 1,34 [1,25; 1,4] | 1,53 [1,43; 1,63] | 1,52 [1,37; 1,68] |
+
+Theo tầng: ALT ở tầng ngắn 0,39 [0,34; 0,46] (2 km) và 0,44 [0,39; 0,52] (4,5 km), CI nằm hẳn dưới 1; ALT ở 4,5 km tầng dài 2,67 [2,47; 2,97]. Bảng đầy đủ theo tầng do lệnh trên in ra.
+
 **Diễn giải (không phải số đo):**
 
 - Số node mở rộng giảm theo thứ tự Dijkstra > hai chiều > A* > ALT ở mọi ô. Hai chiều giảm nhờ tìm từ cả hai đầu (không dùng heuristic); A* và ALT giảm nhờ heuristic, và heuristic landmark của ALT trên các cặp này chặt hơn heuristic địa lý của A* (thấy qua số node; không đúng cho mọi cặp nút).
 - Ít node hơn chưa chắc nhanh hơn: thời gian chỉ giảm khi phần tiết kiệm lớn hơn chi phí thêm cho mỗi node. Ở tầng ngắn, ALT **chậm hơn** Dijkstra khoảng 2,3–2,6 lần (s = 0,44 và 0,39) dù mở ít node nhất.
 - Trên vùng 2 km (cùng kích thước vùng của E2), tầng dài: A* s = 1,06, gần như không nhanh hơn, khớp với E2; ALT s = 1,94. Lợi lớn nhất của ALT là ở vùng 4,5 km, tầng dài (s = 2,67; A* ở đó s = 1,27). Đây là một run trên một máy; không suy ra cho đồ thị khác.
 - Kết luận cho essay: số node mở rộng và thời gian truy vấn là hai thước đo khác nhau; chọn thuật toán phụ thuộc độ dài chuyến đi và việc có chấp nhận tiền xử lý hay không.
+
+## E2c — Chi phí tính heuristic của A* (RQ1, đo tách, 16/11)
+
+Trả lời góp ý: ở E2, nguyên nhân "A* mở ít node hơn mà không nhanh hơn" chỉ là giả thuyết. E2c đo tách phần thời gian A* dành cho heuristic trên **đúng 1.000 cặp của E2**.
+
+**Run:** `20261116-0517-hcost-aa5bb7d` · lệnh `python scripts/measure_heuristic_cost.py --graph data/processed/hcm-benthanh-r2000-20261024.json` (bộ cặp: `results/20261031-1556-demo-054f300/queries.csv`) · commit `aa5bb7d`, `git_dirty: false` · kịch bản cơ sở · warm-up 20, mỗi cặp lặp 5 lần lấy median, thứ tự ba cấu hình xoay vòng theo cặp, `gc.disable()` khi đo · máy: laptop Windows 11 của Tiến, Intel (Family 6 Model 197), 31,4 GB, Python 3.11.9 (máy khác máy đo E2).
+
+**Cách đo:** ba cấu hình trên mỗi cặp. **D**: Dijkstra như E2. **A**: A* gốc (`make_geo_heuristic` + `astar`, như E2). **P**: tính sẵn h cho mọi node tới đích thành mảng (|V| lần haversine, đo riêng là `t_pre`), rồi chạy A* đọc mảng thay vì gọi hàm (đo riêng là `t_search`); giá trị h trùng từng bit với A gốc, nên số node mở rộng và chi phí trùng A ở 1.000/1.000 cặp (script dừng nếu lệch). Hai cách tính phần thời gian dành cho h: (a) `(t_A − t_search) / t_A`; (b) số lần A* gọi h (đếm ở lần chạy riêng) × thời gian một lần gọi (micro-benchmark 20 đích × 20.000 lần × 7 vòng) / `t_A`. Biến thể P và bộ đếm chỉ có trong script đo; app/API vẫn dùng `astar` gốc. Tỉ số tính theo từng cặp rồi lấy median; CI 95% bootstrap như E2.
+
+| Tầng | Cặp | D ms | A* ms | A* tìm (h sẵn) ms | Tính sẵn h ms | Lần gọi h | s [CI] | s nếu h sẵn [CI] | % thời gian A* cho h, (a) [CI] | (b) [CI] | ns/node D / A* / A* h sẵn |
+|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---|
+| ngắn | 333 | 0,060 | 0,058 | 0,035 | 0,687 | 59 | 1,05 [1; 1,1] | 1,66 [1,54; 1,77] | 36,9 [35,1; 38,3] | 36,2 [35,2; 37] | 567 / 1.453 / 900 |
+| trung bình | 334 | 0,319 | 0,241 | 0,131 | 0,686 | 251,5 | 1,26 [1,22; 1,31] | 2,27 [2,17; 2,38] | 45,4 [44,6; 46] | 39,9 [39,5; 40,2] | 506 / 1.168 / 642 |
+| dài | 333 | 0,688 | 0,639 | 0,354 | 0,689 | 641 | 0,97 [0,92; 1] | 1,8 [1,74; 1,86] | 45,7 [45; 46,5] | 38 [37,5; 38,4] | 511 / 1.142 / 626 |
+| tất cả | 1.000 | 0,303 | 0,230 | 0,128 | 0,687 | 246 | 1,09 [1,05; 1,12] | 1,87 [1,82; 1,92] | 43,7 [42,9; 44,4] | 38,3 [37,9; 38,5] | 523 / 1.210 / 677 |
+
+Micro-benchmark: một lần gọi h = 362,6 ns (median qua 20 đích), trong đó haversine = 326,2 ns; đắt hơn đọc phần tử mảng 354,5 ns. Nếu tự tính sẵn h cho mọi node rồi mới tìm, s = 0,37 [0,34; 0,39]: tính sẵn |V| = 1.889 giá trị (0,69 ms) đắt hơn cả truy vấn. Bảng do chính script in ra; số từng cặp ở `hcost_measurements.csv`, micro-benchmark ở `microbench.csv`.
+
+**Diễn giải (không phải số đo):**
+
+- **Giả thuyết của E2 được xác nhận, nhưng chỉ giải thích được một phần.** Khoảng 38–44% thời gian A* là để tính heuristic (hai cách đo lệch nhau khoảng 5 điểm vì (b) không tính phần chi phí gián tiếp như cấp phát số thực và gọi hàm qua biến). Bỏ phần này (h tính sẵn), A* nhanh hơn Dijkstra 1,87 lần [1,82; 1,92] thay vì 1,09, gần với mức tiết kiệm số node (r ≈ 0,40, tức Dijkstra mở gấp ~2,5 lần).
+- Ngay cả khi h sẵn, mỗi node của A* vẫn tốn hơn Dijkstra (677 so với 523 ns): hàng đợi ưu tiên của A* xếp theo f = g + h và có nhiều mục cũ hơn trong heap. Phần này chưa đo tách.
+- **Không có cách "miễn phí":** tính sẵn h cho cả đồ thị mỗi truy vấn tốn 0,69 ms, đắt hơn phần tiết kiệm; muốn có lợi thật phải dùng heuristic rẻ hơn (bảng tra) hoặc tiền xử lý dùng chung cho nhiều truy vấn, đúng hướng của ALT ở E2b (lợi rõ ở chuyến dài, vùng lớn).
+- **Giới hạn:** một máy, một run, khác máy đo E2 (số tuyệt đối khác E2; s tất cả ở đây 1,09 so với 1,03 ở E2, nằm sát CI của E2); chỉ đo trên Python, nơi một phép tính lượng giác đắt tương đối hơn so với ngôn ngữ biên dịch.
 
 ## E3 — Đồ thị cho thí nghiệm tăng quy mô (T61)
 
@@ -95,6 +130,8 @@ Cắt bằng `python scripts/make_crops.py` từ `outer.graphml` đã đóng bă
 ## E3 — Kết quả: tăng quy mô, fixed trips (T62)
 
 **Run:** `20261113-0438-scaling-cb16bc0` (thư mục `results/20261113-0438-scaling-cb16bc0/`) · lệnh `python scripts/run_scaling.py --pairs 250 --seed 42 --repeats 5 --warmup 20` · commit `cb16bc0`, `git_dirty: false` · máy: laptop Windows 11 của Tiến, Intel (Family 6 Model 197), RAM 31,4 GB, Python 3.11.9 · 4 vùng đúng sha256 trong `crop_manifest.json`.
+
+**Phạm vi câu trả lời (RQ1b):** E3 chỉ trả lời "bản đồ lớn ra mà **chuyến đi giữ nguyên** thì sao" (fixed trips): mọi cặp nằm trong vùng 1 km. Nó không trả lời "chuyến đi dài hơn trên bản đồ lớn hơn" (growing trips, đã cắt ở D11); câu đó chỉ có gián tiếp ở E2b, nơi hai yếu tố bị trộn.
 
 **Cách đo:** 250 cặp sinh trong SCC vùng 1 km (seed 42, phân tầng ngắn / trung bình / dài = 83 / 84 / 83), dùng **y hệt** trên cả 4 vùng: mỗi vùng đánh số node lại nên cặp được đổi qua `osmid`. Quy trình đo mục 3.1 (warm-up 20, lặp 5, lấy median, đảo thứ tự thuật toán theo cặp). Thời gian nạp đồ thị và bộ nhớ đỉnh đo riêng (`load.csv`, bộ nhớ bằng `tracemalloc`).
 
