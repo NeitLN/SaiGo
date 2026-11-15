@@ -36,11 +36,12 @@ import TourResults, { TourItinerary } from './TourResults'
 import { unreachableGroups } from './tourIssues'
 import {
   TRACE_LIMIT, addTourPoint, blockedIds, distanceText, fmt, latLon, nextPrevious, nextRoutePoint, removeLastTourPoint,
-  closedMore, renameIds, routeAnnouncement, routePoints, runLabel as scenarioRunLabel, sameIdList, segmentLabels, tourAnnouncement, tourPoints, traceLegend, type Mode, type Pt,
+  closedMore, renameIds, routeAnnouncement, routePoints, runLabel as scenarioRunLabel, sameIdList, segmentLabels, tourAnnouncement, tourPoints, traceLegend, shortScenario, type Mode, type Pt,
   type Run,
 } from './appLogic'
 import { useServerStatus } from './useServerStatus'
 import { Logo } from './Logo'
+import { ChipRadioGroup, PickList } from './Chips'
 import { themes, defaultThemeSlug } from './astryx-themes'
 
 // Mỗi lần gửi request là một query mới (n tăng); effect hủy request cũ nên chỉ kết quả mới nhất được hiện.
@@ -131,6 +132,15 @@ export default function App() {
   // Phần mở rộng (D17, đợt 3 phương án E-b): tắt mặc định để 4 phút demo không lẫn thứ ngoài proposal; bật khi
   // hỏi đáp. Bật/tắt thì tìm lại với cùng tham số (đọc qua ref để không đưa vào deps của effect gọi API).
   const [showExt, setShowExt] = useState(false)
+  // Chế độ "Chặn trên bản đồ" (đợt UI "Bàn điều phối"): chỉ khi bật mới bấm tuyến để đóng đoạn, nên chạm nhầm vào
+  // tuyến lúc trình bày không đóng mất đường. Ô chọn "Đóng một đoạn" vẫn đóng ngay một bước. Esc để tắt.
+  const [blockTool, setBlockTool] = useState(false)
+  useEffect(() => {
+    if (!blockTool) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setBlockTool(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [blockTool])
   const showExtRef = useRef(showExt)
   showExtRef.current = showExt
 
@@ -350,7 +360,7 @@ export default function App() {
       layers.setTrace(shownTrace?.results.dijkstra?.trace ?? null, shownTrace?.results.astar?.trace ?? null)
       if (route) {
         layers.setSnapped(route.res, { source: source?.name, target: target?.name })
-        layers.drawRoutes(route.res, closeSegment)
+        layers.drawRoutes(route.res, blockTool ? closeSegment : undefined)
         if (pendingFit.current) {
           pendingFit.current = false
           const { source: s, target: t } = route.res.snapped
@@ -373,7 +383,7 @@ export default function App() {
       if (stops.length) legend.push({ kind: 'stop', label: cand ? 'Điểm giao, số là thứ tự đi' : 'Điểm giao' })
       if (closedToDraw(tourBlocked, edgeGeom.current, tourClosed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
       if (broken.size) legend.push({ kind: 'broken', label: 'Điểm không đi được' })
-      if (cand) layers.drawTour(cand, closeTourSegment)
+      if (cand) layers.drawTour(cand, blockTool ? closeTourSegment : undefined)
       else layers.clearRoutes()
       if (tour && pendingFit.current) {
         pendingFit.current = false
@@ -389,7 +399,7 @@ export default function App() {
       }
     }
     layers.setLegend(legend)
-  }, [mapReady, mode, scenario, scenarios, tourScenario, route, prevRoute, trace, source, target, closed, blocked, closeSegment, tour, tourMethod, depot,
+  }, [mapReady, mode, scenario, scenarios, tourScenario, route, prevRoute, trace, source, target, closed, blocked, closeSegment, blockTool, tour, tourMethod, depot,
     stops, tourClosed, tourBlocked, closeTourSegment])
 
   // --- Thao tác ---
@@ -549,6 +559,7 @@ export default function App() {
 
   const changeMode = (v: Mode) => {
     dropPendingClicks()
+    setBlockTool(false)   // chế độ chặn chỉ cho kết quả đang xem (góp ý review #169)
     setMode(v)
     // Không xoá lỗi: lỗi đã gắn theo chế độ, chỉ hiện ở chế độ sinh ra nó, quay lại vẫn thấy (góp ý #147).
     setNotice(null)
@@ -556,6 +567,7 @@ export default function App() {
 
   const clearAll = () => {
     dropPendingClicks()
+    setBlockTool(false)   // chế độ chặn chỉ cho kết quả đang xem (góp ý review #169)
     setNotice(null)
     setCaseId('')
     if (mode === 'route') {
@@ -590,6 +602,7 @@ export default function App() {
 
   const loadCase = (id: string) => {
     dropPendingClicks()
+    setBlockTool(false)   // chế độ chặn chỉ cho kết quả đang xem (góp ý review #169)
     const c = DEMO_CASES.find((x) => x.id === id)
     if (!c) return
     // Nạp case bỏ kết quả của chế độ kia (xem dưới), nên ô case của chế độ đó cũng về trống.
@@ -695,10 +708,14 @@ export default function App() {
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
       : !target ? 'Bấm để chọn điểm đến.'
         : route && noPath ? 'Không có tuyến để đóng thêm. Bấm Mở lại tất cả, đổi điều kiện giao thông, hoặc Xóa để chọn điểm mới.'
-        : route ? 'Bấm vào một đoạn trên tuyến để đóng đoạn đó. Bấm Xóa để chọn điểm mới.'
+        : route ? (blockTool
+          ? 'Đang ở chế độ chặn: bấm vào một đoạn trên tuyến để đóng đoạn đó. Esc hoặc bấm lại nút để tắt.'
+          : 'Chọn đoạn ở ô Đóng một đoạn, hoặc bật Chặn trên bản đồ rồi bấm vào tuyến. Bấm Xóa để chọn điểm mới.')
           : 'Bấm Tìm đường. Bấm lên bản đồ lần nữa để chọn lại từ đầu.')
     : (!depot ? 'Bấm lên bản đồ để đặt kho.'
-      : tour?.status === 'ok' ? 'Bấm vào một đoạn trên tour để đóng đoạn đó; tour được lập lại. Bấm Xóa để lập tour mới.'
+      : tour?.status === 'ok' ? (blockTool
+        ? 'Đang ở chế độ chặn: bấm vào một đoạn trên tour để đóng đoạn đó; tour được lập lại. Esc để tắt.'
+        : 'Chọn đoạn ở ô Đóng một đoạn, hoặc bật Chặn trên bản đồ rồi bấm vào tour. Bấm Xóa để lập tour mới.')
         : tour ? 'Bấm Mở lại tất cả để bỏ các đoạn đang đóng, hoặc Xóa để lập tour mới.'
           : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`
             + (tourBlocked.length ? ' Các đoạn đang đóng vẫn giữ khi lập tour mới; bấm Mở lại tất cả để bỏ.' : ''))
@@ -714,13 +731,20 @@ export default function App() {
     : (tour && depot ? `Tour từ ${depot.label === 'Kho' ? 'kho' : depot.label} · ${stops.length} điểm giao` : null)
   const summaryBlock = (
     <VStack gap={2} as="section" aria-label="Kết quả đo được">
-      <Text type="supporting" weight="semibold">Kết quả đo được</Text>
+      <HStack gap={2} vAlign="center" hAlign="between">
+        <Text type="supporting" weight="semibold">Kết quả đo được</Text>
+        {/* Trạng thái thật của lần tính (đợt UI "Bàn điều phối"): đang tính / lỗi / đã tính. */}
+        {(mode === 'route' ? busyRoute : busyTour)
+          ? <Badge variant="neutral" label="Đang tính…" />
+          : errorState && errorState.mode === mode ? <Badge variant="error" label="Lỗi" />
+            : (mode === 'route' ? route : tour) ? <Badge variant="success" label="Đã tính" /> : null}
+      </HStack>
       {runTitle && (
         <HStack gap={2} vAlign="center" wrap="wrap">
           <Heading level={2}>{runTitle}</Heading>
           {runScenario && (
             <Badge variant={run && run.scenarioId !== 'baseline' ? 'yellow' : 'neutral'}
-              label={runScenario.replace(/^Cơ sở — .*$/, 'Cơ sở').replace('Cao điểm mô phỏng — ', 'Cao điểm — ')} />
+              label={shortScenario(runScenario)} />
           )}
           {run && run.blocked.length > 0 && <Badge variant="neutral" label={`Đóng ${run.blocked.length} cạnh`} />}
         </HStack>
@@ -794,16 +818,6 @@ export default function App() {
   const middle = (
     <VStack gap={4}>
       {status}
-      <Selector
-        label="Lộ trình mẫu"
-        placeholder="Chọn lộ trình mẫu"
-        options={DEMO_CASES.map((c) => ({ value: c.id, label: c.label }))}
-        value={caseId}
-        onChange={loadCase}
-        isDisabled={caseDisabled}
-        disabledMessage={`Lộ trình mẫu dùng đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
-      />
-      <Divider />
       <VStack gap={3}>
         <Heading level={3}>{mode === 'route' ? 'Điểm đi và điểm đến' : 'Kho và điểm giao'}</Heading>
         {mode === 'route' && <Text type="supporting">{hint}</Text>}
@@ -851,6 +865,13 @@ export default function App() {
               </HStack>
             )}
             {keySegs.length > 0 && (
+              <HStack gap={2} vAlign="center" hAlign="between" wrap="wrap">
+                <Text type="supporting">Hoặc bấm vào {mode === 'route' ? 'tuyến' : 'tour'} trên bản đồ</Text>
+                <Button label="Chặn trên bản đồ" size="sm" variant={blockTool ? 'primary' : 'secondary'}
+                  aria-pressed={blockTool} onClick={() => setBlockTool((b) => !b)} />
+              </HStack>
+            )}
+            {keySegs.length > 0 && (
               <Selector
                 label={mode === 'route' ? 'Đóng một đoạn trên tuyến' : 'Đóng một đoạn trên tour'}
                 placeholder="Chọn đoạn (thay cho bấm trên bản đồ)"
@@ -862,18 +883,43 @@ export default function App() {
           </VStack>
         </>
       )}
+      <Divider />
+      {/* Lộ trình mẫu là danh sách bấm một lần (đợt UI "Bàn điều phối"), chỉ các mẫu của chế độ đang dùng;
+          đặt cuối phần giữa để lịch trình tour (kết quả chính) nằm trong màn hình 1280 × 800. */}
+      <PickList
+        id="cases"
+        label="Lộ trình mẫu"
+        options={DEMO_CASES.filter((c) => c.mode === mode).map((c) => ({ value: c.id, label: c.label }))}
+        value={caseId}
+        onPick={loadCase}
+        isDisabled={caseDisabled}
+        disabledMessage={`Lộ trình mẫu dùng đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
+      />
     </VStack>
   )
 
   // Đáy dính: điều kiện giao thông cạnh nút chính, vì đổi điều kiện rồi tính lại là thao tác hay làm nhất khi demo.
   const footer = (
     <VStack gap={3}>
-      <Selector
-        label="Điều kiện giao thông"
-        options={scenarios.map((s) => ({ value: s.id, label: s.label }))}
-        value={scenarioId}
-        onChange={changeScenario}
-      />
+      {/* Chip một lựa chọn (đợt UI "Bàn điều phối", 7/9 vai): đổi là tính lại ngay khi đã có kết quả (changeScenario),
+          kết quả được đọc qua vùng thông báo như mọi lần tính. Nhãn rút gọn, câu đầy đủ ở title, nhãn kết quả và chú
+          giải. Nhiều hơn 4 kịch bản thì chip quá dài, quay về ô chọn. */}
+      {scenarios.length <= 4 ? (
+        <ChipRadioGroup
+          id="scenario"
+          label="Điều kiện giao thông"
+          options={scenarios.map((s) => ({ value: s.id, label: shortScenario(s.label), title: s.label }))}
+          value={scenarioId}
+          onChange={changeScenario}
+        />
+      ) : (
+        <Selector
+          label="Điều kiện giao thông"
+          options={scenarios.map((s) => ({ value: s.id, label: s.label }))}
+          value={scenarioId}
+          onChange={changeScenario}
+        />
+      )}
       {scenarioNote && <Text type="supporting">{scenarioNote}</Text>}
       {mode === 'route' ? (
         <HStack gap={2}>

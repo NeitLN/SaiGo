@@ -156,3 +156,9 @@ export function traceLegend(r: RouteResponse): string {
   const cut = d.trace_truncated || a.trace_truncated ? ` Chỉ vẽ ${TRACE_LIMIT.toLocaleString('vi-VN')} node đầu.` : ''
   return `Đang vẽ ${d.expanded.toLocaleString('vi-VN')} node Dijkstra và ${a.expanded.toLocaleString('vi-VN')} node A* đã mở rộng.${cut}`
 }
+
+/** Nhãn ngắn của điều kiện giao thông cho chip và nhãn kết quả (đợt UI "Bàn điều phối"): "Cơ sở", "Cao điểm — trung tâm",
+ *  "Cao điểm — Bến Thành". Câu đầy đủ vẫn ở title của chip và ở chú giải. */
+export function shortScenario(label: string): string {
+  return label.replace(/^Cơ sở — .*$/, 'Cơ sở').replace('Cao điểm mô phỏng — ', 'Cao điểm — ').replace('vòng xoay ', '')
+}
