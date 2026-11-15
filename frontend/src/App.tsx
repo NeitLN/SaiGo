@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppShell } from '@astryxdesign/core/AppShell'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
-import { Collapsible } from '@astryxdesign/core/Collapsible'
 import { Divider } from '@astryxdesign/core/Divider'
 import { EmptyState } from '@astryxdesign/core/EmptyState'
 import { Heading } from '@astryxdesign/core/Heading'
@@ -13,6 +12,7 @@ import { Layout, LayoutContent, LayoutHeader, LayoutPanel } from '@astryxdesign/
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Spinner } from '@astryxdesign/core/Spinner'
+import { StackItem } from '@astryxdesign/core/Stack'
 import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
@@ -62,6 +62,8 @@ const closedToDraw = (ids: number[], geom: Map<number, BlockedEdge>, clicked: Ro
 
 // Kiểm điểm quá thời gian này thì coi như không kiểm được và vẫn đặt (test lại 15/11, C-2).
 const SNAP_TIMEOUT_MS = 4000
+// Khay phân tích dưới bản đồ khi mở (đợt UI "Bàn điều phối"): đủ cho thanh node hoặc bốn dòng phương án ở 1280 × 800.
+const TRAY_HEIGHT = 220
 
 export default function App() {
   const narrow = useMediaQuery('(max-width: 767px)')
@@ -69,6 +71,12 @@ export default function App() {
   // 1366 × 768 ba cột chỉ còn 706 px cho bản đồ và cắt chữ ô kịch bản (test lại 15/11, A-7), nên cũng hai cột.
   const medium = useMediaQuery('(max-width: 1439px)')
   const layersRef = useRef<MapLayers | null>(null)
+  const [trayOpen, setTrayOpen] = useState(true)
+  // Thu/mở khay đổi chiều cao bản đồ (MapView tự invalidateSize qua ResizeObserver); thu phóng lại cho vừa kết quả.
+  const toggleTray = () => {
+    setTrayOpen((o) => !o)
+    layersRef.current?.refitAfterResize()
+  }
   const [mapReady, setMapReady] = useState(0)
   const onMapReady = useCallback((l: MapLayers) => {
     layersRef.current = l
@@ -690,21 +698,20 @@ export default function App() {
           : `Bấm để thêm điểm giao (tối đa ${MAX_TOUR_STOPS}), rồi bấm Lập tour.`
             + (tourBlocked.length ? ' Các đoạn đang đóng vẫn giữ khi lập tour mới; bấm Mở lại tất cả để bỏ.' : ''))
 
-  const controls = (
-    <VStack gap={4}>
-      <SegmentedControl label="Chế độ" value={mode} layout="fill" onChange={(v) => changeMode(v as Mode)}>
-        <SegmentedControlItem value="route" label="Tìm đường" />
-        <SegmentedControlItem value="tour" label="Tour" />
-      </SegmentedControl>
-      {/* Dải KPI ở đầu cột khi không có cột kết quả riêng (< 1440 px; đợt UI 15/11 nâng từ dòng tóm tắt của #153). */}
-      {(medium || narrow) && summaryKpi && (
+  // Đợt UI "Bàn điều phối" (họp thiết kế 9 vai, Tiến duyệt mockup 16/11): một bố cục cho mọi độ rộng từ 768 px.
+  // Panel trái ba tầng: tóm tắt kết quả (luôn thấy) / phần giữa cuộn được / đáy dính có điều kiện giao thông và nút
+  // chính. Bản đồ bên phải, khay phân tích dưới bản đồ thu gọn được; không lớp nào che tuyến.
+  const summaryBlock = (
+    <VStack gap={2} as="section" aria-label="Kết quả đo được">
+      <Heading level={2}>Kết quả đo được</Heading>
+      {summaryKpi ? (
         <VStack gap={1}>
           <Grid columns={2} gap={2}>
             <Kpi label="Thời gian di chuyển ước tính" value={minutes(summaryKpi.cost)}
               sub={`${summaryKpi.timeNote} · ${secondsRaw(summaryKpi.cost)}`} />
             <Kpi label="Quãng đường" value={km(summaryKpi.dist)} sub={metersRaw(summaryKpi.dist)} />
           </Grid>
-          {/* Tour: so theo phương án được chọn như dòng ở cột kết quả, nên ghi rõ (góp ý #160). */}
+          {/* Tour: so theo phương án được chọn như dòng ở khay kết quả, nên ghi rõ (góp ý #160). */}
           {summaryKpi.delta && (
             <Text type="body" weight="semibold">
               So với lần trước{mode === 'tour' ? ', phương án được chọn' : ''}: {summaryKpi.delta}
@@ -716,12 +723,31 @@ export default function App() {
               Giữ thứ tự cũ: {minutesText(tour.candidates.kept_order.cost_s)} · {secondsRaw(tour.candidates.kept_order.cost_s)}
             </Text>
           )}
-          <Text type="supporting">Chi tiết ở mục Kết quả đo được bên dưới.</Text>
         </VStack>
+      ) : summary ? (
+        <Text type="body" weight="semibold">{summary}</Text>
+      ) : (
+        <Text type="supporting">Chưa có kết quả.</Text>
       )}
-      {(medium || narrow) && !summaryKpi && summary && <Text type="body" weight="semibold">{summary}</Text>}
-      {/* Đợt UI 15/11 (họp thiết kế 5 vai): chia nhóm theo công việc: lộ trình mẫu → điểm → điều kiện giao thông;
-          phần phân tích thuật toán (trace, phần mở rộng) gom vào một khối thu gọn, không ẩn tên thuật toán. */}
+    </VStack>
+  )
+
+  const status = (
+    <>
+      {checkingPoints > 0 && <Spinner label="Đang kiểm điểm vừa chọn…" />}
+      {(mode === 'route' ? busyRoute : busyTour) && <Spinner label="Đang tính…" />}
+      {notice && <Banner status="info" title={notice} />}
+      {/* role="alert": lỗi được đọc ngay cho người dùng trình đọc màn hình (FE-3). */}
+      {errorState && errorState.mode === mode && <Banner status="error" title={errorState.text} role="alert" />}
+      {mode === 'route' && noPath && (
+        <Banner status="info" title="Không có đường đi giữa hai điểm này với điều kiện giao thông hiện tại." />
+      )}
+    </>
+  )
+
+  const middle = (
+    <VStack gap={4}>
+      {status}
       <Selector
         label="Lộ trình mẫu"
         placeholder="Chọn lộ trình mẫu"
@@ -768,66 +794,61 @@ export default function App() {
             </Text>
           </HStack>
         )}
-        {mode === 'route' ? (
-          <HStack gap={2}>
-            <Button label="Tìm đường" variant="primary" isDisabled={!(source && target) || checking} onClick={findRoute} />
-            <Button label="Đảo chiều" isDisabled={!(source && target) || checking} onClick={swap} />
-            <Button label="Xóa" variant="ghost" onClick={clearAll} />
-          </HStack>
-        ) : (
-          <HStack gap={2}>
-            <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0 || checking} onClick={buildTour} />
-            <Button label="Bỏ điểm cuối" isDisabled={!depot} onClick={removeLastPoint} />
-            <Button label="Xóa" variant="ghost" onClick={clearAll} />
-          </HStack>
-        )}
+        <HStack gap={2}>
+          {mode === 'route'
+            ? <Button label="Đảo chiều" size="sm" isDisabled={!(source && target) || checking} onClick={swap} />
+            : <Button label="Bỏ điểm cuối" size="sm" isDisabled={!depot} onClick={removeLastPoint} />}
+        </HStack>
       </VStack>
-      <Divider />
-      <VStack gap={3}>
-        <Heading level={3}>Điều kiện giao thông</Heading>
-        <Selector
-          label="Điều kiện giao thông"
-          isLabelHidden
-          options={scenarios.map((s) => ({ value: s.id, label: s.label }))}
-          value={scenarioId}
-          onChange={changeScenario}
-        />
-        {scenarioNote && <Text type="supporting">{scenarioNote}</Text>}
-        {(mode === 'route' ? blocked : tourBlocked).length > 0 && (
-          <HStack gap={2} vAlign="center" hAlign="between">
-            <Text type="supporting">Đang đóng {(mode === 'route' ? blocked : tourBlocked).length} cạnh</Text>
-            <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
-          </HStack>
-        )}
-        {keySegs.length > 0 && (
-          <Selector
-            label={mode === 'route' ? 'Đóng một đoạn trên tuyến' : 'Đóng một đoạn trên tour'}
-            placeholder="Chọn đoạn (thay cho bấm trên bản đồ)"
-            options={keyLabels.map((label, i) => ({ value: String(i), label }))}
-            value=""
-            onChange={closeByKey}
-          />
-        )}
-      </VStack>
-      <Divider />
-      <Collapsible trigger={<Text type="body" weight="semibold">Phân tích thuật toán</Text>} defaultIsOpen={false}>
-        <VStack gap={3}>
-          {mode === 'route' && (
-            <Switch label="Hiện node đã mở rộng" value={showTrace} onChange={setShowTrace}
-              description="Chấm xanh: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng." />
-          )}
-          {mode === 'route' && showTrace && route && trace && <Text type="supporting">{traceLegend(trace)}</Text>}
-          <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
-            description={mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).'} />
-        </VStack>
-      </Collapsible>
-      {checkingPoints > 0 && <Spinner label="Đang kiểm điểm vừa chọn…" />}
-      {(mode === 'route' ? busyRoute : busyTour) && <Spinner label="Đang tính…" />}
-      {notice && <Banner status="info" title={notice} />}
-      {/* role="alert": lỗi được đọc ngay cho người dùng trình đọc màn hình (FE-3). */}
-      {errorState && errorState.mode === mode && <Banner status="error" title={errorState.text} role="alert" />}
-      {mode === 'route' && noPath && (
-        <Banner status="info" title="Không có đường đi giữa hai điểm này với điều kiện giao thông hiện tại." />
+      {(keySegs.length > 0 || (mode === 'route' ? blocked : tourBlocked).length > 0) && (
+        <>
+          <Divider />
+          <VStack gap={3}>
+            {(mode === 'route' ? blocked : tourBlocked).length > 0 && (
+              <HStack gap={2} vAlign="center" hAlign="between">
+                <Text type="supporting">Đang đóng {(mode === 'route' ? blocked : tourBlocked).length} cạnh</Text>
+                <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
+              </HStack>
+            )}
+            {keySegs.length > 0 && (
+              <Selector
+                label={mode === 'route' ? 'Đóng một đoạn trên tuyến' : 'Đóng một đoạn trên tour'}
+                placeholder="Chọn đoạn (thay cho bấm trên bản đồ)"
+                options={keyLabels.map((label, i) => ({ value: String(i), label }))}
+                value=""
+                onChange={closeByKey}
+              />
+            )}
+          </VStack>
+        </>
+      )}
+    </VStack>
+  )
+
+  // Đáy dính: điều kiện giao thông cạnh nút chính, vì đổi điều kiện rồi tính lại là thao tác hay làm nhất khi demo.
+  const footer = (
+    <VStack gap={3}>
+      <Selector
+        label="Điều kiện giao thông"
+        options={scenarios.map((s) => ({ value: s.id, label: s.label }))}
+        value={scenarioId}
+        onChange={changeScenario}
+      />
+      {scenarioNote && <Text type="supporting">{scenarioNote}</Text>}
+      {mode === 'route' ? (
+        <HStack gap={2}>
+          <StackItem size="fill">
+            <Button label="Tìm đường" variant="primary" width="100%" isDisabled={!(source && target) || checking} onClick={findRoute} />
+          </StackItem>
+          <Button label="Xóa" variant="ghost" onClick={clearAll} />
+        </HStack>
+      ) : (
+        <HStack gap={2}>
+          <StackItem size="fill">
+            <Button label="Lập tour" variant="primary" width="100%" isDisabled={!depot || stops.length === 0 || checking} onClick={buildTour} />
+          </StackItem>
+          <Button label="Xóa" variant="ghost" onClick={clearAll} />
+        </HStack>
       )}
     </VStack>
   )
@@ -846,34 +867,60 @@ export default function App() {
     />
   )
   const results = mode === 'route'
-    ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel}
+    ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel} hasSummary
       previous={prevRoute ? { res: prevRoute.res, label: runLabel(prevRoute) } : null} /> : empty)
-    : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel}
+    : (tour ? <TourResults res={tour} labels={tourLabels} hasSummary selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel}
       previous={prevTour ? { res: prevTour.res, label: runLabel(prevTour), closedMore: closedMore(prevTour, tourScenario) } : null} />
       : empty)
 
-  const resultsBlock = (
+  // Khay phân tích dưới bản đồ: thu về một dòng tiêu đề để bản đồ cao hơn; đổi xong thì thu phóng lại cho vừa tuyến.
+  const trayTitle = mode === 'route' ? 'Phân tích thuật toán' : 'So sánh phương án'
+  const trayHeader = (
+    <HStack gap={3} vAlign="center" hAlign="between" wrap="wrap">
+      <Heading level={2}>{trayTitle}</Heading>
+      <HStack gap={4} vAlign="center" wrap="wrap">
+      {mode === 'route' && (
+        <Switch label="Hiện node đã mở rộng" value={showTrace} onChange={setShowTrace}
+          description={narrow ? 'Chấm xanh: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng.' : undefined} />
+      )}
+      <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
+        description={narrow ? (mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).') : undefined} />
+      {!narrow && (
+        <Button label={trayOpen ? 'Thu gọn' : 'Mở rộng'} variant="ghost" size="sm" aria-expanded={trayOpen}
+          aria-controls="tray-body" onClick={toggleTray} />
+      )}
+      </HStack>
+    </HStack>
+  )
+  const trayBody = (
     <VStack gap={3}>
-      <Heading level={2}>Kết quả đo được</Heading>
+      {mode === 'route' && showTrace && route && trace && <Text type="supporting">{traceLegend(trace)}</Text>}
       {results}
     </VStack>
   )
+
   const map = <MapView onReady={onMapReady} onClick={onMapClick} />
   const header = (
     // Header nền mực ở cả hai chế độ (đợt UI "Bàn điều phối"): bọc trong theme chế độ tối.
     <Theme theme={themes[defaultThemeSlug]} mode="dark">
     <LayoutHeader hasDivider>
-      <HStack gap={3} vAlign="center" hAlign="between">
-        <HStack gap={2} vAlign="center">
-          <Logo />
-          <Heading level={1}>SaiGo</Heading>
-          {!narrow && <Text type="supporting">Lập kế hoạch lộ trình giao hàng · Khu Bến Thành, TP.HCM</Text>}
+      <HStack gap={4} vAlign="center" hAlign="between">
+        <HStack gap={4} vAlign="center">
+          <HStack gap={2} vAlign="center">
+            <Logo />
+            <Heading level={1}>SaiGo</Heading>
+            {!medium && <Text type="supporting">Lập kế hoạch lộ trình giao hàng · Khu Bến Thành, TP.HCM</Text>}
+          </HStack>
+          <SegmentedControl label="Chế độ" value={mode} size="sm" onChange={(v) => changeMode(v as Mode)}>
+            <SegmentedControlItem value="route" label="Tìm đường" />
+            <SegmentedControlItem value="tour" label="Tour" />
+          </SegmentedControl>
         </HStack>
         {/* Trạng thái gọn (đợt UI 15/11): chấm màu + chữ; mã dataset trong tooltip thay vì in ra như log. */}
         <Tooltip content={datasetId ? `Dữ liệu OSM: ${datasetId}` : server.text}>
           <HStack gap={2} vAlign="center">
             <StatusDot variant={server.ok === null ? 'neutral' : server.ok ? 'success' : 'error'} label={server.text} />
-            <Text type="supporting">{server.ok === null ? 'Đang kết nối…' : server.ok ? 'Đã kết nối' : 'Mất kết nối'}</Text>
+            {!narrow && <Text type="supporting">{server.ok === null ? 'Đang kết nối…' : server.ok ? 'Đã kết nối' : 'Mất kết nối'}</Text>}
           </HStack>
         </Tooltip>
       </HStack>
@@ -881,10 +928,8 @@ export default function App() {
     </Theme>
   )
 
-  // Bố cục theo độ rộng (review 14/11 đợt 2, FE-1/UX-6/QA-10): trước đây hai cột cố định 320 + 380 px, nên máy
-  // chiếu 1024 px chỉ còn ~324 px cho bản đồ và điện thoại 390 px thì bản đồ rộng 0.
   if (narrow) {
-    // < 768 px: bản đồ ở trên (55% chiều cao), điều khiển và kết quả xếp dọc bên dưới, cả trang cuộn.
+    // < 768 px: bản đồ ở trên (55% chiều cao), rồi kết quả, điều khiển và khay xếp dọc, cả trang cuộn.
     return (
       <AppShell height="fill">
         <Layout
@@ -894,8 +939,10 @@ export default function App() {
               <VStack gap={0}>
                 <VStack height="55dvh">{map}</VStack>
                 <VStack gap={6} padding={4}>
-                  {controls}
-                  {resultsBlock}
+                  {summaryBlock}
+                  {footer}
+                  {middle}
+                  <VStack gap={3} as="section" aria-label={trayTitle}>{trayHeader}{trayBody}</VStack>
                 </VStack>
               </VStack>
             </LayoutContent>
@@ -909,19 +956,34 @@ export default function App() {
       <Layout
         header={header}
         start={
-          // 768–1439 px (máy chiếu 1024/1280, laptop 1366): kết quả gộp xuống dưới điều khiển ở cột trái, bỏ cột phải.
-          <LayoutPanel width={medium ? 360 : 300} hasDivider padding={4} label="Bảng điều khiển">
-            {medium ? <VStack gap={6}>{controls}{resultsBlock}</VStack> : controls}
+          <LayoutPanel width={360} hasDivider padding={0} isScrollable={false} label="Bảng điều khiển">
+            <VStack height="100%" gap={0}>
+              <VStack padding={4} gap={0}>{summaryBlock}</VStack>
+              <Divider />
+              <StackItem size="fill" isScrollable>
+                <VStack padding={4} gap={0}>{middle}</VStack>
+              </StackItem>
+              <Divider />
+              <VStack padding={4} gap={0}>{footer}</VStack>
+            </VStack>
           </LayoutPanel>
         }
         content={
-          <LayoutContent padding={0} isScrollable={false} label="Bản đồ">
-            {map}
+          <LayoutContent padding={0} isScrollable={false} label="Bản đồ và phân tích">
+            <VStack height="100%" gap={0}>
+              <StackItem size="fill">{map}</StackItem>
+              <Divider />
+              <VStack as="section" aria-label={trayTitle} height={trayOpen ? TRAY_HEIGHT : undefined} gap={0}>
+                <VStack paddingInline={4} paddingBlock={2} gap={0}>{trayHeader}</VStack>
+                {trayOpen && (
+                  <StackItem size="fill" isScrollable>
+                    <VStack id="tray-body" paddingInline={4} paddingBlockEnd={3} gap={0}>{trayBody}</VStack>
+                  </StackItem>
+                )}
+              </VStack>
+            </VStack>
           </LayoutContent>
         }
-        end={medium ? undefined : (
-          <LayoutPanel width={360} hasDivider padding={4} label="Kết quả đo được">{resultsBlock}</LayoutPanel>
-        )}
       />
     </AppShell>
   )

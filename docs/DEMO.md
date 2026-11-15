@@ -10,35 +10,41 @@ Mọi số hiển thị đều lấy từ response của backend; không có s�
 
 ## 1. Bố cục giao diện
 
-Bố cục đổi theo độ rộng cửa sổ:
+**Cập nhật 16/11 (đợt UI "Bàn điều phối", họp thiết kế 9 vai):** một bố cục cho mọi độ rộng từ 768 px.
 
 | Độ rộng | Bố cục |
 |---|---|
-| ≥ 1440 px | Ba cột: điều khiển (300 px) · bản đồ · kết quả (360 px) |
-| 768–1439 px (máy chiếu 1024/1280, laptop 1366) | Hai cột: cột trái 360 px gồm điều khiển rồi kết quả, bản đồ bên phải. Có **dòng tóm tắt kết quả** ngay dưới chọn chế độ (vd. "Tìm xong: 186,1 giây, 1.565 mét. Dijkstra mở 404 node, A* mở 106 node. So với lần trước: …"), nên người xem thấy số mà không cần cuộn |
-| < 768 px | Bản đồ ở trên, điều khiển và kết quả xếp dưới |
+| ≥ 768 px (máy chiếu 1024/1280, laptop, màn lớn) | Header nền mực có chọn chế độ **Tìm đường / Tour**. Panel trái 360 px ba tầng: **Kết quả đo được** (ô số chính, "So với lần trước", luôn thấy) / phần giữa cuộn được (lộ trình mẫu, điểm, đóng đoạn) / đáy dính (**Điều kiện giao thông** và nút chính). Bản đồ bên phải, **khay phân tích** 220 px dưới bản đồ (bảng thuật toán hoặc các phương án tour), nút **Thu gọn / Mở rộng**; thu gọn thì bản đồ cao lên và tự thu phóng lại vừa tuyến |
+| < 768 px | Bản đồ ở trên, rồi kết quả, điều kiện giao thông và nút chính, điều khiển, khay phân tích xếp dọc |
 
 ```
-≥ 1440 px
-┌──────────────┬──────────────────────────────────┬────────────────┐
-│ Chế độ       │                                  │ Kết quả        │
-│ Lộ trình mẫu │   Bản đồ Leaflet (nền Esri xám,  │ đo được        │
-│ Điểm, điều   │   OSM hoặc nền rút gọn)          │ Dijkstra / A*  │
-│ Địa danh     │   điểm, tuyến, vùng ùn tắc,      │ Thẻ tour       │
-│ Nút, công tắc│   đoạn đóng, chú giải nổi        │ So với lần trước│
-└──────────────┴──────────────────────────────────┴────────────────┘
+≥ 768 px (vd. 1280 × 800)
+┌──────────────────────────────────────────────────────────────────┐
+│ SaiGo  [Tìm đường | Tour]                           ● Đã kết nối │
+├──────────────┬───────────────────────────────────────────────────┤
+│ Kết quả đo   │                                                   │
+│ được (số)    │   Bản đồ Leaflet (Esri Đường phố / Xám, OSM hoặc  │
+├──────────────┤   nền rút gọn): điểm, tuyến, vùng ùn tắc, đoạn    │
+│ Lộ trình mẫu │   đóng, chú giải nổi                              │
+│ Điểm, địa    │                                                   │
+│ danh, đóng   ├───────────────────────────────────────────────────┤
+│ đoạn (cuộn)  │ Phân tích thuật toán / So sánh phương án  [Thu gọn]│
+├──────────────┤ bảng Dijkstra / A*, hoặc thẻ tour và các phương án│
+│ Điều kiện GT │                                                   │
+│ [Tìm đường]  │                                                   │
+└──────────────┴───────────────────────────────────────────────────┘
 ```
 
 ### 1.1. Bảng điều khiển
 
-- Chế độ: **Tìm đường** (mặc định) / **Tour**.
+- Chế độ: **Tìm đường** (mặc định) / **Tour**, ở header.
 - **Lộ trình mẫu** (5 mẫu; trước 15/11 gọi là "Case demo"): "Hai điểm qua trung tâm", "Không còn đường", "Kho + 5 điểm giao", "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (bước 10), "Tour không còn khả thi" (bước 11). Chọn mẫu là app tự chạy, tự thu phóng, và đặt kịch bản về cơ sở. Ô case nhớ riêng theo chế độ; Đảo chiều hay Mở lại tất cả làm ô về trống vì kết quả không còn là case đó.
 - **Điều kiện giao thông** (3; trước 15/11 gọi là "Kịch bản"): **Cơ sở — không ùn tắc, không đóng đường**, **Cao điểm mô phỏng — trung tâm** (`peak-center`), **Cao điểm mô phỏng — vòng xoay Bến Thành**. Điều kiện giữ nguyên khi bấm Xóa.
 - **Đặt điểm từ địa danh**: chọn Dinh Độc Lập, Chợ Bến Thành, Nhà thờ Đức Bà… thay vì bấm bản đồ. Mỗi điểm (bấm hay chọn) được kiểm ngay (`/api/snap`): xa đường quá 150 m thì bị từ chối kèm khoảng cách; trong lúc kiểm có dòng "Đang kiểm điểm vừa chọn…" và các nút tìm/lập bị khoá.
-- Tìm đường: nút **Tìm đường** (chạy Dijkstra và A*), **Đảo chiều**, **Xóa**. Tour: **Lập tour**, **Bỏ điểm cuối**, **Xóa**.
+- Tìm đường: nút **Tìm đường** (chạy Dijkstra và A*) và **Xóa** ở đáy panel, **Đảo chiều** dưới hai điểm. Tour: **Lập tour** và **Xóa** ở đáy, **Bỏ điểm cuối** dưới danh sách điểm.
 - Khi có cạnh đóng: dòng "Đang đóng N cạnh" và nút **Mở lại tất cả**.
 - Ô **Đóng một đoạn trên tuyến / tour**: liệt kê từng đoạn ("Đoạn 10/18: … m, bắt đầu cách điểm đi … m"); chọn một đoạn như bấm vào nó trên bản đồ. Dùng được bằng bàn phím.
-- Khối thu gọn **Phân tích thuật toán** (đóng sẵn) chứa công tắc **Hiện node đã mở rộng** (chế độ Tìm đường, mặc định tắt) và **Phần mở rộng** (mặc định tắt; thêm ALT, Dijkstra hai chiều vào bảng phụ, và thẻ NN + 2-opt + Or-opt cho tour). Phần mở rộng **giữ trạng thái khi đổi chế độ**: nhớ tắt trước bước 9 nếu đã bật khi hỏi đáp.
+- Đầu khay phân tích có công tắc **Hiện node đã mở rộng** (chế độ Tìm đường, mặc định tắt) và **Phần mở rộng** (mặc định tắt; thêm ALT, Dijkstra hai chiều vào bảng phụ, và thẻ NN + 2-opt + Or-opt cho tour). Phần mở rộng **giữ trạng thái khi đổi chế độ**: nhớ tắt trước bước 9 nếu đã bật khi hỏi đáp.
 
 ### 1.2. Bản đồ
 
@@ -59,7 +65,7 @@ Rê chuột lên tuyến thì đoạn sẽ đóng tô đỏ kèm "Bấm để đ
 
 ### 1.3. Kết quả đo được
 
-**Ô số chính** (đợt UI 15/11): thời gian di chuyển ước tính (phút, dòng phụ ghi giây và "theo điều kiện giao thông") và quãng đường (km, dòng phụ ghi mét); với tour là của phương án **đang xem**. Ở 768–1439 px có dải ô số này ngay dưới chọn chế độ. **Bảng so sánh thuật toán** (RQ1): khi Dijkstra và A* cùng chi phí, bảng chỉ còn số node mở rộng và thời gian tính toán (1 lần chạy), vì thời gian di chuyển và quãng đường đã ở ô số chính; khác chi phí thì bảng ghi đủ cả bốn dòng; dòng "Chi phí trùng khớp: có/không" và "Ở truy vấn này, A* mở …% số node của Dijkstra". Khi bật Phần mở rộng có bảng phụ ALT / Hai chiều.
+**Ô số chính** (đợt UI 15/11): thời gian di chuyển ước tính (phút, dòng phụ ghi giây và "theo điều kiện giao thông") và quãng đường (km, dòng phụ ghi mét); với tour là của phương án **đang xem**. Ô số chính nằm ở đầu panel trái (mục "Kết quả đo được"), khay phân tích không lặp lại. **Bảng so sánh thuật toán** (RQ1): khi Dijkstra và A* cùng chi phí, bảng chỉ còn số node mở rộng và thời gian tính toán (1 lần chạy), vì thời gian di chuyển và quãng đường đã ở ô số chính; khác chi phí thì bảng ghi đủ cả bốn dòng; dòng "Chi phí trùng khớp: có/không" và "Ở truy vấn này, A* mở …% số node của Dijkstra". Khi bật Phần mở rộng có bảng phụ ALT / Hai chiều.
 
 **So với lần trước** (cùng điểm, khác điều kiện giao thông hoặc cạnh đóng): "186,1 s → 246,1 s: +60,0 s (+32,2%)", dòng phụ ghi điều kiện lần trước và lần này. Lưu ý: so với **lần ngay trước**, không phải với Cơ sở.
 
