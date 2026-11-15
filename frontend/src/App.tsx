@@ -441,14 +441,18 @@ export default function App() {
       || (tourScenario.scenarioId === 'baseline' && tourScenario.blocked.length === 0)) return
     const pts = Object.entries(tour.snapped)
     const d = pts.find(([id]) => id === 'depot')
-    if (!d) return
+    const order = tour.chosen ? tour.candidates[tour.chosen]?.stop_order : undefined
+    if (!d || !order) return
     const ctl = new AbortController()
+    // So CÙNG thứ tự giao của phương án được chọn ở điều kiện Cơ sở (keep_order → kept_order), không so với tour mà
+    // heuristic tự sắp ở Cơ sở: hai lần NN + 2-opt có thể ra thứ tự khác nhau, làm cao điểm trông "nhanh hơn" giờ
+    // bình thường (góp ý review #171: Kho + 5 điểm 898,1 → 705,3 s).
     postTour({
       depot: latLon(d[1]),
       stops: pts.filter(([id]) => id !== 'depot').map(([id, p]) => ({ id, lat: p.lat, lon: p.lon })),
-      scenario_id: 'baseline', blocked_edge_ids: [], include_optimal: false,
+      scenario_id: 'baseline', blocked_edge_ids: [], include_optimal: false, keep_order: order,
     }, ctl.signal)
-      .then((r) => setTourBase({ of: tour, cost: r.status === 'ok' && r.chosen ? r.candidates[r.chosen]?.cost_s ?? null : null }))
+      .then((r) => setTourBase({ of: tour, cost: r.status === 'ok' ? r.candidates.kept_order?.cost_s ?? null : null }))
       .catch(() => { /* chỉ là dòng phụ */ })
     return () => ctl.abort()
   }, [tour, tourScenario])
@@ -833,7 +837,7 @@ export default function App() {
             <Text type="body" weight="semibold"
               className={baseLine.diff ? (baseLine.diff > 0 ? 'delta delta-slow' : 'delta delta-fast') : 'delta'}>
               <DeltaIcon diff={baseLine.diff} />
-              So với Cơ sở (không ùn tắc, không đóng đường){mode === 'tour' ? ', phương án được chọn' : ''}: {baseLine.text}
+              So với Cơ sở (không ùn tắc, không đóng đường){mode === 'tour' ? ', cùng thứ tự giao' : ''}: {baseLine.text}
             </Text>
           )}
           {/* Bước 10 của DEMO: số "Giữ thứ tự cũ" thấy ngay ở máy chiếu, không phải cuộn tới danh sách phương án. */}

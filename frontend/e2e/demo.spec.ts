@@ -242,3 +242,15 @@ test('So với Cơ sở khi đổi giữa hai kiểu cao điểm; bấm ngoài v
   await page.mouse.click(b.x + 40, b.y + 40)
   await expect(page.getByText('Điểm này nằm ngoài vùng có dữ liệu')).toBeVisible()
 })
+
+test('Tour: so với Cơ sở dùng cùng thứ tự giao, cao điểm không bao giờ nhanh hơn giờ bình thường', async ({ page }) => {
+  await mode(page, 'Tour')
+  await choose(page, 'Lộ trình mẫu', 'Kho + 5 điểm giao')
+  await expectAll(page, ['898,1'])
+  await choose(page, 'Điều kiện giao thông', /Cao điểm — trung tâm/)
+  // Cùng thứ tự giao: chi phí ở cao điểm (hệ số ≥ 1) không thể thấp hơn ở Cơ sở, nên phần chênh luôn là dấu +.
+  const line = page.getByText(/So với Cơ sở \(không ùn tắc, không đóng đường\), cùng thứ tự giao: /)
+  await expect(line).toBeVisible()
+  await expect(line).toContainText('+')
+  await expect(line).not.toContainText('−')
+})
