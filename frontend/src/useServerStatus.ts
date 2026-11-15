@@ -31,7 +31,7 @@ export function useServerStatus() {
       .then((d) => {
         datasetRead.current = true
         if (d === null) {
-          setScenarioNote('API chưa có /api/dataset (T51); chỉ có kịch bản cơ sở.')
+          setScenarioNote('API chưa có /api/dataset (T51); chỉ có điều kiện cơ sở.')
           return
         }
         setScenarioNote(null)
@@ -39,7 +39,7 @@ export function useServerStatus() {
         if (d.scenarios.length) setScenarios(d.scenarios)
         setDataArea(d.bbox ?? null)
       })
-      .catch((e: Error) => setScenarioNote(`Không đọc được danh sách kịch bản: ${e.message}`))
+      .catch((e: Error) => setScenarioNote(`Không đọc được danh sách điều kiện giao thông: ${e.message}`))
   }, [])
 
   // Request thành công sau khi backend bật lại (kể cả khi mở trang lúc backend còn tắt): đưa badge về

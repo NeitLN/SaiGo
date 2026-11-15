@@ -102,7 +102,7 @@ const route = (status: 'ok' | 'no_path') => ({
 
 test('routeAnnouncement và traceLegend lấy số từ response', () => {
   assert.equal(routeAnnouncement(route('ok')), 'Tìm xong: 186,1 giây, 1.565 mét. Dijkstra mở 404 node, A* mở 106 node.')
-  assert.equal(routeAnnouncement(route('no_path')), 'Không có đường đi giữa hai điểm này trong kịch bản hiện tại.')
+  assert.equal(routeAnnouncement(route('no_path')), 'Không có đường đi giữa hai điểm này với điều kiện giao thông hiện tại.')
   assert.equal(traceLegend(route('ok')), 'Đang vẽ 404 node Dijkstra và 106 node A* đã mở rộng. Chỉ vẽ 5.000 node đầu.')
 })
 

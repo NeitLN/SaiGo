@@ -2,17 +2,22 @@
 // Chế độ "Tìm đường hai điểm" (T14, T52, T53, đóng đoạn đường T54) và "Tour" (T73).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppShell } from '@astryxdesign/core/AppShell'
-import { Badge } from '@astryxdesign/core/Badge'
+import { Avatar } from '@astryxdesign/core/Avatar'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
+import { Collapsible } from '@astryxdesign/core/Collapsible'
+import { Divider } from '@astryxdesign/core/Divider'
+import { EmptyState } from '@astryxdesign/core/EmptyState'
 import { Heading } from '@astryxdesign/core/Heading'
 import { HStack } from '@astryxdesign/core/HStack'
 import { Layout, LayoutContent, LayoutHeader, LayoutPanel } from '@astryxdesign/core/Layout'
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Spinner } from '@astryxdesign/core/Spinner'
+import { StatusDot } from '@astryxdesign/core/StatusDot'
 import { Switch } from '@astryxdesign/core/Switch'
 import { Text } from '@astryxdesign/core/Text'
+import { Tooltip } from '@astryxdesign/core/Tooltip'
 import { VStack } from '@astryxdesign/core/VStack'
 import { useAnnounce, useMediaQuery } from '@astryxdesign/core/hooks'
 import {
@@ -655,7 +660,7 @@ export default function App() {
   const hint = mode === 'route'
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
       : !target ? 'Bấm để chọn điểm đến.'
-        : route && noPath ? 'Không có tuyến để đóng thêm. Bấm Mở lại tất cả, đổi kịch bản, hoặc Xóa để chọn điểm mới.'
+        : route && noPath ? 'Không có tuyến để đóng thêm. Bấm Mở lại tất cả, đổi điều kiện giao thông, hoặc Xóa để chọn điểm mới.'
         : route ? 'Bấm vào một đoạn trên tuyến để đóng đoạn đó. Bấm Xóa để chọn điểm mới.'
           : 'Bấm Tìm đường. Bấm lên bản đồ lần nữa để chọn lại từ đầu.')
     : (!depot ? 'Bấm lên bản đồ để đặt kho.'
@@ -676,102 +681,137 @@ export default function App() {
           <Text type="supporting">Bảng chi tiết ở mục Kết quả đo được bên dưới.</Text>
         </VStack>
       )}
+      {/* Đợt UI 15/11 (họp thiết kế 5 vai): chia nhóm theo công việc: lộ trình mẫu → điểm → điều kiện giao thông;
+          phần phân tích thuật toán (trace, phần mở rộng) gom vào một khối thu gọn, không ẩn tên thuật toán. */}
       <Selector
-        label="Case demo"
-        placeholder="Chọn case minh họa"
+        label="Lộ trình mẫu"
+        placeholder="Chọn lộ trình mẫu"
         options={DEMO_CASES.map((c) => ({ value: c.id, label: c.label }))}
         value={caseId}
         onChange={loadCase}
         isDisabled={caseDisabled}
-        disabledMessage={`Case demo dùng đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
+        disabledMessage={`Lộ trình mẫu dùng đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
       />
-      <Selector
-        label="Kịch bản"
-        options={scenarios.map((s) => ({ value: s.id, label: s.label }))}
-        value={scenarioId}
-        onChange={changeScenario}
-      />
-      {scenarioNote && <Text type="supporting">{scenarioNote}</Text>}
-      <Text type="body">{hint}</Text>
-      {/* Đặt điểm từ danh sách địa danh (đợt 3, C-b): như một cú bấm bản đồ tại địa danh đó, đi qua cùng
-          bước kiểm; dùng được bằng bàn phím. Ô luôn về trống sau khi chọn để chọn tiếp được. */}
-      <Selector
-        label={mode === 'route' ? 'Đặt điểm từ địa danh' : 'Thêm kho / điểm giao từ địa danh'}
-        placeholder="Chọn địa danh có tên"
-        options={NAMED_PLACES.map((p) => ({ value: p.name, label: p.name }))}
-        value=""
-        onChange={(v) => {
-          const place = NAMED_PLACES.find((p) => p.name === v)
-          if (place) onMapClick(place)
-        }}
-        isDisabled={caseDisabled}
-        disabledMessage={`Địa danh lấy toạ độ trên đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
-      />
-      {mode === 'route' ? (
-        <VStack gap={2}>
-          <Text type="supporting">Điểm đi: {fmt(source)}</Text>
-          <Text type="supporting">Điểm đến: {fmt(target)}</Text>
+      <Divider />
+      <VStack gap={3}>
+        <Heading level={3}>{mode === 'route' ? 'Điểm đi và điểm đến' : 'Kho và điểm giao'}</Heading>
+        <Text type="supporting">{hint}</Text>
+        {/* Đặt điểm từ danh sách địa danh (đợt 3, C-b): như một cú bấm bản đồ tại địa danh đó, đi qua cùng
+            bước kiểm; dùng được bằng bàn phím. Ô luôn về trống sau khi chọn để chọn tiếp được. */}
+        <Selector
+          label={mode === 'route' ? 'Đặt điểm từ địa danh' : 'Thêm kho / điểm giao từ địa danh'}
+          placeholder="Chọn địa danh có tên"
+          options={NAMED_PLACES.map((p) => ({ value: p.name, label: p.name }))}
+          value=""
+          onChange={(v) => {
+            const place = NAMED_PLACES.find((p) => p.name === v)
+            if (place) onMapClick(place)
+          }}
+          isDisabled={caseDisabled}
+          disabledMessage={`Địa danh lấy toạ độ trên đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
+        />
+        {mode === 'route' ? (
+          <VStack gap={1}>
+            <HStack gap={2} vAlign="center">
+              <StatusDot variant={source ? 'success' : 'neutral'} label={source ? 'Đã đặt điểm đi' : 'Chưa đặt điểm đi'} />
+              <Text type="body">Điểm đi: {fmt(source)}</Text>
+            </HStack>
+            <HStack gap={2} vAlign="center">
+              <StatusDot variant={target ? 'error' : 'neutral'} label={target ? 'Đã đặt điểm đến' : 'Chưa đặt điểm đến'} />
+              <Text type="body">Điểm đến: {fmt(target)}</Text>
+            </HStack>
+          </VStack>
+        ) : (
+          <HStack gap={2} vAlign="center">
+            <StatusDot variant={depot ? 'success' : 'neutral'} label={depot ? 'Đã đặt kho' : 'Chưa đặt kho'} />
+            <Text type="body">
+              {!depot ? 'Chưa đặt kho' : depot.label === 'Kho' ? 'Đã đặt kho' : `Kho: ${depot.label}`} · {stops.length} điểm giao
+            </Text>
+          </HStack>
+        )}
+        {mode === 'route' ? (
           <HStack gap={2}>
             <Button label="Tìm đường" variant="primary" isDisabled={!(source && target) || checking} onClick={findRoute} />
             <Button label="Đảo chiều" isDisabled={!(source && target) || checking} onClick={swap} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
-          {blocked.length > 0 && (
-            <HStack gap={2} vAlign="center" hAlign="between">
-              <Text type="supporting">Đang đóng {blocked.length} cạnh</Text>
-              <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
-            </HStack>
-          )}
-          <Switch label="Hiện node đã mở rộng" value={showTrace} onChange={setShowTrace}
-            description="Chấm xanh: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng." />
-          {showTrace && route && trace && <Text type="supporting">{traceLegend(trace)}</Text>}
-        </VStack>
-      ) : (
-        <VStack gap={2}>
-          <Text type="supporting">
-            {!depot ? 'Chưa đặt kho' : depot.label === 'Kho' ? 'Đã đặt kho' : `Kho: ${depot.label}`} · {stops.length} điểm giao
-          </Text>
+        ) : (
           <HStack gap={2}>
             <Button label="Lập tour" variant="primary" isDisabled={!depot || stops.length === 0 || checking} onClick={buildTour} />
             <Button label="Bỏ điểm cuối" isDisabled={!depot} onClick={removeLastPoint} />
             <Button label="Xóa" variant="ghost" onClick={clearAll} />
           </HStack>
-          {tourBlocked.length > 0 && (
-            <HStack gap={2} vAlign="center" hAlign="between">
-              <Text type="supporting">Đang đóng {tourBlocked.length} cạnh</Text>
-              <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
-            </HStack>
-          )}
-        </VStack>
-      )}
-      {keySegs.length > 0 && (
+        )}
+      </VStack>
+      <Divider />
+      <VStack gap={3}>
+        <Heading level={3}>Điều kiện giao thông</Heading>
         <Selector
-          label={mode === 'route' ? 'Đóng một đoạn trên tuyến' : 'Đóng một đoạn trên tour'}
-          placeholder="Chọn đoạn (thay cho bấm trên bản đồ)"
-          options={keyLabels.map((label, i) => ({ value: String(i), label }))}
-          value=""
-          onChange={closeByKey}
+          label="Điều kiện giao thông"
+          isLabelHidden
+          options={scenarios.map((s) => ({ value: s.id, label: s.label }))}
+          value={scenarioId}
+          onChange={changeScenario}
         />
-      )}
-      <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
-        description={mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).'} />
+        {scenarioNote && <Text type="supporting">{scenarioNote}</Text>}
+        {(mode === 'route' ? blocked : tourBlocked).length > 0 && (
+          <HStack gap={2} vAlign="center" hAlign="between">
+            <Text type="supporting">Đang đóng {(mode === 'route' ? blocked : tourBlocked).length} cạnh</Text>
+            <Button label="Mở lại tất cả" size="sm" onClick={reopenAll} />
+          </HStack>
+        )}
+        {keySegs.length > 0 && (
+          <Selector
+            label={mode === 'route' ? 'Đóng một đoạn trên tuyến' : 'Đóng một đoạn trên tour'}
+            placeholder="Chọn đoạn (thay cho bấm trên bản đồ)"
+            options={keyLabels.map((label, i) => ({ value: String(i), label }))}
+            value=""
+            onChange={closeByKey}
+          />
+        )}
+      </VStack>
+      <Divider />
+      <Collapsible trigger={<Text type="body" weight="semibold">Phân tích thuật toán</Text>} defaultIsOpen={false}>
+        <VStack gap={3}>
+          {mode === 'route' && (
+            <Switch label="Hiện node đã mở rộng" value={showTrace} onChange={setShowTrace}
+              description="Chấm xanh: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng." />
+          )}
+          {mode === 'route' && showTrace && route && trace && <Text type="supporting">{traceLegend(trace)}</Text>}
+          <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
+            description={mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).'} />
+        </VStack>
+      </Collapsible>
       {checkingPoints > 0 && <Spinner label="Đang kiểm điểm vừa chọn…" />}
       {(mode === 'route' ? busyRoute : busyTour) && <Spinner label="Đang tính…" />}
       {notice && <Banner status="info" title={notice} />}
       {/* role="alert": lỗi được đọc ngay cho người dùng trình đọc màn hình (FE-3). */}
       {errorState && errorState.mode === mode && <Banner status="error" title={errorState.text} role="alert" />}
       {mode === 'route' && noPath && (
-        <Banner status="info" title="Không có đường đi giữa hai điểm này trong kịch bản hiện tại." />
+        <Banner status="info" title="Không có đường đi giữa hai điểm này với điều kiện giao thông hiện tại." />
       )}
     </VStack>
   )
 
+  // Trạng thái rỗng có bước tiếp theo (đợt UI 15/11) thay dòng "Chưa có kết quả.".
+  const sampleId = mode === 'route' ? 'hai-diem-qua-trung-tam' : 'kho-5-diem'
+  const empty = (
+    <EmptyState isCompact headingLevel={3}
+      title={mode === 'route' ? 'Chưa có tuyến' : 'Chưa có tour'}
+      description={mode === 'route'
+        ? 'Đặt điểm đi và điểm đến trên bản đồ hoặc từ danh sách địa danh, rồi bấm Tìm đường. Hoặc mở một lộ trình mẫu.'
+        : 'Đặt kho rồi các điểm giao, sau đó bấm Lập tour. Hoặc mở một lộ trình mẫu.'}
+      actions={DEMO_CASES.some((c) => c.id === sampleId) && !caseDisabled
+        ? <Button label="Mở lộ trình mẫu" size="sm" onClick={() => loadCase(sampleId)} />
+        : undefined}
+    />
+  )
   const results = mode === 'route'
     ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel}
-      previous={prevRoute ? { res: prevRoute.res, label: runLabel(prevRoute) } : null} /> : <Text type="supporting">Chưa có kết quả.</Text>)
+      previous={prevRoute ? { res: prevRoute.res, label: runLabel(prevRoute) } : null} /> : empty)
     : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel}
       previous={prevTour ? { res: prevTour.res, label: runLabel(prevTour), closedMore: closedMore(prevTour, tourScenario) } : null} />
-      : <Text type="supporting">Chưa có kết quả.</Text>)
+      : empty)
 
   const resultsBlock = (
     <VStack gap={3}>
@@ -784,11 +824,17 @@ export default function App() {
     <LayoutHeader hasDivider>
       <HStack gap={3} vAlign="center" hAlign="between">
         <HStack gap={2} vAlign="center">
+          <Avatar name="Sai Go" shape="rounded" size="sm" tooltip={false} />
           <Heading level={1}>SaiGo</Heading>
-          {!narrow && <Text type="supporting">Lập kế hoạch lộ trình giao hàng</Text>}
+          {!narrow && <Text type="supporting">Lập kế hoạch lộ trình giao hàng · Khu Bến Thành, TP.HCM</Text>}
         </HStack>
-        <Badge variant={server.ok === null ? 'neutral' : server.ok ? 'success' : 'error'}
-          label={narrow && server.ok ? 'Sẵn sàng' : server.text} />
+        {/* Trạng thái gọn (đợt UI 15/11): chấm màu + chữ; mã dataset trong tooltip thay vì in ra như log. */}
+        <Tooltip content={datasetId ? `Dữ liệu OSM: ${datasetId}` : server.text}>
+          <HStack gap={2} vAlign="center">
+            <StatusDot variant={server.ok === null ? 'neutral' : server.ok ? 'success' : 'error'} label={server.text} />
+            <Text type="supporting">{server.ok === null ? 'Đang kết nối…' : server.ok ? 'Đã kết nối' : 'Mất kết nối'}</Text>
+          </HStack>
+        </Tooltip>
       </HStack>
     </LayoutHeader>
   )

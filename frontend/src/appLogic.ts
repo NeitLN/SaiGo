@@ -133,7 +133,7 @@ const vn = (x: number, d = 1) => x.toLocaleString('vi-VN', { maximumFractionDigi
 export function routeAnnouncement(r: RouteResponse): string {
   const d = r.results.dijkstra
   const a = r.results.astar
-  if (!d || d.status !== 'ok' || d.cost_s === null) return 'Không có đường đi giữa hai điểm này trong kịch bản hiện tại.'
+  if (!d || d.status !== 'ok' || d.cost_s === null) return 'Không có đường đi giữa hai điểm này với điều kiện giao thông hiện tại.'
   const nodes = a ? ` Dijkstra mở ${vn(d.expanded, 0)} node, A* mở ${vn(a.expanded, 0)} node.` : ''
   return `Tìm xong: ${vn(d.cost_s)} giây, ${vn(d.distance_m ?? 0, 0)} mét.${nodes}`
 }

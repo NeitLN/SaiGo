@@ -25,7 +25,7 @@ export function seconds(s: number): string {
 }
 
 const ROWS: [string, (r: AlgorithmResult) => string][] = [
-  ['Thời gian di chuyển ước tính (theo kịch bản)', (r) => (r.status !== 'ok' || r.cost_s === null ? 'Không có đường' : seconds(r.cost_s))],
+  ['Thời gian di chuyển ước tính (theo điều kiện giao thông)', (r) => (r.status !== 'ok' || r.cost_s === null ? 'Không có đường' : seconds(r.cost_s))],
   ['Quãng đường', (r) => (r.status !== 'ok' || r.distance_m === null ? '—' : `${num(r.distance_m, 0)} m`)],
   ['Số node mở rộng', (r) => num(r.expanded, 0)],
   // Một lần chạy của truy vấn này (review 14/11, AI-1): nhãn nói rõ để không bị đọc thành kết luận tốc độ.
@@ -125,7 +125,7 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
       <Text type="supporting">
         Thời gian tính là một lần chạy trên máy này, dao động giữa các lần; không dùng để so tốc độ hai thuật toán.
       </Text>
-      <Text type="supporting">Kịch bản: {scenarioLabel}</Text>
+      <Text type="supporting">Điều kiện giao thông: {scenarioLabel}</Text>
       {extAlgos.length > 0 && (
         <VStack gap={2}>
           <Text type="body" weight="semibold">Phần mở rộng (ngoài proposal)</Text>
