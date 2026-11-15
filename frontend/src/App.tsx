@@ -702,7 +702,12 @@ export default function App() {
               sub={`${summaryKpi.timeNote} · ${secondsRaw(summaryKpi.cost)}`} />
             <Kpi label="Quãng đường" value={km(summaryKpi.dist)} sub={metersRaw(summaryKpi.dist)} />
           </Grid>
-          {summaryKpi.delta && <Text type="body" weight="semibold">So với lần trước: {summaryKpi.delta}</Text>}
+          {/* Tour: so theo phương án được chọn như dòng ở cột kết quả, nên ghi rõ (góp ý #160). */}
+          {summaryKpi.delta && (
+            <Text type="body" weight="semibold">
+              So với lần trước{mode === 'tour' ? ', phương án được chọn' : ''}: {summaryKpi.delta}
+            </Text>
+          )}
           <Text type="supporting">Chi tiết ở mục Kết quả đo được bên dưới.</Text>
         </VStack>
       )}

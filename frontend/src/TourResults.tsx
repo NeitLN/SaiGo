@@ -179,10 +179,9 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
         return (
           <Card key={m} padding={2} variant={isSelected ? 'muted' : 'default'}>
             <VStack gap={1}>
-              <HStack gap={2} hAlign="between" vAlign="center">
-                <Text type="body" weight="semibold">{TOUR_METHOD_LABEL[m]}</Text>
-                {isCheapest(c.cost_s) && <Badge variant="success" label="Thời gian ước tính thấp nhất" />}
-              </HStack>
+              <Text type="body" weight="semibold">{TOUR_METHOD_LABEL[m]}</Text>
+              {/* Badge dòng riêng: cùng hàng với tên dài (Held–Karp) thì bị cắt ở cột 360 px (góp ý #160). */}
+              {isCheapest(c.cost_s) && <HStack><Badge variant="success" label="Thời gian ước tính thấp nhất" /></HStack>}
               <Text type="body" hasTabularNumbers>
                 {minutesText(c.cost_s)} · {kmText(c.distance_m)}
                 {m !== 'input' ? ` · ${improvementText(c.improvement_pct).toLowerCase()}` : ''}
