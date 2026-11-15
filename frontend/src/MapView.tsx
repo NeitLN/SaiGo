@@ -70,7 +70,9 @@ export default function MapView({ onReady, onClick }: {
     }).setView(CENTER, 16)
     // Khung bản đồ nhận focus bằng Tab nhưng không có tên (A-9).
     map.getContainer().setAttribute('aria-label', 'Bản đồ. Phím mũi tên để di chuyển, phím + và − để thu phóng.')
-    L.control.zoom({ zoomInTitle: 'Phóng to', zoomOutTitle: 'Thu nhỏ' }).addTo(map)
+    // Nút bản đồ gom một cột ở góc dưới phải (đợt UI "Bàn điều phối"): từ trên xuống là chọn nền, Về toàn tuyến, +/−,
+    // rồi dòng ghi nguồn. Góc dưới của Leaflet chèn control mới lên trên, nên thêm zoom trước, chọn nền sau cùng.
+    L.control.zoom({ zoomInTitle: 'Phóng to', zoomOutTitle: 'Thu nhỏ', position: 'bottomright' }).addTo(map)
     map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>')   // bỏ lá cờ mặc định
     map.attributionControl.addAttribution(DATA_ATTRIBUTION)
     map.on('click', (e: L.LeafletMouseEvent) => onClickRef.current({ lat: e.latlng.lat, lon: e.latlng.lng }))
@@ -200,7 +202,7 @@ export default function MapView({ onReady, onClick }: {
     L.DomEvent.disableClickPropagation(switcher)
     L.DomEvent.disableScrollPropagation(switcher)   // lăn chuột trên nút không zoom bản đồ (góp ý #162)
     const Switcher = L.Control.extend({ onAdd: () => switcher })
-    new Switcher({ position: 'topright' }).addTo(map)
+    new Switcher({ position: 'bottomright' }).addTo(map)
 
     // Khung bản đồ đổi kích thước theo bố cục: báo Leaflet tính lại để không bị ô trắng.
     const resize = new ResizeObserver(() => map.invalidateSize())

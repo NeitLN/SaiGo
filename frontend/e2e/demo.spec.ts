@@ -135,3 +135,23 @@ test('Khay phân tích thu gọn được, bản đồ cao lên và vẫn thấy
   await expect(page.getByRole('button', { name: 'Thu gọn', exact: true })).toHaveAttribute('aria-expanded', 'true')
   await expect(page.locator('#tray-body')).toBeVisible()
 })
+
+test('Bản đồ: ký hiệu A/B có tên địa danh, chú giải thu gọn được', async ({ page }) => {
+  await choose(page, 'Lộ trình mẫu', 'Hai điểm qua trung tâm')
+  await expectAll(page, ['186,1'])
+  await expect(page.getByRole('img', { name: 'Điểm đi: Dinh Độc Lập' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Điểm đến: Bitexco' })).toBeVisible()
+  const legend = page.getByRole('button', { name: 'Chú giải' })
+  await expect(legend).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('#map-legend-rows')).toBeVisible()
+  await legend.click()
+  await expect(page.getByRole('button', { name: 'Chú giải' })).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.locator('#map-legend-rows')).toBeHidden()
+  await page.getByRole('button', { name: 'Chú giải' }).click()
+  await expect(page.locator('#map-legend-rows')).toBeVisible()
+  // Nút giữ focus khi bản đồ vẽ lại vì có kết quả mới (góp ý review #166).
+  await page.getByRole('button', { name: 'Chú giải' }).focus()
+  await page.getByRole('button', { name: 'Đảo chiều', exact: true }).evaluate((b: HTMLElement) => b.click())
+  await expectAll(page, ['193,0'])
+  await expect(page.getByRole('button', { name: 'Chú giải' })).toBeFocused()
+})
