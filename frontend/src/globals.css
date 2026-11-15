@@ -16,6 +16,8 @@
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  /* Chữ trên bản đồ (nhãn điểm, chú giải) cùng font với app. */
+  font-family: var(--font-family-body);
   /* Nền bản đồ (tile OSM hoặc nền dự phòng #ddd) luôn sáng, nên mọi token trong bản đồ lấy biến thể sáng kể cả khi
      trang ở chế độ tối (test lại 15/11, A-2/A-3: viền tuyến đổi sang trắng còn 1,12:1, chữ trắng trên đỏ 2,72:1). */
   color-scheme: light;
@@ -64,6 +66,8 @@
   /* 14 px: đọc được trên máy chiếu (test lại 15/11, A-10). */
   font-size: 14px;
   line-height: 1.6;
+  /* Câu mô tả vùng cao điểm dài: xuống dòng thay vì kéo chú giải rộng đè lên tuyến (đợt UI "Bàn điều phối"). */
+  max-width: 280px;
 }
 
 .legend-row {
@@ -93,13 +97,19 @@
   border-radius: var(--radius-full);
 }
 
+/* Nền bản đồ làm dịu riêng lớp tile (đợt UI "Bàn điều phối", họp thiết kế 9 vai): Esri Đường phố nhiều cam/be lấn
+   tuyến, giảm bão hoà để tuyến, vùng và điểm là lớp nổi nhất; các lớp vẽ giữ nguyên màu. */
+.map-frame .leaflet-tile-pane {
+  filter: saturate(0.3) contrast(0.92) brightness(1.04);
+}
+
 /* Tour (review 14/11 đợt 3, UX-9): kho là ô vuông riêng, mũi tên chỉ chiều dọc tuyến, tên điểm cạnh số. */
 .tour-depot {
   display: grid;
   place-items: center;
   border-radius: var(--radius-element);
-  /* Xanh của token success: chữ trắng đạt 5,0:1; xanh categorical chỉ 3,76:1 (test lại 15/11, A-3). */
-  background: var(--color-success);
+  /* Đợt UI "Bàn điều phối": kho là ô vuông màu mực có hình nhà kho, không còn xanh giống điểm đi. */
+  background: var(--color-text-primary);
   color: white;
   border: 2px solid var(--color-background-card);
   font-weight: 700;
@@ -113,16 +123,19 @@
   pointer-events: none;
 }
 
-/* Nhãn trên bản đồ (đợt UI 15/11): không mũi tên, bo góc, viền và bóng theo token, như nhãn của sản phẩm bản đồ. */
+/* Tên điểm trên bản đồ (đợt UI "Bàn điều phối"): chữ đậm có quầng trắng, không hộp, như bản đồ thật; hộp chỉ dành
+   cho nhãn trạng thái (vùng cao điểm). Quầng giữ chữ đọc được trên cả tuyến lẫn tile. */
 .leaflet-tooltip.map-label,
 .leaflet-tooltip.stop-label {
-  background: var(--color-background-card);
+  background: transparent;
   color: var(--color-text-primary);
-  border: var(--border-width, 1px) solid var(--color-border);
-  border-radius: var(--radius-element);
-  box-shadow: var(--shadow-low);
-  padding: 2px 8px;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
   font-weight: 600;
+  text-shadow:
+    0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff,
+    1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
 }
 
 .leaflet-tooltip.map-label::before,
@@ -136,13 +149,43 @@
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
 }
 
+/* Tiêu đề chú giải là nút thu gọn (đợt UI "Bàn điều phối"); chữ thường theo câu, không viết hoa giãn chữ. */
 .legend-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-weight: 600;
+  font-size: 13px;
   color: var(--color-text-secondary);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 2px;
+  cursor: pointer;
+}
+
+.legend-title[aria-expanded='true'] {
+  margin-bottom: 4px;
+}
+
+.legend-title:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.legend-square {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+.legend-pin-drop {
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
 }
 
 .legend-pin {
@@ -154,7 +197,7 @@
   box-shadow: 0 0 0 1px var(--color-border);
 }
 
-/* Nút zoom và "Về toàn tuyến": 36 px, nền thẻ, viền và bóng theo token, vòng focus rõ. */
+/* Nút zoom và "Về toàn tuyến": 40 px (đợt UI "Bàn điều phối"), nền thẻ, viền và bóng theo token, vòng focus rõ. */
 .map-frame .leaflet-bar {
   border: var(--border-width, 1px) solid var(--color-border);
   border-radius: var(--radius-element);
@@ -163,9 +206,9 @@
 }
 
 .map-frame .leaflet-bar a {
-  width: 36px;
-  height: 36px;
-  line-height: 36px;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
   display: grid;
   place-items: center;
   background: var(--color-background-card);

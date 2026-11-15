@@ -348,7 +348,7 @@ export default function App() {
       if (shownTrace) legend.push({ kind: 'trace', label: 'Node đã mở rộng: Dijkstra, A*' })
       layers.setTrace(shownTrace?.results.dijkstra?.trace ?? null, shownTrace?.results.astar?.trace ?? null)
       if (route) {
-        layers.setSnapped(route.res)
+        layers.setSnapped(route.res, { source: source?.name, target: target?.name })
         layers.drawRoutes(route.res, closeSegment)
         if (pendingFit.current) {
           pendingFit.current = false
@@ -368,6 +368,8 @@ export default function App() {
       const broken = new Set(tour?.status === 'infeasible_under_model' ? unreachableGroups(tour.unreachable).map((g) => g.id) : [])
       layers.setTourPoints(depot, stops, cand?.stop_order, broken)
       if (cand) legend.unshift({ kind: 'tour', label: 'Tour đang xem' })
+      if (depot) legend.push({ kind: 'depot', label: 'Kho' })
+      if (stops.length) legend.push({ kind: 'stop', label: cand ? 'Điểm giao, số là thứ tự đi' : 'Điểm giao' })
       if (closedToDraw(tourBlocked, edgeGeom.current, tourClosed).length) legend.push({ kind: 'closed', label: 'Đoạn đang đóng' })
       if (broken.size) legend.push({ kind: 'broken', label: 'Điểm không đi được' })
       if (cand) layers.drawTour(cand, closeTourSegment)
@@ -881,7 +883,7 @@ export default function App() {
       <HStack gap={4} vAlign="center" wrap="wrap">
       {mode === 'route' && (
         <Switch label="Hiện node đã mở rộng" value={showTrace} onChange={setShowTrace}
-          description={narrow ? 'Chấm xanh: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng.' : undefined} />
+          description={narrow ? 'Chấm xám: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng.' : undefined} />
       )}
       <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
         description={narrow ? (mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).') : undefined} />
