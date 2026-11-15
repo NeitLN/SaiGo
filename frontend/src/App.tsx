@@ -226,6 +226,7 @@ export default function App() {
       .catch((e: Error) => {
         if (ctl.signal.aborted) return
         pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
+        fitOnResult.current = false
         setRoute(null)
         setErrorState({ mode: 'route', text: `Lỗi: ${e.message}` })
         checkServer()
@@ -266,6 +267,7 @@ export default function App() {
       .catch((e: Error) => {
         if (ctl.signal.aborted) return
         pendingFit.current = false   // request lỗi: không để lần sau tự thu phóng bất ngờ (review #135)
+        fitOnResult.current = false
         setTour(null)
         // API gọi điểm bằng id nội bộ ('p2', 'depot'); đổi sang tên trên marker (QA-13).
         const msg = renameIds(e.message, tourQuery.stops)
