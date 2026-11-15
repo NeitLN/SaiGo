@@ -12,7 +12,7 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
   - dữ liệu thô đóng băng theo sha256;
   - contract `/api/route` v1 chỉ được thêm trường;
   - không số liệu nào chưa đo; mọi số trong tài liệu có `run_id`.
-- ~~**Chưa biết:** nền tile OSM thật (UI-1) trên giao diện mới, vì mạng các máy kiểm hiện chặn `tile.openstreetmap.org`.~~ **15/11:** UI-1 đạt; mạng máy Minh trả 200 cho một phần tile (có lần 20/20, lần 45 kiểm 9/20 do reset TLS), ảnh chụp thấy nền OSM thật.
+- ~~**Chưa biết:** nền tile OSM thật (UI-1) trên giao diện mới, vì mạng các máy kiểm hiện chặn `tile.openstreetmap.org`.~~ **15/11:** UI-1 đạt về chức năng; mạng máy Minh trả 200 cho một phần tile (có lần 20/20, lần 45 kiểm 9/20 do reset TLS), ảnh chụp thấy cả tile OSM thật lẫn nền dự phòng R8.
 
 ## Đang ở đâu
 - R0 xong (#127, #128).
