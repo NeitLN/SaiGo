@@ -7,6 +7,8 @@ import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { ALGORITHM_LABEL, type Algorithm, type AlgorithmResult, type RouteResponse } from './api'
 import { costDelta, deltaText } from './compare'
+import { Grid } from '@astryxdesign/core/Grid'
+import Kpi, { km, metersRaw, minutes, secondsRaw } from './Kpi'
 
 const ALGOS: Algorithm[] = ['dijkstra', 'astar']
 // Cùng màu với tuyến trên bản đồ (layers.ts: categorical blue / orange).
@@ -94,11 +96,23 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
   // Cùng điều kiện với App khi vẽ tuyến lần trước (test lại 15/11, R-4): cả khi lần này không còn đường.
   const moved = before?.status === 'ok' && (now?.status !== 'ok' || before.edge_ids?.join() !== now.edge_ids?.join())
   const lost = before?.status === 'ok' && now?.status !== 'ok'
+  // Ô số chính (đợt UI 15/11): thời gian và quãng đường của tuyến Dijkstra (A* cho cùng chi phí khi "Chi phí trùng
+  // khớp: có"). Khi hai thuật toán cùng chi phí thì hai dòng đó không lặp lại trong bảng so sánh bên dưới.
+  const ok = now?.status === 'ok' && now.cost_s !== null
+  const same = res.costs_match === true
+  const tableData = ok && same ? data.slice(2) : data
   return (
     <VStack gap={3}>
-      <HStack gap={2}>
-        {algos.map((a) => <Badge key={a} variant={LEGEND[a]} label={ALGORITHM_LABEL[a]} />)}
-      </HStack>
+      {ok ? (
+        <Grid columns={2} gap={2}>
+          <Kpi label="Thời gian di chuyển ước tính" value={minutes(now.cost_s!)}
+            sub={`theo điều kiện giao thông · ${secondsRaw(now.cost_s!)}${same ? '' : ' · theo Dijkstra'}`} />
+          <Kpi label="Quãng đường" value={km(now.distance_m ?? 0)} sub={metersRaw(now.distance_m ?? 0)} />
+        </Grid>
+      ) : (
+        <Kpi label="Thời gian di chuyển ước tính" value="Không có đường"
+          sub="Không còn đường đi giữa hai điểm với điều kiện giao thông này." />
+      )}
       {previous && (
         <VStack gap={0.5}>
           <Text type="body" weight="semibold">
@@ -107,12 +121,18 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
           <Text type="supporting">
             {/* Ghi cả hai kịch bản (R-7): so với lần ngay trước, không phải với Cơ sở. */}
             Lần trước: {previous.label}. Lần này: {scenarioLabel}.
-            {lost ? ' Nét xám mờ trên bản đồ là tuyến lần trước, nay không đi được.' : moved ? ' Tuyến lần trước vẽ nét xám mờ trên bản đồ.' : ''}
+            {lost ? ' Nét rỗng màu xám trên bản đồ là tuyến lần trước, nay không đi được.' : moved ? ' Tuyến lần trước vẽ nét rỗng màu xám trên bản đồ.' : ''}
           </Text>
         </VStack>
       )}
+      <HStack gap={2} vAlign="center" hAlign="between">
+        <Text type="body" weight="semibold">So sánh thuật toán</Text>
+        <HStack gap={1}>
+          {algos.map((a) => <Badge key={a} variant={LEGEND[a]} label={ALGORITHM_LABEL[a]} />)}
+        </HStack>
+      </HStack>
       <Table<Row>
-        data={data}
+        data={tableData}
         idKey="metric"
         density="compact"
         columns={[
