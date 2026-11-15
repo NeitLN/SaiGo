@@ -59,11 +59,11 @@ Rê chuột lên tuyến thì đoạn sẽ đóng tô đỏ kèm "Bấm để đ
 
 ### 1.3. Kết quả đo được
 
-**Khối Dijkstra / A\*** (RQ1): thời gian di chuyển ước tính (theo điều kiện giao thông), quãng đường, số node mở rộng, thời gian tính toán (1 lần chạy); dòng "Chi phí trùng khớp: có/không" và "Ở truy vấn này, A* mở …% số node của Dijkstra". Khi bật Phần mở rộng có bảng phụ ALT / Hai chiều.
+**Ô số chính** (đợt UI 15/11): thời gian di chuyển ước tính (phút, dòng phụ ghi giây và "theo điều kiện giao thông") và quãng đường (km, dòng phụ ghi mét); với tour là của phương án **đang xem**. Ở 768–1439 px có dải ô số này ngay dưới chọn chế độ. **Bảng so sánh thuật toán** (RQ1): khi Dijkstra và A* cùng chi phí, bảng chỉ còn số node mở rộng và thời gian tính toán (1 lần chạy), vì thời gian di chuyển và quãng đường đã ở ô số chính; khác chi phí thì bảng ghi đủ cả bốn dòng; dòng "Chi phí trùng khớp: có/không" và "Ở truy vấn này, A* mở …% số node của Dijkstra". Khi bật Phần mở rộng có bảng phụ ALT / Hai chiều.
 
 **So với lần trước** (cùng điểm, khác điều kiện giao thông hoặc cạnh đóng): "186,1 s → 246,1 s: +60,0 s (+32,2%)", dòng phụ ghi điều kiện lần trước và lần này. Lưu ý: so với **lần ngay trước**, không phải với Cơ sở.
 
-**Thẻ tour** (RQ2): Thứ tự nhập · Nearest Neighbor · NN + 2-opt (phương án được chọn) · **Held–Karp (tối ưu, chỉ để đối chứng)** khi tổng số điểm ≤ 11 · NN + 2-opt + Or-opt khi bật Phần mở rộng. Badge "Rẻ nhất" gắn mọi thẻ có chi phí thấp nhất, nên thẻ Held–Karp cũng có thể mang badge. Mỗi thẻ có nút **Xem trên bản đồ**. Sau khi đóng đường có thêm thẻ **Giữ thứ tự cũ** và dòng "Cùng thứ tự, trước khi đóng" (chỉ khi lần này cùng kịch bản và chỉ đóng thêm đoạn).
+**Kết quả tour** (RQ2): khung **Đang xem** ở đầu: tên phương án, nhãn "Được chọn" hoặc "Đối chứng", ô số chính, dòng "N điểm giao · gồm chặng về kho · nhanh hơn thứ tự nhập X%", và **lịch trình** Kho → 1 … n → về kho, đánh số khớp marker (không có giờ đến từng điểm: API chỉ trả tổng). Dưới là **Các phương án**: Thứ tự nhập · Nearest Neighbor · NN + 2-opt (phương án được chọn) · Held–Karp (tham chiếu tối ưu, chỉ để đối chứng) khi tổng số điểm ≤ 11 · NN + 2-opt + Or-opt khi bật Phần mở rộng; mỗi phương án một dòng phút · km, nút **Xem trên bản đồ**. Badge "Thời gian ước tính thấp nhất" gắn mọi phương án có chi phí thấp nhất, nên Held–Karp cũng có thể mang badge. Sau khi đóng đường có thêm **Giữ thứ tự cũ** (đứng đầu) và dòng "Cùng thứ tự, trước khi đóng" (chỉ khi lần này cùng điều kiện giao thông và chỉ đóng thêm đoạn). Dòng cuối: "Tham chiếu tối ưu (Held–Karp): …; phương án được chọn chậm hơn tối ưu X%".
 
 **Dòng điều kiện**: "Điều kiện giao thông: <tên>", thêm "; đóng N cạnh" khi đang đóng cạnh.
 
@@ -91,7 +91,7 @@ Giữ đúng số bước của [PROJECT_BRIEF](PROJECT_BRIEF.md) mục 7; bư�
 | 6 | Ở ô **Đóng một đoạn trên tuyến**, chọn "Đoạn 10/18" (hoặc bấm đoạn đó trên bản đồ) | Đoạn đỏ; tuyến mới 302,3 s, 2.118 m; "246,1 s → 302,3 s"; "Đang đóng 1 cạnh" | Lập lại tuyến, không dùng cạnh bị đóng (RQ3) | ~25 s |
 | 7 | Chọn lộ trình mẫu "Không còn đường" | Thông báo không có đường; không vẽ đường thẳng; Dijkstra và A* cùng mở 1.762 node | Hệ thống báo đúng giới hạn (RQ3); khi không còn đường, A* duyệt như Dijkstra | ~20 s |
 | 8 | Chuyển sang slide biểu đồ tăng quy mô | `expanded` và thời gian theo `|V|` (4 kích thước, fixed trips) | Số đo thật (RQ1b) | ~30 s |
-| 9 | Chế độ **Tour**, lộ trình mẫu "Kho + 5 điểm giao"; bấm **Xem trên bản đồ** ở thẻ Thứ tự nhập rồi NN + 2-opt | 1.066,0 s → 898,1 s, thứ tự giao đổi; thẻ Held–Karp 627,8 s mang "Rẻ nhất", NN + 2-opt "đắt hơn tối ưu 43,0%" | Tầng thứ hai của bài toán (RQ2). Câu chuẩn bị sẵn: "Held–Karp chỉ để đối chứng, không dùng để chọn tour" | ~45 s |
+| 9 | Chế độ **Tour**, lộ trình mẫu "Kho + 5 điểm giao"; bấm **Xem trên bản đồ** ở thẻ Thứ tự nhập rồi NN + 2-opt | 1.066,0 s → 898,1 s, thứ tự giao đổi; thẻ Held–Karp 627,8 s mang "Thời gian ước tính thấp nhất", NN + 2-opt "chậm hơn tối ưu 43,0%" | Tầng thứ hai của bài toán (RQ2). Câu chuẩn bị sẵn: "Held–Karp chỉ để đối chứng, không dùng để chọn tour" | ~45 s |
 | 10 | Chọn lộ trình mẫu "Kho + 5 điểm, đóng đường gần Bến Bạch Đằng" (đóng sẵn cạnh 1666, gửi kèm thứ tự trước khi đóng) | Đoạn đỏ; thẻ "Giữ thứ tự cũ" 962,7 s đứng đầu, "Cùng thứ tự, trước khi đóng: 898,1 → 962,7 s (+7,2%)"; NN + 2-opt sắp lại 692,5 s (p5 p1 p2 p4 p3) | Đóng đường làm đổi cả tuyến lẫn thứ tự (RQ3). Sắp lại rẻ hơn tour cũ vì tour cũ là cực trị địa phương kém, không phải vì đóng đường có lợi | ~40 s |
 | 11 | Chọn lộ trình mẫu "Tour không còn khả thi" | "Không điểm nào đi tới được Nhà hát Thành phố."; bản đồ phóng vào Nhà hát, marker đỏ, đoạn đóng đỏ; không vẽ tour một phần | Hệ thống không bỏ điểm giao âm thầm (RQ3) | ~20 s |
 
@@ -108,7 +108,7 @@ Khoản cắt 4 của đề xuất phạm vi 26/10 (đóng đường qua API/CLI
 ## 3. Checklist trước buổi demo
 
 - [ ] Năm lộ trình mẫu đã chạy trên đúng snapshot sẽ dùng và cho kết quả như mục 2.
-- [ ] Số trong khối Dijkstra/A* và thẻ tour khớp với response API, không có số viết tay.
+- [ ] Số trong ô số chính, bảng Dijkstra/A* và kết quả tour khớp với response API, không có số viết tay.
 - [ ] Đóng đoạn rồi bấm **Mở lại tất cả** trả về đúng tuyến ban đầu.
 - [ ] Khối "Phân tích thuật toán" đóng, hai công tắc trong đó đang tắt khi bắt đầu.
 - [ ] Ghi nguồn hiển thị trên bản đồ: dữ liệu tuyến © OpenStreetMap contributors và nguồn của nền (Esri hoặc OSM).

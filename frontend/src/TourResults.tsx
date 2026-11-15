@@ -11,6 +11,8 @@ import { TOUR_METHOD_LABEL, type TourMethod, type TourResponse } from './api'
 import { num, seconds } from './RouteResults'
 import { describeIssue, unreachableGroups } from './tourIssues'
 import { costDelta, deltaText, orderChanged } from './compare'
+import { Grid } from '@astryxdesign/core/Grid'
+import Kpi, { km, kmText, metersRaw, minutes, minutesText, secondsRaw } from './Kpi'
 
 /** Chi phí của phương án được chọn, hoặc null khi tour không khả thi. */
 const chosenCost = (r: TourResponse): number | null =>
@@ -28,7 +30,8 @@ const METHODS: TourMethod[] = [
 /** So với thứ tự nhập, không in "cải thiện" kèm số âm (review 14/11, AI-4). Ngưỡng 0,05% để khớp số in ra 1 chữ số. */
 function improvementText(pct: number): string {
   if (Math.abs(pct) < 0.05) return 'Bằng thứ tự nhập'
-  return pct > 0 ? `Rẻ hơn thứ tự nhập ${num(pct)}%` : `Đắt hơn thứ tự nhập ${num(-pct)}%`
+  // "Nhanh hơn / chậm hơn" thay "rẻ / đắt": đại lượng là thời gian, không phải tiền (đợt UI 15/11).
+  return pct > 0 ? `Nhanh hơn thứ tự nhập ${num(pct)}%` : `Chậm hơn thứ tự nhập ${num(-pct)}%`
 }
 
 export default function TourResults({ res, labels, selected, onSelect, scenarioLabel, previous }: {
@@ -93,59 +96,113 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
   const best = Math.min(...shown.map((c) => c.cost_s))
   const isCheapest = (cost: number) => cost <= best + 1e-6 * Math.max(1, best)
   const chosenOrder = res.chosen ? res.candidates[res.chosen]?.stop_order.join(',') : undefined
+  // Đợt UI 15/11 (họp thiết kế 5 vai): tour đọc như một chuyến giao. Phương án đang xem lên đầu: ô số chính (phút, km)
+  // và lịch trình Kho → 1 … n → về kho, đánh số khớp marker. Các phương án khác thành danh sách so sánh gọn, vẫn bấm
+  // "Xem trên bản đồ". Số của phương án đang xem, không phải lúc nào cũng là phương án được chọn (vd. Held–Karp).
+  const viewKey = selected && res.candidates[selected] ? selected : res.chosen
+  const view = viewKey ? res.candidates[viewKey] : undefined
+  const depotName = labels.depot && labels.depot !== 'Kho' ? labels.depot : 'Kho'
+  const note = (m: TourMethod, c: NonNullable<typeof view>) => (
+    <>
+      {m === 'kept_order' && (
+        <Text type="supporting">Thứ tự trước khi đóng đường, mỗi chặng tìm lại trên đường hiện tại.</Text>
+      )}
+      {m === 'nearest_neighbor_2opt_oropt' && (
+        <Text type="supporting">
+          Phần mở rộng: Or-opt xen kẽ 2-opt, chạy tiếp từ NN + 2-opt. Không nằm trong các phương án đã đo ở E5,
+          nên không có số đo tổng quát; không dùng để chọn tour.
+        </Text>
+      )}
+      {m === 'optimal' && (
+        <Text type="supporting">
+          Quy hoạch động Held–Karp, chỉ tính khi tối đa 10 điểm giao. Dùng để đo các heuristic cách tối ưu bao xa,
+          không dùng để chọn tour.
+        </Text>
+      )}
+      {m === 'kept_order' && keptBefore(c.stop_order) !== null && (
+        <Text type="body" weight="semibold">
+          Cùng thứ tự, trước khi đóng: {deltaText(costDelta(keptBefore(c.stop_order), c.cost_s), 'tour')}
+        </Text>
+      )}
+      {m === 'kept_order' && c.stop_order.join(',') === chosenOrder && (
+        <Text type="body">Sắp lại cho ra đúng thứ tự này: đóng đường không làm đổi thứ tự.</Text>
+      )}
+    </>
+  )
   return (
     <VStack gap={3}>
+      {view && viewKey && (
+        <Card padding={3} elevation="low">
+          <VStack gap={2}>
+            <HStack gap={2} hAlign="between" vAlign="center">
+              <Text type="body" weight="semibold">Đang xem: {TOUR_METHOD_LABEL[viewKey]}</Text>
+              <HStack gap={1}>
+                {viewKey === res.chosen && <Badge variant="purple" label="Được chọn" />}
+                {viewKey === 'optimal' && <Badge variant="neutral" label="Đối chứng" />}
+              </HStack>
+            </HStack>
+            <Grid columns={2} gap={2}>
+              <Kpi label="Thời gian di chuyển ước tính" value={minutes(view.cost_s)} sub={secondsRaw(view.cost_s)} />
+              <Kpi label="Quãng đường" value={km(view.distance_m)} sub={metersRaw(view.distance_m)} />
+            </Grid>
+            <Text type="supporting">
+              {view.stop_order.length} điểm giao · gồm chặng về kho
+              {viewKey !== 'input' ? ` · ${improvementText(view.improvement_pct).toLowerCase()}` : ''}
+            </Text>
+            {/* Lịch trình: số khớp marker trên bản đồ. Không có giờ đến từng điểm: API chỉ trả tổng của cả tour. */}
+            <VStack gap={1}>
+              <HStack gap={2} vAlign="center">
+                <Badge variant="green" label="K" />
+                <Text type="body">{depotName}</Text>
+              </HStack>
+              {view.stop_order.map((id, i) => (
+                <HStack key={id} gap={2} vAlign="center">
+                  <Badge variant="purple" label={String(i + 1)} />
+                  <Text type="body">{name(id)}</Text>
+                </HStack>
+              ))}
+              <HStack gap={2} vAlign="center">
+                <Badge variant="green" label="K" />
+                <Text type="supporting">Về {depotName === 'Kho' ? 'kho' : depotName}</Text>
+              </HStack>
+            </VStack>
+            {note(viewKey, view)}
+          </VStack>
+        </Card>
+      )}
       {compareLine}
+      <Text type="body" weight="semibold">Các phương án</Text>
       {methods.map((m) => {
         const c = res.candidates[m]
         if (!c) return null
         const isSelected = m === selected
         return (
-          <Card key={m} variant={isSelected ? 'blue' : 'default'} padding={3}>
-            <VStack gap={1.5}>
-              <HStack gap={2} hAlign="between" vAlign="center">
-                <Text type="body" weight="semibold">{TOUR_METHOD_LABEL[m]}</Text>
-                {isCheapest(c.cost_s) && <Badge variant="success" label="Rẻ nhất" />}
+          <Card key={m} padding={2} variant={isSelected ? 'muted' : 'default'}>
+            <VStack gap={1}>
+              <Text type="body" weight="semibold">{TOUR_METHOD_LABEL[m]}</Text>
+              {/* Badge dòng riêng: cùng hàng với tên dài (Held–Karp) thì bị cắt ở cột 360 px (góp ý #160). */}
+              {isCheapest(c.cost_s) && <HStack><Badge variant="success" label="Thời gian ước tính thấp nhất" /></HStack>}
+              <Text type="body" hasTabularNumbers>
+                {minutesText(c.cost_s)} · {kmText(c.distance_m)}
+                {m !== 'input' ? ` · ${improvementText(c.improvement_pct).toLowerCase()}` : ''}
+              </Text>
+              <Text type="supporting" hasTabularNumbers>
+                {seconds(c.cost_s)} · {num(c.distance_m, 0)} m · Thứ tự: {c.stop_order.map(name).join(' → ')}
+              </Text>
+              <HStack hAlign="end">
+                <Button label={isSelected ? 'Đang hiển thị' : 'Xem trên bản đồ'} size="sm"
+                  variant={isSelected ? 'primary' : 'secondary'} onClick={() => onSelect(m)} />
               </HStack>
-              <Text type="body">Thời gian di chuyển ước tính: {seconds(c.cost_s)}</Text>
-              <Text type="body">Quãng đường: {num(c.distance_m, 0)} m</Text>
-              {m === 'kept_order' && (
-                <Text type="supporting">Thứ tự trước khi đóng đường, mỗi chặng tìm lại trên đường hiện tại.</Text>
-              )}
-              {m === 'nearest_neighbor_2opt_oropt' && (
-                <Text type="supporting">
-                  Phần mở rộng: Or-opt xen kẽ 2-opt, chạy tiếp từ NN + 2-opt. Không nằm trong các phương án đã đo ở E5,
-                  nên không có số đo tổng quát; không dùng để chọn tour.
-                </Text>
-              )}
-              {m === 'optimal' && (
-                <Text type="supporting">
-                  Quy hoạch động Held–Karp, chỉ tính khi tối đa 10 điểm giao. Dùng để đo các heuristic cách tối ưu bao xa,
-                  không dùng để chọn tour.
-                </Text>
-              )}
-              {m === 'kept_order' && keptBefore(c.stop_order) !== null && (
-                <Text type="body" weight="semibold">
-                  Cùng thứ tự, trước khi đóng: {deltaText(costDelta(keptBefore(c.stop_order), c.cost_s), 'tour')}
-                </Text>
-              )}
-              {m === 'kept_order' && c.stop_order.join(',') === chosenOrder && (
-                <Text type="body">Sắp lại cho ra đúng thứ tự này: đóng đường không làm đổi thứ tự.</Text>
-              )}
-              {m !== 'input' && <Text type="body">{improvementText(c.improvement_pct)}</Text>}
-              <Text type="supporting">Thứ tự: {c.stop_order.map(name).join(' → ')}</Text>
-              <Button label={isSelected ? 'Đang hiển thị' : 'Xem trên bản đồ'} size="sm"
-                variant={isSelected ? 'primary' : 'secondary'} onClick={() => onSelect(m)} />
             </VStack>
           </Card>
         )
       })}
       {res.optimal && (
         <Text type="supporting">
-          Tối ưu (Held–Karp): {seconds(res.optimal.cost_s)};{' '}
+          Tham chiếu tối ưu (Held–Karp): {seconds(res.optimal.cost_s)};{' '}
           {res.optimal.gap_pct < 0.05
             ? 'phương án được chọn là tối ưu'
-            : `phương án được chọn đắt hơn tối ưu ${num(res.optimal.gap_pct)}%`}
+            : `phương án được chọn chậm hơn tối ưu ${num(res.optimal.gap_pct)}%`}
         </Text>
       )}
       <Text type="supporting">

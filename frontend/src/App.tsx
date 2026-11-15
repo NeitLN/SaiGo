@@ -21,11 +21,13 @@ import { Tooltip } from '@astryxdesign/core/Tooltip'
 import { VStack } from '@astryxdesign/core/VStack'
 import { useAnnounce, useMediaQuery } from '@astryxdesign/core/hooks'
 import {
-  BASELINE, MAX_TOUR_STOPS, getSnap, postRoute, postTour,
+  BASELINE, MAX_TOUR_STOPS, TOUR_METHOD_LABEL, getSnap, postRoute, postTour,
   type BlockedEdge, type LatLon, type RouteResponse, type TourMethod, type TourResponse,
 } from './api'
 import { DEMO_CASES, DEMO_DATASET_ID, NAMED_PLACES } from './cases'
 import { costDelta, deltaText } from './compare'
+import { Grid } from '@astryxdesign/core/Grid'
+import Kpi, { km, metersRaw, minutes, secondsRaw } from './Kpi'
 import { routeSegments, segmentLength, toLatLngs, zoneLegend, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
@@ -657,6 +659,23 @@ export default function App() {
     : (tour ? tourAnnouncement(tour)
       + (prevTour ? ` So với lần trước: ${deltaText(costDelta(tourCost(prevTour.res), tourCost(tour)), 'tour')}.` : '') : null)
 
+  const viewedTour = tour?.status === 'ok' && tourMethod ? tour.candidates[tourMethod] : undefined
+  const summaryKpi = mode === 'route'
+    ? (route && routeCost(route.res) !== null
+      ? {
+          timeNote: 'theo điều kiện giao thông',
+          cost: routeCost(route.res)!, dist: route.res.results.dijkstra?.distance_m ?? 0,
+          delta: prevRoute ? deltaText(costDelta(routeCost(prevRoute.res), routeCost(route.res))) : null,
+        }
+      : null)
+    : (viewedTour
+      ? {
+          timeNote: TOUR_METHOD_LABEL[tourMethod!],
+          cost: viewedTour.cost_s, dist: viewedTour.distance_m,
+          delta: prevTour ? deltaText(costDelta(tourCost(prevTour.res), tourCost(tour!)), 'tour') : null,
+        }
+      : null)
+
   const hint = mode === 'route'
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
       : !target ? 'Bấm để chọn điểm đến.'
@@ -675,12 +694,24 @@ export default function App() {
         <SegmentedControlItem value="route" label="Tìm đường" />
         <SegmentedControlItem value="tour" label="Tour" />
       </SegmentedControl>
-      {(medium || narrow) && summary && (
-        <VStack gap={0.5}>
-          <Text type="body" weight="semibold">{summary}</Text>
-          <Text type="supporting">Bảng chi tiết ở mục Kết quả đo được bên dưới.</Text>
+      {/* Dải KPI ở đầu cột khi không có cột kết quả riêng (< 1440 px; đợt UI 15/11 nâng từ dòng tóm tắt của #153). */}
+      {(medium || narrow) && summaryKpi && (
+        <VStack gap={1}>
+          <Grid columns={2} gap={2}>
+            <Kpi label="Thời gian di chuyển ước tính" value={minutes(summaryKpi.cost)}
+              sub={`${summaryKpi.timeNote} · ${secondsRaw(summaryKpi.cost)}`} />
+            <Kpi label="Quãng đường" value={km(summaryKpi.dist)} sub={metersRaw(summaryKpi.dist)} />
+          </Grid>
+          {/* Tour: so theo phương án được chọn như dòng ở cột kết quả, nên ghi rõ (góp ý #160). */}
+          {summaryKpi.delta && (
+            <Text type="body" weight="semibold">
+              So với lần trước{mode === 'tour' ? ', phương án được chọn' : ''}: {summaryKpi.delta}
+            </Text>
+          )}
+          <Text type="supporting">Chi tiết ở mục Kết quả đo được bên dưới.</Text>
         </VStack>
       )}
+      {(medium || narrow) && !summaryKpi && summary && <Text type="body" weight="semibold">{summary}</Text>}
       {/* Đợt UI 15/11 (họp thiết kế 5 vai): chia nhóm theo công việc: lộ trình mẫu → điểm → điều kiện giao thông;
           phần phân tích thuật toán (trace, phần mở rộng) gom vào một khối thu gọn, không ẩn tên thuật toán. */}
       <Selector
