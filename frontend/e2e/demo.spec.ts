@@ -159,3 +159,22 @@ test('Bản đồ: ký hiệu A/B có tên địa danh, chú giải thu gọn đ
   await expectAll(page, ['193,0'])
   await expect(page.getByRole('button', { name: 'Chú giải' })).toBeFocused()
 })
+
+test('Tour: lịch trình khớp marker, rê dòng làm nổi điểm, dòng phương án có vạch Held–Karp', async ({ page }) => {
+  await mode(page, 'Tour')
+  await choose(page, 'Lộ trình mẫu', 'Kho + 5 điểm giao')
+  await expectAll(page, ['898,1'])
+  // NN + 2-opt: p1, p2, p4, p3, p5 → Nhà thờ Đức Bà, Nhà hát Thành phố, Bến Bạch Đằng, Bảo tàng Mỹ thuật, Công viên Tao Đàn.
+  const rows = page.locator('.itin-row')
+  await expect(rows).toHaveCount(7)
+  await expect(rows.nth(3)).toHaveAccessibleName('Điểm 3: Bến Bạch Đằng')
+  await expect(rows.nth(3)).toContainText('nhập #4')
+  await rows.nth(3).focus()
+  await expect(page.getByRole('img', { name: 'Điểm 3: Bến Bạch Đằng' })).toHaveClass(/is-highlighted/)
+  await rows.nth(3).blur()
+  await expect(page.getByRole('img', { name: 'Điểm 3: Bến Bạch Đằng' })).not.toHaveClass(/is-highlighted/)
+  // Bốn phương án, mỗi dòng một thanh có vạch tối ưu (Held–Karp chạy trong cùng response).
+  await expect(page.locator('.plan-row')).toHaveCount(4)
+  await expect(page.locator('.plan-row .astryx-progress-bar-mark')).toHaveCount(4)
+  await expect(page.getByText('chậm hơn tối ưu 43,0%')).toBeVisible()
+})

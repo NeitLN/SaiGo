@@ -158,6 +158,8 @@ export class MapLayers {
   private map: L.Map
   private legendEl: HTMLDivElement
   private legendCollapsed = false
+  private stopMarkers = new Map<string, L.Marker>()
+  private highlighted: string | null = null
   private legendBtn: HTMLButtonElement
   private legendRows: HTMLDivElement
 
@@ -472,6 +474,7 @@ export class MapLayers {
    */
   setTourPoints(depot: TourPoint | null, stops: TourPoint[], order?: string[], broken: ReadonlySet<string> = new Set()) {
     this.points.clearLayers()
+    this.stopMarkers.clear()
     // Bản đồ hẹp (điện thoại): tên cố định của 5–14 điểm đè lên nhau (test lại 15/11, A-10), nên chỉ hiện khi chạm /
     // rê chuột; điểm hỏng vẫn ghi tên cố định.
     const w = this.map.getSize().x
@@ -495,6 +498,7 @@ export class MapLayers {
         .bindTooltip(depot.label !== 'Kho' ? `Kho · ${depot.label}` : 'Kho', { permanent: true, direction: 'left', offset: [-14, 0], className: 'map-label' })
         .addTo(this.points)
       label(dm, depot.label !== 'Kho' ? `Kho: ${depot.label}` : 'Kho', bad)
+      this.stopMarkers.set(depot.id, dm)
     }
     stops.forEach((s, i) => {
       const n = order ? order.indexOf(s.id) + 1 : i + 1
@@ -508,7 +512,30 @@ export class MapLayers {
         .bindTooltip(s.label, { direction: 'right', offset: [12, 0], permanent: bad || (!/^Điểm \d+$/.test(s.label) && !narrow && few), className: 'stop-label' })
         .addTo(this.points)
       label(sm, `Điểm ${n}: ${s.label}`, bad)
+      this.stopMarkers.set(s.id, sm)
     })
+    const h = this.highlighted
+    this.highlighted = null
+    if (h) this.highlightStop(h)
+  }
+
+  /**
+   * Làm nổi marker của một điểm (rê chuột / focus dòng lịch trình ở panel trái, đợt UI "Bàn điều phối"): phóng to,
+   * đưa lên trên và hiện tên kể cả khi tên đang ẩn (bản đồ hẹp, tour nhiều điểm). null thì bỏ làm nổi.
+   */
+  highlightStop(id: string | null) {
+    if (this.highlighted) {
+      const old = this.stopMarkers.get(this.highlighted)
+      old?.getElement()?.classList.remove('is-highlighted')
+      old?.setZIndexOffset(0)
+      if (old && !old.getTooltip()?.options.permanent) old.closeTooltip()
+    }
+    this.highlighted = id
+    const m = id ? this.stopMarkers.get(id) : undefined
+    if (!m) return
+    m.getElement()?.classList.add('is-highlighted')
+    m.setZIndexOffset(1000)
+    m.openTooltip()
   }
 
   /** Sau khi khung bản đồ đổi kích thước (thu/mở khay phân tích): thu phóng lại cho vừa tuyến / tour đang vẽ. */

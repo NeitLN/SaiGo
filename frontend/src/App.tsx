@@ -32,7 +32,7 @@ import Kpi, { km, metersRaw, minutes, minutesText, secondsRaw } from './Kpi'
 import { routeSegments, segmentLength, toLatLngs, zoneLegend, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
-import TourResults from './TourResults'
+import TourResults, { TourItinerary } from './TourResults'
 import { unreachableGroups } from './tourIssues'
 import {
   TRACE_LIMIT, addTourPoint, blockedIds, distanceText, fmt, latLon, nextPrevious, nextRoutePoint, removeLastTourPoint,
@@ -774,6 +774,23 @@ export default function App() {
     </>
   )
 
+  // Đặt điểm từ danh sách địa danh (đợt 3, C-b): như một cú bấm bản đồ tại địa danh đó, đi qua cùng bước kiểm; dùng
+  // được bằng bàn phím. Ô luôn về trống sau khi chọn để chọn tiếp được.
+  const placeSelector = (
+    <Selector
+      label={mode === 'route' ? 'Đặt điểm từ địa danh' : 'Thêm kho / điểm giao từ địa danh'}
+      placeholder="Chọn địa danh có tên"
+      options={NAMED_PLACES.map((p) => ({ value: p.name, label: p.name }))}
+      value=""
+      onChange={(v) => {
+        const place = NAMED_PLACES.find((p) => p.name === v)
+        if (place) onMapClick(place)
+      }}
+      isDisabled={caseDisabled}
+      disabledMessage={`Địa danh lấy toạ độ trên đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
+    />
+  )
+
   const middle = (
     <VStack gap={4}>
       {status}
@@ -789,21 +806,8 @@ export default function App() {
       <Divider />
       <VStack gap={3}>
         <Heading level={3}>{mode === 'route' ? 'Điểm đi và điểm đến' : 'Kho và điểm giao'}</Heading>
-        <Text type="supporting">{hint}</Text>
-        {/* Đặt điểm từ danh sách địa danh (đợt 3, C-b): như một cú bấm bản đồ tại địa danh đó, đi qua cùng
-            bước kiểm; dùng được bằng bàn phím. Ô luôn về trống sau khi chọn để chọn tiếp được. */}
-        <Selector
-          label={mode === 'route' ? 'Đặt điểm từ địa danh' : 'Thêm kho / điểm giao từ địa danh'}
-          placeholder="Chọn địa danh có tên"
-          options={NAMED_PLACES.map((p) => ({ value: p.name, label: p.name }))}
-          value=""
-          onChange={(v) => {
-            const place = NAMED_PLACES.find((p) => p.name === v)
-            if (place) onMapClick(place)
-          }}
-          isDisabled={caseDisabled}
-          disabledMessage={`Địa danh lấy toạ độ trên đồ thị ${DEMO_DATASET_ID}, server đang nạp ${datasetId}.`}
-        />
+        {mode === 'route' && <Text type="supporting">{hint}</Text>}
+        {mode === 'route' && placeSelector}
         {mode === 'route' ? (
           <VStack gap={1}>
             <HStack gap={2} vAlign="center">
@@ -816,13 +820,20 @@ export default function App() {
             </HStack>
           </VStack>
         ) : (
-          <HStack gap={2} vAlign="center">
-            <StatusDot variant={depot ? 'success' : 'neutral'} label={depot ? 'Đã đặt kho' : 'Chưa đặt kho'} />
-            <Text type="body">
-              {!depot ? 'Chưa đặt kho' : depot.label === 'Kho' ? 'Đã đặt kho' : `Kho: ${depot.label}`} · {stops.length} điểm giao
-            </Text>
-          </HStack>
+          <VStack gap={3}>
+            <HStack gap={2} vAlign="center">
+              <StatusDot variant={depot ? 'success' : 'neutral'} label={depot ? 'Đã đặt kho' : 'Chưa đặt kho'} />
+              <Text type="body">
+                {!depot ? 'Chưa đặt kho' : depot.label === 'Kho' ? 'Đã đặt kho' : `Kho: ${depot.label}`} · {stops.length} điểm giao
+              </Text>
+            </HStack>
+            {/* Lịch trình của phương án đang xem (đợt UI "Bàn điều phối"): số khớp marker, rê / focus thì marker nổi lên. */}
+            {tour && <TourItinerary res={tour} method={tourMethod} labels={tourLabels}
+              onHover={(id) => layersRef.current?.highlightStop(id)} />}
+          </VStack>
         )}
+        {mode === 'tour' && placeSelector}
+        {mode === 'tour' && <Text type="supporting">{hint}</Text>}
         <HStack gap={2}>
           {mode === 'route'
             ? <Button label="Đảo chiều" size="sm" isDisabled={!(source && target) || checking} onClick={swap} />

@@ -348,3 +348,109 @@
 .delta-fast {
   color: var(--color-text-success);
 }
+
+/* Lịch trình tour ở panel trái (đợt UI "Bàn điều phối"): số trong vòng tím khớp marker, đường nối dọc, kho ô vuông mực;
+   dòng đang rê / focus tô nền tím nhạt và marker trên bản đồ nổi lên. */
+.itin {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  display: grid;
+  gap: 2px;
+}
+
+.itin::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: color-mix(in srgb, var(--color-data-categorical-purple) 30%, transparent);
+}
+
+.itin-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 8px 0 0;
+  border-radius: var(--radius-element);
+}
+
+.itin-row:hover,
+.itin-row:focus-visible {
+  background: color-mix(in srgb, var(--color-data-categorical-purple) 10%, transparent);
+}
+
+.itin-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.itin-mark {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--color-data-categorical-purple);
+  color: white;
+  font-weight: 700;
+  font-size: 12.5px;
+  border: 2px solid var(--color-background-surface);
+}
+
+.itin-depot {
+  border-radius: 6px;
+  background: var(--color-text-primary);
+  color: var(--color-background-surface);
+}
+
+/* Marker được làm nổi từ dòng lịch trình. */
+.leaflet-marker-icon.is-highlighted {
+  transform-origin: center;
+  filter: drop-shadow(0 0 0 #fff) drop-shadow(0 0 4px rgb(0 0 0 / 0.45));
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Khay "So sánh phương án": mỗi phương án một dòng, dòng đang xem nền tím nhạt, thanh cùng trục có vạch Held–Karp. */
+.plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.plan-row {
+  min-height: 40px;
+  padding: 2px 8px;
+  border-radius: var(--radius-element);
+}
+
+.plan-row.is-selected {
+  background: color-mix(in srgb, var(--color-data-categorical-purple) 10%, transparent);
+}
+
+.plan-bar .astryx-progress-bar {
+  --color-background-muted: var(--color-border);
+}
+
+.plan-bar .astryx-progress-bar-track {
+  height: 12px;
+  border-radius: 3px;
+}
+
+.plan-bar .astryx-progress-bar-fill {
+  background: color-mix(in srgb, var(--color-data-categorical-purple) 45%, var(--color-background-surface));
+  border-radius: 3px;
+}
+
+.plan-bar.is-selected .astryx-progress-bar-fill {
+  background: var(--color-data-categorical-purple);
+}
