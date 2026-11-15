@@ -51,6 +51,23 @@ export type NextRoutePoint =
   | { kind: 'ok'; source: Pt; target: Pt | null; restart: boolean }
 
 /**
+ * Lần này chỉ đóng thêm đoạn so với lần trước: cùng kịch bản, tập cạnh đóng chứa hẳn tập lần trước. Chỉ khi đó phép
+ * so "cùng thứ tự, trước khi đóng" mới nói đúng ảnh hưởng của việc đóng (test lại 15/11, T-1).
+ */
+export function closedMore(prev: { scenarioId: string; blocked: number[] } | null,
+  now: { scenarioId: string; blocked: number[] } | null): boolean {
+  if (!prev || !now || prev.scenarioId !== now.scenarioId) return false
+  const cur = new Set(now.blocked)
+  return cur.size > new Set(prev.blocked).size && prev.blocked.every((id) => cur.has(id))
+}
+
+/** Nhãn kịch bản kèm số cạnh đóng; nhãn cơ sở ghi "không đóng đường" nên bỏ vế đó khi có cạnh đóng (T-7). */
+export function runLabel(scenarioLabel: string, blockedCount: number): string {
+  if (blockedCount === 0) return scenarioLabel
+  return `${scenarioLabel.replace(/, không đóng đường$/, '')}; đóng ${blockedCount} cạnh`
+}
+
+/**
  * Điểm vừa đặt ở chế độ tìm đường: lần 1 là điểm đi, lần 2 là điểm đến; đã đủ hai điểm (chưa tìm) thì bắt đầu lại
  * từ điểm đi (`restart`: App xoá tuyến, đoạn đóng, lỗi như resetRoute). Điểm đến trùng điểm đi thì từ chối (test
  * lại 15/11, R-9: trước đây ra tuyến 0 s, 0 m mà không báo gì; tour đã chặn trùng từ #145).

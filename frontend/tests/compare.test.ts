@@ -49,3 +49,9 @@ test('bước 10 của DEMO: chênh lệch của phương án được chọn đ
   assert.ok(!orderChanged(['p1', 'p2'], ['p1', 'p2']))
   assert.ok(!orderChanged(null, ['p1']))      // lần trước không khả thi: không có thứ tự để so
 })
+
+test('deltaText: chữ cho tour và phần trăm rất nhỏ (T-7)', () => {
+  assert.equal(deltaText(costDelta(898.07, null), 'tour'), '898,1 s → không lập được tour đầy đủ')
+  assert.equal(deltaText(costDelta(null, 80.1), 'tour'), 'trước không lập được tour đầy đủ → 80,1 s')
+  assert.equal(deltaText(costDelta(1003.3, 1003.6)), '1.003,3 s → 1.003,6 s: +0,3 s (+< 0,1%)')
+})

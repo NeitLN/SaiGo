@@ -27,7 +27,7 @@ import TourResults from './TourResults'
 import { unreachableGroups } from './tourIssues'
 import {
   TRACE_LIMIT, addTourPoint, blockedIds, distanceText, fmt, latLon, nextPrevious, nextRoutePoint, removeLastTourPoint,
-  renameIds, routeAnnouncement, routePoints, sameIdList, tourAnnouncement, tourPoints, traceLegend, type Mode, type Pt,
+  closedMore, renameIds, routeAnnouncement, routePoints, runLabel as scenarioRunLabel, sameIdList, tourAnnouncement, tourPoints, traceLegend, type Mode, type Pt,
   type Run,
 } from './appLogic'
 import { useServerStatus } from './useServerStatus'
@@ -69,7 +69,11 @@ export default function App() {
   const { server, datasetId, dataArea, scenarios, scenarioNote, checkServer, markServerUp } = useServerStatus()
   const [scenarioId, setScenarioId] = useState('baseline')
   const [mode, setMode] = useState<Mode>('route')
-  const [caseId, setCaseId] = useState('')
+  // Ô Case demo nhớ riêng theo chế độ (test lại 15/11, R-8/T-7): trước đây đổi chế độ rồi quay lại thì ô trống dù
+  // kết quả của case vẫn đang hiện. setCaseId đổi ô của chế độ đang xem.
+  const [caseIds, setCaseIds] = useState<Record<Mode, string>>({ route: '', tour: '' })
+  const caseId = caseIds[mode]
+  const setCaseId = (id: string) => setCaseIds((s) => ({ ...s, [modeRef.current]: id }))
   // Bận và lỗi tách theo chế độ (review 14/11 đợt 3, QA-11): đổi kịch bản chạy lại query của cả hai chế độ, nên
   // dùng chung một cờ thì spinner tắt sớm và lỗi của chế độ đang ẩn hiện ở chế độ đang xem.
   const [busyRoute, setBusyRoute] = useState(false)
@@ -281,9 +285,13 @@ export default function App() {
   useEffect(() => {
     const layers = layersRef.current
     if (!layers) return
-    layers.setZones(scenario)
+    // Vùng ùn tắc theo kịch bản của kết quả đang hiện (test lại 15/11, C-5): trong lúc chờ request của kịch bản mới,
+    // bản đồ và bảng vẫn khớp nhau; chưa có kết quả thì theo kịch bản đang chọn.
+    const shownId = mode === 'route' ? route?.scenarioId : tourScenario?.scenarioId
+    const zones = scenarios.find((s) => s.id === shownId) ?? scenario
+    layers.setZones(zones)
     const legend: LegendItem[] = []
-    if (scenario.rules.length) legend.push({ kind: 'zone', label: 'Vùng cao điểm mô phỏng' })
+    if (zones.rules.length) legend.push({ kind: 'zone', label: 'Vùng cao điểm mô phỏng' })
     if (mode === 'route') {
       layers.setClosed(closedToDraw(blocked, edgeGeom.current, closed))
       // Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng) vẽ mờ làm mốc, chỉ khi khác tuyến hiện tại.
@@ -337,7 +345,7 @@ export default function App() {
       }
     }
     layers.setLegend(legend)
-  }, [mapReady, mode, scenario, route, prevRoute, trace, source, target, closed, blocked, closeSegment, tour, tourMethod, depot,
+  }, [mapReady, mode, scenario, scenarios, tourScenario, route, prevRoute, trace, source, target, closed, blocked, closeSegment, tour, tourMethod, depot,
     stops, tourClosed, tourBlocked, closeTourSegment])
 
   // --- Thao tác ---
@@ -478,6 +486,8 @@ export default function App() {
   const swap = () => {
     if (!source || !target) return
     dropPendingClicks()
+    setNotice(null)      // gợi ý "Đang hiện kết quả…" của lần trước không còn đúng (R-5)
+    setCaseId('')        // đã đảo thì không còn là case vừa chọn (C-5)
     setSource(target)
     setTarget(source)
     // Đã gửi request (kể cả khi chưa về) thì phải tìm lại theo chiều mới; nếu chỉ đổi state, request cũ về sau
@@ -490,8 +500,6 @@ export default function App() {
     setMode(v)
     // Không xoá lỗi: lỗi đã gắn theo chế độ, chỉ hiện ở chế độ sinh ra nó, quay lại vẫn thấy (góp ý #147).
     setNotice(null)
-    // Ô case demo không giữ tên case của chế độ kia (UX-11).
-    if (DEMO_CASES.find((c) => c.id === caseId)?.mode !== v) setCaseId('')
   }
 
   const clearAll = () => {
@@ -512,6 +520,7 @@ export default function App() {
 
   const reopenAll = () => {
     setNotice(null)
+    setCaseId('')        // bỏ cạnh đóng của case thì ô không còn ghi tên case đó (T-7)
     if (mode === 'route') {
       setClosed([])
       setCaseBlocked([])
@@ -531,7 +540,8 @@ export default function App() {
     dropPendingClicks()
     const c = DEMO_CASES.find((x) => x.id === id)
     if (!c) return
-    setCaseId(id)
+    // Nạp case bỏ kết quả của chế độ kia (xem dưới), nên ô case của chế độ đó cũng về trống.
+    setCaseIds({ route: c.mode === 'route' ? id : '', tour: c.mode === 'tour' ? id : '' })
     setError(null)
     setNotice(null)
     pendingFit.current = true
@@ -546,7 +556,9 @@ export default function App() {
       setTour(null)
       setTourMethod(null)
       setMode('route')
-      carriedRoute.current = routeRef.current
+      // Nạp liên tiếp khi case trước chưa về (C-5): giữ mốc cũ thay vì ghi đè bằng null.
+      carriedRoute.current = routeRef.current ?? carriedRoute.current
+      carriedTour.current = tourRunRef.current ?? carriedTour.current
       setRoute(null)
       setPrevRoute(null)
       setClosed([])
@@ -561,7 +573,8 @@ export default function App() {
       setRouteQuery(null)
       setRoute(null)
       setMode('tour')
-      carriedTour.current = tourRunRef.current
+      carriedTour.current = tourRunRef.current ?? carriedTour.current
+      carriedRoute.current = routeRef.current ?? carriedRoute.current
       setTour(null)
       setPrevTour(null)
       setDepot(d)
@@ -580,16 +593,15 @@ export default function App() {
   const noPath = route && Object.values(route.res.results).some((r) => r?.status === 'no_path')
   const tourLabels = Object.fromEntries([...(depot ? [depot] : []), ...stops].map((p) => [p.id, p.label]))
   // Nhãn kịch bản cơ sở ghi "không đóng đường", nên phải nói rõ khi người dùng hoặc case đã đóng thêm cạnh.
-  const runLabel = (r: { scenarioId: string; blocked: number[] }) => {
-    const base = scenarios.find((s) => s.id === r.scenarioId)?.label ?? r.scenarioId
-    return r.blocked.length > 0 ? `${base}; đóng thêm ${r.blocked.length} cạnh` : base
-  }
+  const runLabel = (r: { scenarioId: string; blocked: number[] }) =>
+    scenarioRunLabel(scenarios.find((s) => s.id === r.scenarioId)?.label ?? r.scenarioId, r.blocked.length)
   const routeScenarioLabel = route ? runLabel(route) : ''
   const tourScenarioLabel = tourScenario ? runLabel(tourScenario) : ''
 
   const hint = mode === 'route'
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
       : !target ? 'Bấm để chọn điểm đến.'
+        : route && noPath ? 'Không có tuyến để đóng thêm. Bấm Mở lại tất cả, đổi kịch bản, hoặc Xóa để chọn điểm mới.'
         : route ? 'Bấm vào một đoạn trên tuyến để đóng đoạn đó. Bấm Xóa để chọn điểm mới.'
           : 'Bấm Tìm đường. Bấm lên bản đồ lần nữa để chọn lại từ đầu.')
     : (!depot ? 'Bấm lên bản đồ để đặt kho.'
@@ -689,7 +701,7 @@ export default function App() {
     ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel}
       previous={prevRoute ? { res: prevRoute.res, label: runLabel(prevRoute) } : null} /> : <Text type="supporting">Chưa có kết quả.</Text>)
     : (tour ? <TourResults res={tour} labels={tourLabels} selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel}
-      previous={prevTour ? { res: prevTour.res, label: runLabel(prevTour) } : null} />
+      previous={prevTour ? { res: prevTour.res, label: runLabel(prevTour), closedMore: closedMore(prevTour, tourScenario) } : null} />
       : <Text type="supporting">Chưa có kết quả.</Text>)
 
   const resultsBlock = (

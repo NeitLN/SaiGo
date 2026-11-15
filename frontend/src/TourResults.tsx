@@ -38,12 +38,14 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
   onSelect: (m: TourMethod) => void
   scenarioLabel: string   // kịch bản của chính request đã trả về (QA-5), như dòng "Kịch bản" của RouteResults
   // Lần trước cùng bộ điểm, khác kịch bản hoặc cạnh đóng (review 14/11 đợt 2: PM-1, UX-5, AI-7).
-  previous?: { res: TourResponse; label: string } | null
+  // closedMore: lần trước cùng kịch bản và lần này chỉ đóng thêm đoạn; chỉ khi đó mới so "Cùng thứ tự, trước khi
+  // đóng" (test lại 15/11, T-1: đổi kịch bản sau khi đóng từng làm dòng này gán phần chênh do cao điểm cho việc đóng).
+  previous?: { res: TourResponse; label: string; closedMore: boolean } | null
 }) {
   const compareLine = previous && (
     <VStack gap={0.5}>
       <Text type="body" weight="semibold">
-        So với lần trước, phương án được chọn: {deltaText(costDelta(chosenCost(previous.res), chosenCost(res)))}
+        So với lần trước, phương án được chọn: {deltaText(costDelta(chosenCost(previous.res), chosenCost(res)), 'tour')}
       </Text>
       {orderChanged(chosenStops(previous.res), chosenStops(res)) && (
         <Text type="body">
@@ -51,13 +53,13 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
           {res.candidates.kept_order ? ' Ảnh hưởng của riêng việc đóng đường: xem thẻ "Giữ thứ tự cũ".' : ''}
         </Text>
       )}
-      <Text type="supporting">Lần trước: {previous.label}.</Text>
+      <Text type="supporting">Lần trước: {previous.label}. Lần này: {scenarioLabel}.</Text>
     </VStack>
   )
   // Cùng thứ tự với "Giữ thứ tự cũ" ở lần trước (thường là phương án đang xem lúc bấm đóng đường): so được
   // trực tiếp "đóng đường làm tour này dài thêm bao nhiêu".
   const keptBefore = (order: string[]) => {
-    if (!previous || previous.res.status !== 'ok') return null
+    if (!previous || !previous.closedMore || previous.res.status !== 'ok') return null
     const key = order.join(',')
     const cands = Object.values(previous.res.candidates).filter((c) => c !== undefined)
     return cands.find((c) => c.stop_order.join(',') === key)?.cost_s ?? null
@@ -124,7 +126,7 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
               )}
               {m === 'kept_order' && keptBefore(c.stop_order) !== null && (
                 <Text type="body" weight="semibold">
-                  Cùng thứ tự, trước khi đóng: {deltaText(costDelta(keptBefore(c.stop_order), c.cost_s))}
+                  Cùng thứ tự, trước khi đóng: {deltaText(costDelta(keptBefore(c.stop_order), c.cost_s), 'tour')}
                 </Text>
               )}
               {m === 'kept_order' && c.stop_order.join(',') === chosenOrder && (
