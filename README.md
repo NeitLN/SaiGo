@@ -84,7 +84,7 @@ $env:SAIGO_GRAPH = "data\processed\hcm-benthanh-r2000-20261024.json"
 uvicorn app.main:app --reload --app-dir backend
 ```
 
-Chạy test: `.venv\Scripts\python.exe -m pytest -q` (backend), `cd frontend; npm test` (logic giao diện), `cd frontend; npm run e2e` (kịch bản DEMO trên trình duyệt; cần dữ liệu thật, lần đầu chạy `npx playwright install chromium`).
+Chạy test: `.venv\Scripts\python.exe -m pytest -q` (backend; 6 test của `tests/test_crops.py` tự bỏ qua cho tới khi chạy `python scripts/make_crops.py` để dựng các file `crop_r*.json` của E3), `cd frontend; npm test` (logic giao diện), `cd frontend; npm run e2e` (kịch bản DEMO trên trình duyệt; cần dữ liệu thật, lần đầu chạy `npx playwright install chromium`).
 
 Nên clone vào thư mục không dấu (ví dụ `C:\dev\SaiGo`): trên Windows, `pip install -e` lỗi khi đường dẫn có chữ tiếng Việt. Script ở trên không dùng `-e` nên vẫn chạy được ở đường dẫn có dấu.
 
