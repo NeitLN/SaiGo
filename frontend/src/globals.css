@@ -52,7 +52,8 @@
   border: var(--border-width, 1px) solid var(--color-border);
   border-radius: var(--radius-element);
   padding: 6px 10px;
-  font-size: 13px;
+  /* 14 px: đọc được trên máy chiếu (test lại 15/11, A-10). */
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -129,4 +130,15 @@
   button:not([role='switch']) {
     border: 1px solid ButtonText;
   }
+}
+
+/* Nhãn trên bản đồ (tên điểm, khoảng cách snap, vùng ùn tắc): Leaflet mặc định 12 px, nhỏ khi trình chiếu (A-10). */
+.leaflet-tooltip {
+  font-size: 13px;
+}
+
+/* Viền ô chọn và rãnh công tắc đang tắt chỉ đạt 1,48:1 trên nền trắng (A-8): đậm hơn để đạt 3:1. */
+:root,
+[class] {
+  --color-border-emphasized: light-dark(#7d8894, #6b7380);
 }
