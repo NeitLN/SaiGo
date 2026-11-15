@@ -450,8 +450,8 @@ def run(graph_path: Path, queries_path: Path, out_dir: Path, run_id: str, *, rep
     env = collect_env(graph_path)
     (out_dir / "env.json").write_text(json.dumps(env, indent=2, ensure_ascii=False), encoding="utf-8")
     config = {
-        "run_id": run_id, "suite": SUITE, "graph": str(graph_path), "dataset_id": graph.dataset_id,
-        "queries": str(queries_path), "n_queries": len(queries), "scenario": "baseline",
+        "run_id": run_id, "suite": SUITE, "graph": Path(graph_path).as_posix(), "dataset_id": graph.dataset_id,
+        "queries": Path(queries_path).as_posix(), "n_queries": len(queries), "scenario": "baseline",
         "repeats": repeats, "warmup": warmup,
         "microbench": {"targets": targets, "n_calls": micro_calls, "rounds": micro_rounds,
                        "seed": seed, "h_call_ns_median": h_call_ns},

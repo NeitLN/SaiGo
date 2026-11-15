@@ -105,9 +105,9 @@ Micro-benchmark: một lần gọi h = 362,6 ns (median qua 20 đích), trong đ
 **Diễn giải (không phải số đo):**
 
 - **Giả thuyết của E2 được xác nhận, nhưng chỉ giải thích được một phần.** Khoảng 38–44% thời gian A* là để tính heuristic (hai cách đo lệch nhau khoảng 5 điểm vì (b) không tính phần chi phí gián tiếp như cấp phát số thực và gọi hàm qua biến). Bỏ phần này (h tính sẵn), A* nhanh hơn Dijkstra 1,87 lần [1,82; 1,92] thay vì 1,09, gần với mức tiết kiệm số node (r ≈ 0,40, tức Dijkstra mở gấp ~2,5 lần).
-- Ngay cả khi h sẵn, mỗi node của A* vẫn tốn hơn Dijkstra (677 so với 523 ns): hàng đợi ưu tiên của A* xếp theo f = g + h và có nhiều mục cũ hơn trong heap. Phần này chưa đo tách.
+- Ngay cả khi h sẵn, mỗi node của A* vẫn tốn hơn Dijkstra (677 so với 523 ns): giả thuyết (chưa đo tách): hàng đợi ưu tiên của A* xếp theo f = g + h và có thể giữ nhiều mục cũ hơn trong heap.
 - **Không có cách "miễn phí":** tính sẵn h cho cả đồ thị mỗi truy vấn tốn 0,69 ms, đắt hơn phần tiết kiệm; muốn có lợi thật phải dùng heuristic rẻ hơn (bảng tra) hoặc tiền xử lý dùng chung cho nhiều truy vấn, đúng hướng của ALT ở E2b (lợi rõ ở chuyến dài, vùng lớn).
-- **Giới hạn:** một máy, một run, khác máy đo E2 (số tuyệt đối khác E2; s tất cả ở đây 1,09 so với 1,03 ở E2, nằm sát CI của E2); chỉ đo trên Python, nơi một phép tính lượng giác đắt tương đối hơn so với ngôn ngữ biên dịch.
+- **Giới hạn:** `config.json` của run này ghi đường dẫn kiểu Windows (script đã sửa sang dạng `/` cho các run sau); một máy, một run, khác máy đo E2 (số tuyệt đối khác E2; s tất cả ở đây 1,09 so với 1,03 ở E2, nằm sát CI của E2); chỉ đo trên Python, nơi một phép tính lượng giác đắt tương đối hơn so với ngôn ngữ biên dịch.
 
 ## E3 — Đồ thị cho thí nghiệm tăng quy mô (T61)
 
