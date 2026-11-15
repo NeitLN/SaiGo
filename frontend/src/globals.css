@@ -425,12 +425,39 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  gap: 4px;
+  container-type: inline-size;
 }
 
 .plan-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) minmax(80px, 1fr) minmax(150px, auto) auto;
+  grid-template-areas: 'name bar num btn';
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
   min-height: 40px;
   padding: 2px 8px;
   border-radius: var(--radius-element);
+  min-width: 0;
+}
+
+.plan-name { grid-area: name; min-width: 0; }
+.plan-bar { grid-area: bar; min-width: 0; }
+.plan-num { grid-area: num; min-width: 0; }
+.plan-btn { grid-area: btn; }
+
+/* Khay hẹp (bố cục 768–1100 px): tên + nút trên, thanh giữa, số dưới (góp ý review #168). */
+@container (max-width: 600px) {
+  .plan-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'name btn'
+      'bar bar'
+      'num num';
+    padding-block: 6px;
+  }
 }
 
 .plan-row.is-selected {

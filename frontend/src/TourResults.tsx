@@ -14,7 +14,6 @@ import { describeIssue, unreachableGroups } from './tourIssues'
 import { costDelta, deltaText, orderChanged } from './compare'
 import { Grid } from '@astryxdesign/core/Grid'
 import { ProgressBar } from '@astryxdesign/core/ProgressBar'
-import { StackItem } from '@astryxdesign/core/Stack'
 import Kpi, { km, kmText, metersRaw, minutes, minutesText, secondsRaw } from './Kpi'
 
 /** Chi phí của phương án được chọn, hoặc null khi tour không khả thi. */
@@ -187,35 +186,37 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
     }
     return (
       <VStack gap={3}>
-        <VStack gap={1} as="ul" className="plan-list" aria-label="Các phương án">
+        <ul className="plan-list" aria-label="Các phương án">
           {methods.map((m) => {
             const c = res.candidates[m]
             if (!c) return null
             const isSelected = m === viewKey
             return (
-              <HStack key={m} as="li" gap={3} vAlign="center" className={isSelected ? 'plan-row is-selected' : 'plan-row'}>
-                <HStack gap={1} vAlign="center" width={210}>
-                  <Text type="body" weight="semibold" textWrap="nowrap">{TOUR_METHOD_LABEL[m]}</Text>
+              // Lưới CSS (globals.css): khay rộng thì một hàng tên | thanh | số | nút; khay hẹp (< 600 px, container query)
+              // thì tên + nút ở trên, thanh ở giữa, số ở dưới, để thanh không co về 0 px (góp ý review #168).
+              <li key={m} className={isSelected ? 'plan-row is-selected' : 'plan-row'}>
+                <HStack gap={1} vAlign="center" wrap="wrap" className="plan-name">
+                  <Text type="body" weight="semibold">{TOUR_METHOD_LABEL[m]}</Text>
                   {m === res.chosen && <Badge variant="purple" label="Được chọn" />}
                 </HStack>
-                <StackItem size="fill">
-                  <VStack className={isSelected ? 'plan-bar is-selected' : 'plan-bar'}>
-                    <ProgressBar label={`${TOUR_METHOD_LABEL[m]}: ${minutesText(c.cost_s)}`} isLabelHidden value={c.cost_s} max={axis}
-                      variant="neutral" marks={opt !== null ? [{ value: opt, label: 'Tối ưu (Held–Karp)' }] : undefined} />
-                  </VStack>
-                </StackItem>
-                <VStack width={170} gap={0}>
-                  <Text type="body" hasTabularNumbers textWrap="nowrap">
+                <VStack className={isSelected ? 'plan-bar is-selected' : 'plan-bar'}>
+                  <ProgressBar label={`${TOUR_METHOD_LABEL[m]}: ${minutesText(c.cost_s)}`} isLabelHidden value={c.cost_s} max={axis}
+                    variant="neutral" marks={opt !== null ? [{ value: opt, label: 'Tối ưu (Held–Karp)' }] : undefined} />
+                </VStack>
+                <VStack gap={0} className="plan-num">
+                  <Text type="body" hasTabularNumbers>
                     <Text type="inherit" weight="bold">{minutesText(c.cost_s)}</Text> · {secondsRaw(c.cost_s)}
                   </Text>
-                  <Text type="supporting" hasTabularNumbers textWrap="nowrap">{gapText(m, c.cost_s)}</Text>
+                  <Text type="supporting" hasTabularNumbers>{gapText(m, c.cost_s)}</Text>
                 </VStack>
-                <Button label={isSelected ? 'Đang hiển thị' : 'Xem trên bản đồ'} size="sm"
-                  variant={isSelected ? 'primary' : 'secondary'} onClick={() => onSelect(m)} />
-              </HStack>
+                <VStack className="plan-btn">
+                  <Button label={isSelected ? 'Đang hiển thị' : 'Xem trên bản đồ'} size="sm"
+                    variant={isSelected ? 'primary' : 'secondary'} onClick={() => onSelect(m)} />
+                </VStack>
+              </li>
             )
           })}
-        </VStack>
+        </ul>
         {view && viewKey && note(viewKey, view)}
         {previous && (
           <VStack gap={0.5}>
