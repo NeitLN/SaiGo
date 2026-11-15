@@ -970,7 +970,7 @@ export default function App() {
           description={narrow ? 'Chấm xám: Dijkstra · chấm cam: A*. Lấy bằng một lần tìm riêng, không tính vào thời gian ở bảng.' : undefined} />
       )}
       <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
-        description={narrow ? (mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, đã đo ở E5).') : undefined} />
+        description={narrow ? (mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).') : undefined} />
       {!narrow && (
         <Button label={trayOpen ? 'Thu gọn' : 'Mở rộng'} variant="ghost" size="sm" aria-expanded={trayOpen}
           aria-controls="tray-body" onClick={toggleTray} />
