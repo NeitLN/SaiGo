@@ -481,9 +481,12 @@ TOUR_COLUMNS = (
     "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
     "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
 )
-TOUR_METHOD_ORDER = ("input", "nearest_neighbor", "nearest_neighbor_2opt", "held_karp")
+TOUR_OR_OPT = "nearest_neighbor_2opt_oropt"     # chỉ có khi run_tour.py chạy với --or-opt
+TOUR_METHOD_ORDER = ("input", "nearest_neighbor", "nearest_neighbor_2opt", TOUR_OR_OPT, "held_karp")
 TOUR_METHOD_LABEL = {"input": "thứ tự nhập", "nearest_neighbor": "NN",
-                     "nearest_neighbor_2opt": "NN + 2-opt", "held_karp": "Held–Karp"}
+                     "nearest_neighbor_2opt": "NN + 2-opt", TOUR_OR_OPT: "NN + 2-opt + Or-opt",
+                     "held_karp": "Held–Karp"}
+TOUR_COST_TOL = 1e-6   # giây; cost_s trong CSV làm tròn 6 chữ số, chênh nhỏ hơn mức này coi là bằng
 
 
 @dataclass(frozen=True)
@@ -687,13 +690,75 @@ def e5_section(tour_rows: Sequence[TourRow], metas: Sequence[RunMeta]) -> Sectio
     return Section(title, table, source)
 
 
+def e5_oropt_section(tour_rows: Sequence[TourRow]) -> Section | None:
+    """Bảng phụ E5 khi CSV có dòng Or-opt: trùng tối ưu và phần Or-opt cải thiện thêm so với NN + 2-opt.
+
+    Tính **từng bộ** khả thi có đủ NN + 2-opt, Or-opt và Held–Karp. Không có dòng Or-opt nào → `None`
+    (báo cáo của run cũ không đổi).
+    """
+    if not any(r.method == TOUR_OR_OPT for r in tour_rows):
+        return None
+    title = "E5 — Or-opt so với NN + 2-opt"
+    costs: dict[tuple[str, int, int], dict[str, float]] = {}
+    timings: dict[tuple[str, int, int], dict[str, float]] = {}
+    feasible: dict[tuple[str, int, int], bool] = {}
+    for row in tour_rows:
+        key = (row.run_id, row.n_stops, row.set_id)
+        feasible[key] = feasible.get(key, True) and row.feasible
+        if row.cost_s is not None:
+            costs.setdefault(key, {})[row.method] = row.cost_s
+            timings.setdefault(key, {})[row.method] = row.order_ms
+    groups: dict[int, list[tuple[float, float, float, float]]] = {}
+    for key, by_method in costs.items():
+        need = ("nearest_neighbor_2opt", TOUR_OR_OPT, "held_karp")
+        if not feasible[key] or any(m not in by_method for m in need):
+            continue
+        opt, oropt, hk = (by_method[m] for m in need)
+        extra_ms = timings[key][TOUR_OR_OPT] - timings[key]["nearest_neighbor_2opt"]
+        groups.setdefault(key[1], []).append((opt, oropt, hk, extra_ms))
+    if not groups:
+        return Section(title, skipped="không có bộ khả thi nào đủ NN + 2-opt, Or-opt và Held–Karp")
+
+    def row_for(label: str, items: list[tuple[float, float, float, float]]) -> tuple[str, ...]:
+        total = len(items)
+        hit_opt = sum(1 for opt, _o, hk, _t in items if abs(opt - hk) <= TOUR_COST_TOL)
+        hit_or = sum(1 for _p, oropt, hk, _t in items if abs(oropt - hk) <= TOUR_COST_TOL)
+        better = sum(1 for opt, oropt, _h, _t in items if oropt < opt - TOUR_COST_TOL)
+        extra = [(opt - oropt) / opt * 100.0 for opt, oropt, _h, _t in items if opt > 0]
+        gained = [(opt - oropt) / opt * 100.0 for opt, oropt, _h, _t in items
+                  if opt > 0 and oropt < opt - TOUR_COST_TOL]
+        extra_ms = [t for *_rest, t in items]
+        return (label, f"{hit_opt}/{total}", f"{hit_or}/{total}", f"{better}/{total}",
+                fmt_number(median(extra), 2), fmt_number(median(gained), 2) if gained else MISSING,
+                fmt_number(max(extra), 2), fmt_number(median(extra_ms), 3))
+
+    table_rows = [row_for(str(n), groups[n]) for n in sorted(groups)]
+    if len(groups) > 1:
+        table_rows.append(row_for("tất cả", [x for n in sorted(groups) for x in groups[n]]))
+    table = Table(
+        headers=("Điểm giao", "NN + 2-opt trùng tối ưu", "Or-opt trùng tối ưu", "Or-opt rẻ hơn NN + 2-opt",
+                 "Median cải thiện thêm %", "Median cải thiện thêm % (bộ được cải thiện)",
+                 "Max cải thiện thêm %", "Median order_ms thêm"),
+        rows=tuple(table_rows),
+        formulas=("Cải thiện thêm % = 100·(C_nn_2opt − C_oropt)/C_nn_2opt, tính từng bộ; trùng tối ưu khi "
+                  f"|C − C_held_karp| ≤ {fmt_number(TOUR_COST_TOL, 6)} s; order_ms thêm = order_ms của Or-opt "
+                  "trừ order_ms của NN + 2-opt cùng bộ (phần chỉ do Or-opt)."),
+    )
+    run_ids = first_seen(r.run_id for r in tour_rows if r.method == TOUR_OR_OPT and r.run_id)
+    source = "Nguồn: run_id " + ", ".join(f"`{x}`" for x in (run_ids or ["?"]))
+    return Section(title, table, source)
+
+
 # --- In ra ---
 
 def render(rows: Sequence[Row], metas: Sequence[RunMeta],
            tour_rows: Sequence[TourRow] = ()) -> str:
-    """Toàn bộ báo cáo Markdown của các bảng E2, E3, E4, E5."""
+    """Toàn bộ báo cáo Markdown của các bảng E2, E3, E4, E5 (thêm bảng Or-opt khi CSV có Or-opt)."""
     sections = (e2_section(rows, metas), e3_section(rows, metas), e4_section(rows, metas),
                 e5_section(tour_rows, metas))
+    oropt = e5_oropt_section(tour_rows)
+    if oropt is not None:
+        sections += (oropt,)
     blocks = ["# Tổng hợp kết quả benchmark", ""]
     for section in sections:
         blocks += [f"## {section.title}", ""]

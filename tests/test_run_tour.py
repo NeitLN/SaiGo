@@ -19,7 +19,7 @@ from app.graph.model import load_graph, node_by_name  # noqa: E402
 from app.graph.scenario import baseline_snapshot, build_snapshot  # noqa: E402
 import plot_results  # noqa: E402
 import run_benchmarks  # noqa: E402
-from run_tour import TOUR_COLUMNS, main, plan_set, sample_sets  # noqa: E402
+from run_tour import OR_OPT_METHOD, TOUR_COLUMNS, check_order_costs, main, plan_set, sample_sets  # noqa: E402
 import summarize_results  # noqa: E402
 
 from helpers.random_graph import random_graph_dict  # noqa: E402
@@ -114,6 +114,73 @@ def test_run_tour_end_to_end_and_readers(tmp_path, rand_graph):
             assert hk <= opt + 1e-6 <= nn + 2e-6
             assert len(group["input"]["order"].split(";")) == int(n)
 
+
+
+def test_or_opt_flag_off_keeps_old_methods_and_config(tmp_path, rand_graph):
+    """Không bật --or-opt: đúng 4 phương án cũ, config ghi or_opt = false (run cũ tái lập được)."""
+    out = tmp_path / "results"
+    assert main(["--graph", str(rand_graph), "--sizes", "4", "--sets", "2", "--seed", "42",
+                 "--out", str(out), "--run-id", "off"]) == 0
+    with (out / "off" / "tour_measurements.csv").open(encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    assert {r["method"] for r in rows} == set(METHODS)
+    assert json.loads((out / "off" / "config.json").read_text(encoding="utf-8"))["or_opt"] is False
+
+
+def test_or_opt_flag_adds_method_not_worse_than_2opt(tmp_path, rand_graph):
+    """--or-opt thêm dòng nearest_neighbor_2opt_oropt; Held–Karp ≤ Or-opt ≤ NN + 2-opt; 4 phương án cũ không đổi."""
+    out = tmp_path / "results"
+    argv = ["--graph", str(rand_graph), "--sizes", "4", "6", "--sets", "3", "--seed", "42", "--out", str(out)]
+    assert main(argv + ["--run-id", "base"]) == 0
+    assert main(argv + ["--run-id", "or", "--or-opt"]) == 0
+
+    def load(run_id):
+        with (out / run_id / "tour_measurements.csv").open(encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            assert reader.fieldnames == list(TOUR_COLUMNS)          # vẫn 15 cột: Or-opt là thêm dòng, không thêm cột
+            return list(reader)
+
+    base, rows = load("base"), load("or")
+    assert len(rows) == 2 * 3 * 5
+    assert {r["method"] for r in rows} == set(METHODS) | {OR_OPT_METHOD}
+    assert json.loads((out / "or" / "config.json").read_text(encoding="utf-8"))["or_opt"] is True
+    key = lambda r: (r["set_id"], r["method"])                       # noqa: E731
+    old = {key(r): (r["cost_s"], r["order"]) for r in base}
+    assert {key(r): (r["cost_s"], r["order"]) for r in rows if r["method"] != OR_OPT_METHOD} == old
+    for set_id in {r["set_id"] for r in rows}:
+        group = {r["method"]: r for r in rows if r["set_id"] == set_id}
+        if group["input"]["feasible"] == "true":
+            hk, oropt, opt = (float(group[m]["cost_s"]) for m in ("held_karp", OR_OPT_METHOD, "nearest_neighbor_2opt"))
+            assert hk <= oropt + 1e-6 <= opt + 2e-6
+            # order_ns của Or-opt cộng cả NN + 2-opt
+            assert int(group[OR_OPT_METHOD]["order_ns"]) >= int(group["nearest_neighbor_2opt"]["order_ns"])
+    assert summarize_results.e5_oropt_section(summarize_results.read_tour_rows(out / "or")) is not None
+    assert summarize_results.e5_oropt_section(summarize_results.read_tour_rows(out / "base")) is None
+
+
+def test_plan_set_or_opt_on_mini_keeps_other_methods():
+    graph, meta = load_mini()
+    nodes = [node_by_name(meta, n) for n in ("S", "B", "A", "T")]
+    snap = baseline_snapshot(graph)
+    plain = plan_set(graph, snap, nodes)
+    res = plan_set(graph, snap, nodes, include_or_opt=True)
+    assert set(plain["methods"]) == set(METHODS)
+    assert set(res["methods"]) == set(METHODS) | {OR_OPT_METHOD}
+    for m in METHODS:
+        assert res["methods"][m]["cost_s"] == pytest.approx(plain["methods"][m]["cost_s"])
+    assert res["methods"]["held_karp"]["cost_s"] <= res["methods"][OR_OPT_METHOD]["cost_s"] + 1e-9
+    assert res["methods"][OR_OPT_METHOD]["cost_s"] <= res["methods"]["nearest_neighbor_2opt"]["cost_s"] + 1e-9
+
+
+def test_check_order_costs_flags_or_opt_worse_than_2opt():
+    def group(oropt):
+        costs = {"input": 300, "nearest_neighbor": 200, "nearest_neighbor_2opt": 150, OR_OPT_METHOD: oropt,
+                 "held_karp": 120}
+        return [{"set_id": "0", "method": m, "feasible": "true", "cost_s": str(c)} for m, c in costs.items()]
+
+    assert check_order_costs(group(130)) == []
+    assert check_order_costs(group(160))[0]["nn_2opt_oropt"] == 160       # Or-opt đắt hơn NN + 2-opt
+    assert check_order_costs(group(110))[0]["held_karp"] == 120           # Or-opt rẻ hơn tối ưu: vô lý
 
 def test_run_benchmarks_suite_tour_delegates(tmp_path, rand_graph):
     out = tmp_path / "results"
