@@ -180,12 +180,13 @@ export class MapLayers {
     L.DomEvent.disableClickPropagation(fitBar)
     L.DomEvent.on(fitBtn, 'click', (e) => {
       L.DomEvent.preventDefault(e)
-      if (this.lastFit) this.fitTo(this.lastFit.points, this.lastFit.rightPad)
+      if (this.drawn) this.fitTo(this.drawn.points, this.drawn.rightPad)
     })
     fitBar.style.display = 'none'
     this.fitButton = fitBtn
     const Fit = L.Control.extend({ onAdd: () => fitBar })
-    new Fit({ position: 'topleft' }).addTo(map)    // Node đã mở rộng: dưới tuyến (overlayPane z 400), trên tuyến lần trước; canvas vì có thể vài nghìn chấm.
+    new Fit({ position: 'topleft' }).addTo(map)
+    // Node đã mở rộng: dưới tuyến (overlayPane z 400), trên tuyến lần trước; canvas vì có thể vài nghìn chấm.
     const tracePane = map.createPane('trace')
     tracePane.style.zIndex = '395'
     tracePane.style.pointerEvents = 'none'
@@ -345,6 +346,12 @@ export class MapLayers {
       }
       if (a?.status === 'ok') line(toLatLngs(a.geometry.coordinates), this.palette.astar, 7, 4, '8 6')
     }
+    const { source: s, target: t } = res.snapped
+    this.drawn = {
+      points: [L.latLng(s.lat, s.lon), L.latLng(t.lat, t.lon), ...toLatLngs(d?.geometry.coordinates ?? []),
+        ...toLatLngs(a?.geometry.coordinates ?? [])],
+      rightPad: 40,
+    }
     this.setFitButton(true)
     if (onSegmentClick && d) this.addHitSegments(routeSegments(d), onSegmentClick, res)
   }
@@ -474,8 +481,6 @@ export class MapLayers {
       this.map.once('resize', () => this.fitTo(points, rightPad))
       return
     }
-    this.lastFit = { points, rightPad }
-    this.setFitButton(true)
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     // rightPad: chừa chỗ cho nhãn tên điểm đặt bên phải marker (tour), để tên không bị cắt ở mép.
     this.map.fitBounds(L.latLngBounds(points), {
@@ -494,6 +499,7 @@ export class MapLayers {
       L.polyline(ll, { color: this.palette.tour, weight: 6, interactive: false, lineCap: 'round', lineJoin: 'round' }).addTo(this.routes)
       // Chevron chỉ chiều mỗi ~200 m (UX-9): đoạn đi và về chồng lên nhau vẫn đọc được chiều.
       this.chevrons(coords, 200)
+      this.drawn = { points: ll, rightPad: 160 }   // chừa chỗ cho tên điểm bên phải marker, như lúc nạp case
       this.setFitButton(true)
     }
     if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick, cand)
@@ -591,10 +597,13 @@ export class MapLayers {
   }
 
   // Nút "Về toàn tuyến" (đợt UI 15/11): thu phóng lại vừa kết quả đang hiện sau khi người dùng kéo / phóng bản đồ.
-  private lastFit: { points: L.LatLng[]; rightPad: number } | null = null
+  // Khung của chính tuyến / tour đang vẽ (góp ý #158: dùng chung một khung cho hai chế độ thì quay lại Tìm đường, nút
+  // nhảy về khung của tour). drawRoutes / drawTour đặt, clearRoutes xoá.
+  private drawn: { points: L.LatLng[]; rightPad: number } | null = null
   private fitButton: HTMLAnchorElement | null = null
   private setFitButton(on: boolean) {
-    if (this.fitButton) this.fitButton.parentElement!.style.display = on && this.lastFit ? '' : 'none'
+    if (!on) this.drawn = null
+    if (this.fitButton) this.fitButton.parentElement!.style.display = on && this.drawn ? '' : 'none'
   }
 
   clearRoutes() {
