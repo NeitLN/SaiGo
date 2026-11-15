@@ -8,24 +8,46 @@ import { MapLayers } from './layers'
 // Tâm quanh chợ Bến Thành (cùng tâm với data/config/areas.json).
 const CENTER: L.LatLngTuple = [10.7725, 106.698]
 
-// Nền bản đồ (đợt UI 15/11, họp thiết kế 5 vai): Esri Light Gray trước (xám nhạt, có tên đường, không tranh màu với
-// tuyến; màu đường của OSM cam/vàng/hồng trùng nghĩa với A*, vùng ùn tắc, đoạn đóng), rồi OSM, cuối cùng là nền rút
-// gọn tự vẽ từ /api/network. Chỉ xem tương tác, không tải hàng loạt tile (docs/ARCHITECTURE.md mục 6).
+// Nền bản đồ, người dùng chọn bằng nút góc trên phải (16/11, Tiến chọn): "Đường phố" (mặc định) là Esri World Street
+// Map, có ảnh gốc tới z19 nên sắc nét ở mọi mức zoom, có tên đường và mũi tên đường một chiều; "Xám" là Esri Light
+// Gray (đợt UI 15/11), sạch kiểu dashboard nhưng chỉ có ảnh tới z16 nên phóng to bị nhoè. Mỗi lựa chọn có chuỗi dự
+// phòng: Esri → OSM → nền rút gọn tự vẽ từ /api/network. Chỉ xem tương tác, không tải hàng loạt tile (ARCHITECTURE 6).
 interface TileProvider { url: string; maxNativeZoom: number; attribution: string }
-export const TILE_PROVIDERS: TileProvider[] = [
-  {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    // Esri chỉ có ảnh tới z16; z17+ trả ảnh "Map data not yet available" với HTTP 200 (không có tileerror), nên
-    // phóng tile z16 lên thay vì xin z17+.
-    maxNativeZoom: 16,
-    attribution: 'Nền © Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community',
-  },
-  {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    maxNativeZoom: 19,
-    attribution: 'Nền © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
-  },
-]
+export type BasemapChoice = 'street' | 'gray'
+const OSM: TileProvider = {
+  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  maxNativeZoom: 19,
+  attribution: 'Nền © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+}
+export const TILE_CHAINS: Record<BasemapChoice, TileProvider[]> = {
+  street: [
+    {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+      maxNativeZoom: 19,
+      attribution: 'Nền © Esri, HERE, Garmin, USGS, © OpenStreetMap contributors, and the GIS User Community',
+    },
+    OSM,
+  ],
+  gray: [
+    {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      // Esri Light Gray chỉ có ảnh tới z16; z17+ trả ảnh "Map data not yet available" với HTTP 200 (không có
+      // tileerror), nên phóng tile z16 lên thay vì xin z17+.
+      maxNativeZoom: 16,
+      attribution: 'Nền © Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community',
+    },
+    OSM,
+  ],
+}
+const BASEMAP_LABEL: Record<BasemapChoice, string> = { street: 'Đường phố', gray: 'Xám' }
+// Lựa chọn nền nhớ theo trình duyệt của người xem (tiện lợi, không bắt buộc); trình duyệt chặn lưu thì dùng mặc định.
+const BASEMAP_KEY = 'saigo.basemap'
+const readChoice = (): BasemapChoice => {
+  try { return localStorage.getItem(BASEMAP_KEY) === 'gray' ? 'gray' : 'street' } catch { return 'street' }
+}
+const saveChoice = (c: BasemapChoice) => {
+  try { localStorage.setItem(BASEMAP_KEY, c) } catch { /* không lưu được: lần sau về mặc định */ }
+}
 // Đồ thị tìm đường là dữ liệu OSM (ODbL): ghi nguồn này luôn hiện, dù đang dùng nền nào.
 const DATA_ATTRIBUTION = 'Dữ liệu tuyến © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 // Một lượt tải tile chưa xong sau ngần này mà chưa tile nào tải được thì coi như lượt hỏng (mạng treo: 'load' không tới).
@@ -73,9 +95,7 @@ export default function MapView({ onReady, onClick }: {
           if (disposed || !fallback) return
           layers.setNetwork(n.lines, n.kinds)
           chip.style.display = ''
-          // Lớp tile vẫn nằm trên bản đồ (để tự gỡ nền rút gọn khi mạng phục hồi) nhưng không vẽ gì: bỏ ghi nguồn của nó
-          // trong lúc này, chỉ còn "Dữ liệu tuyến © OpenStreetMap" (góp ý #157).
-          map.attributionControl.removeAttribution(TILE_PROVIDERS[idx].attribution)
+          muteTiles()
         })
         // Backend chưa sẵn sàng: tự thử lại sau 3 s, không đợi tới lần lỗi tile sau (review 14/11 đợt 3, QA-15).
         .catch(() => { if (!disposed && fallback) retry = window.setTimeout(load, 3000) })
@@ -86,13 +106,25 @@ export default function MapView({ onReady, onClick }: {
       window.clearTimeout(retry)
       layers.setNetwork(null)
       chip.style.display = 'none'
-      map.attributionControl.addAttribution(TILE_PROVIDERS[idx].attribution)
+      if (tilesMuted) map.attributionControl.addAttribution(providers[idx].attribution)
+      tilesMuted = false
+    }
+    // Lớp tile vẫn nằm trên bản đồ khi đang dùng nền rút gọn (để tự gỡ nền rút gọn khi mạng phục hồi) nhưng không vẽ
+    // gì: bỏ ghi nguồn của nó trong lúc này, chỉ còn "Dữ liệu tuyến © OpenStreetMap" (góp ý #157). Cờ để không trừ
+    // hay cộng hai lần khi đổi nền giữa chừng.
+    let tilesMuted = false
+    const muteTiles = () => {
+      if (tilesMuted || !fallback) return
+      map.attributionControl.removeAttribution(providers[idx].attribution)
+      tilesMuted = true
     }
 
     // Chuỗi nền. Mỗi nguồn một TileLayer riêng (setUrl không đổi ghi nguồn hay giới hạn zoom). Xét theo từng lượt tải
     // (reset ở 'loading', kết luận ở 'load' hoặc khi quá BATCH_TIMEOUT_MS): lượt lỗi nhiều hơn tải được thì sang nguồn
     // kế; hết nguồn thì vẽ nền rút gọn và quay về nguồn đầu, để khi mạng phục hồi tile thật đè lên và nền rút gọn được
     // gỡ (lượt sạch, không lỗi). `gen` bỏ sự kiện của nguồn đã thay.
+    let choice = readChoice()
+    let providers = TILE_CHAINS[choice]
     let gen = 0
     let idx = 0
     let exhausted = false
@@ -105,11 +137,12 @@ export default function MapView({ onReady, onClick }: {
       window.clearTimeout(timer)
       const bad = timedOut ? loaded === 0 : failed > loaded
       if (bad) {
-        if (!exhausted && idx + 1 < TILE_PROVIDERS.length) {
+        if (!exhausted && idx + 1 < providers.length) {
           use(idx + 1)
           return
         }
         if (!fallback) showFallback()
+        else muteTiles()
         if (!exhausted) {
           exhausted = true
           use(0)
@@ -123,8 +156,9 @@ export default function MapView({ onReady, onClick }: {
       const my = gen
       window.clearTimeout(timer)
       tiles?.remove()
+      tilesMuted = false   // lớp mới tự thêm ghi nguồn của nó
       idx = i
-      const p = TILE_PROVIDERS[i]
+      const p = providers[i]
       const t = L.tileLayer(p.url, { maxZoom: 19, maxNativeZoom: p.maxNativeZoom, detectRetina: false, attribution: p.attribution })
       // Gắn listener trước khi thêm vào bản đồ, để không lỡ lượt tải đầu tiên.
       t.on('loading', () => {
@@ -141,6 +175,31 @@ export default function MapView({ onReady, onClick }: {
       tiles.bringToBack()
     }
     use(0)
+
+    // Nút chọn nền "Đường phố / Xám" (16/11). Đổi nền thì chạy lại chuỗi dự phòng của lựa chọn mới từ đầu.
+    const switcher = L.DomUtil.create('div', 'leaflet-bar leaflet-control map-basemap')
+    switcher.setAttribute('role', 'group')
+    switcher.setAttribute('aria-label', 'Chọn nền bản đồ')
+    const buttons = (['street', 'gray'] as BasemapChoice[]).map((c) => {
+      const b = L.DomUtil.create('button', 'map-basemap-btn', switcher) as HTMLButtonElement
+      b.type = 'button'
+      b.textContent = BASEMAP_LABEL[c]
+      b.addEventListener('click', () => {
+        if (c === choice) return
+        choice = c
+        saveChoice(c)
+        providers = TILE_CHAINS[c]
+        exhausted = false
+        use(0)
+        paint()
+      })
+      return [c, b] as const
+    })
+    const paint = () => buttons.forEach(([c, b]) => b.setAttribute('aria-pressed', String(c === choice)))
+    paint()
+    L.DomEvent.disableClickPropagation(switcher)
+    const Switcher = L.Control.extend({ onAdd: () => switcher })
+    new Switcher({ position: 'topright' }).addTo(map)
 
     // Khung bản đồ đổi kích thước theo bố cục: báo Leaflet tính lại để không bị ô trắng.
     const resize = new ResizeObserver(() => map.invalidateSize())
