@@ -1,10 +1,10 @@
 # STATUS
-Cập nhật: 14/11/2026 · Người tích hợp: Tiến · Đọc file này đầu mỗi session; giữ ≤ 100 dòng, ghi đè mỗi cuối session.
+Cập nhật: 15/11/2026 · Người tích hợp: Tiến · Đọc file này đầu mỗi session; giữ ≤ 100 dòng, ghi đè mỗi cuối session.
 
 Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.md](PROJECT_BRIEF.md) mục 4 (D1–D18) · kiến trúc và API ở [ARCHITECTURE.md](ARCHITECTURE.md) · **kế hoạch phần còn lại ở [ROADMAP.md](ROADMAP.md) mục 7 (R0–R4)** · trạng thái từng task và bằng chứng ở [PROGRESS.md](PROGRESS.md) · số đo ở [EXPERIMENTS.md](EXPERIMENTS.md).
 
 ## Tóm tắt
-- **Hiện tại (main, 14/11):** đủ lõi của proposal: dữ liệu OSM đóng băng (Release `data-raw-20261024`), Dijkstra, A*, đối chứng NetworkX (fixture, đồ thị ngẫu nhiên, 200 cặp đồ thị thật), ùn tắc theo vùng, đóng đoạn đường, tour NN / 2-opt có hướng / Held–Karp, API `/api/route`, `/api/tour`, `/api/dataset`, `/api/network`, giao diện React + Astryx (T56), kết quả E2–E5 và E2b. Mở rộng sau kế hoạch: ALT, Dijkstra hai chiều, Or-opt (D17).
+- **Hiện tại (main, 15/11):** đủ lõi của proposal: dữ liệu OSM đóng băng (Release `data-raw-20261024`), Dijkstra, A*, đối chứng NetworkX (fixture, đồ thị ngẫu nhiên, 200 cặp đồ thị thật), ùn tắc theo vùng, đóng đoạn đường, tour NN / 2-opt có hướng / Held–Karp, API `/api/route`, `/api/tour`, `/api/dataset`, `/api/network`, giao diện React + Astryx (T56, Minh review 15/11: 45/45 kiểm), kết quả E2–E5 và E2b. Mở rộng sau kế hoạch: ALT, Dijkstra hai chiều, Or-opt (D17).
 - **Mong muốn:** làm trọn như bản cuối (essay 10 trang, thuyết trình 15 phút có demo), dù không còn nộp chính thức (D18).
 - **Phải giữ nguyên:**
   - `main` chỉ nhận PR có review + CI xanh (`backend`, `frontend`, `identity` bắt buộc);
@@ -12,19 +12,20 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
   - dữ liệu thô đóng băng theo sha256;
   - contract `/api/route` v1 chỉ được thêm trường;
   - không số liệu nào chưa đo; mọi số trong tài liệu có `run_id`.
-- **Chưa biết:** nền tile OSM thật (UI-1) trên giao diện mới, vì mạng các máy kiểm hiện chặn `tile.openstreetmap.org`.
+- ~~**Chưa biết:** nền tile OSM thật (UI-1) trên giao diện mới, vì mạng các máy kiểm hiện chặn `tile.openstreetmap.org`.~~ **15/11:** UI-1 đạt về chức năng; mạng máy Minh trả 200 cho một phần tile (có lần 20/20, lần 45 kiểm 9/20 do reset TLS), ảnh chụp thấy cả tile OSM thật lẫn nền dự phòng R8.
 
 ## Đang ở đâu
 - R0 xong (#127, #128).
 - R1 xong (#129): lập lại tour sau khi đóng đường, giữ thứ tự cũ / sắp lại, case "Tour không còn khả thi"; bằng chứng ở [phiếu R1](tasks/R1-tour-closure.md).
-- R2 xong (#130): E5 thêm n = 5, cột p90 và max Gap; E5b tour sau khi đóng đường; Or-opt ghi rõ chỉ minh họa. Phần "Minh chạy lại một bảng trên máy mình" chuyển sang R3 vì cần máy khác.
+- R2 xong (#130): E5 thêm n = 5, cột p90 và max Gap; E5b tour sau khi đóng đường; Or-opt ghi rõ chỉ minh họa. **15/11 Minh chạy lại E5b** (`20261115-1719-tourclosure-1406a40`): trùng số bảng cũ (2/20 không khả thi; median 1,42% / p90 4,04% / max 13,66%; sắp lại rẻ hơn 3/18, tối đa 7,25%).
+- **R3/T80 xong (15/11, Minh):** clone sạch `1406a40` → `setup_dev.ps1 -Data` tới `==> Xong` → Release `data-raw-20261024` đúng sha256 `24a28327…` → `build --area demo` đúng sha256 `928c1f8b…` → demo 8/8 (186,1 / 193,0 / 246,1 s; tour 1.066,0 / 1.003,3 / 898,1 s; 33/33 tile OSM). Hai vướng đã ghi: README thiếu `SAIGO_GRAPH` cho dữ liệu demo — **đã bổ sung ở mục "Chạy local" (`$env:SAIGO_GRAPH` + link ONBOARDING)**; Python 3.14 thay vì 3.11 nhưng hash/kết quả vẫn khớp.
 - Review UI 14/11 (chạy thử toàn app, 6 vai: QA, người dùng cuối, UI/UX, frontend + a11y, PM, giảng viên; biên bản ngoài repo). Đợt 1 (an toàn demo, số đúng) gồm 4 PR: bấm trượt bản đồ không xoá kết quả, sửa Đảo chiều/bấm marker/kịch bản lệch; API trả hình học cạnh đóng, vẽ cạnh đóng của case, tô đỏ điểm hỏng, tự thu phóng; nhãn và số trung thực; case dựng sẵn cho bước 10. Đợt 2 (5 PR, #138–#142): chênh lệch trước/sau kèm tuyến lần trước vẽ mờ; công tắc lớp node đã mở rộng (tĩnh, trace bằng request riêng); thẻ Held–Karp xem được (badge "Rẻ nhất" so cả tối ưu); bố cục theo độ rộng cho máy chiếu 1024–1280 px và điện thoại; kiểm điểm ngay lúc bấm (`/api/snap`), nút "Bỏ điểm cuối", viền vùng có dữ liệu. Đợt 3 (5 PR, #143–#147): vùng ùn tắc màu cảnh báo, nhãn ở mép, tuyến có viền tối, chú giải nổi; tour có mũi tên chiều, kho là ô vuông, tên điểm cạnh số; đặt điểm từ danh sách địa danh (dùng được bằng bàn phím); công tắc "Phần mở rộng" (ALT, hai chiều, Or-opt); đọc kết quả cho trình đọc màn hình, lỗi role="alert", nút zoom tiếng Việt, bận/lỗi tách theo chế độ, badge server tự cập nhật mỗi 10 s, nền dự phòng tự thử lại, gzip. Tách state App.tsx (làm luôn 14/11, Tiến quyết định không đợi sau demo): logic thuần sang `appLogic.ts` có test, trạng thái server sang hook `useServerStatus`; App.tsx 835 → 714 dòng.
 - T81 xong (14/11): ALGORITHMS.md có tóm tắt mọi thuật toán đã cài; README có kết quả chính kèm `run_id`; TOPIC.md trỏ sang PROJECT_BRIEF mục 4. #107, #108 đã đóng.
 - R4, phần làm được trên máy này đã xong: bản nháp essay tiếng Anh [essay/essay.md](essay/essay.md) (#131; khoảng 2.640 từ trước phần tham khảo, tức khoảng 10 trang double spaced); slide 15 phút (15 slide, có ghi chú cho người nói, số liệu theo essay; Tiến giữ bản slide, không để trong repo).
-- **Phần còn lại cần người:** điền MSSV ở bìa essay, cả nhóm đọc chéo, dàn trang Word để đếm trang thật; tập demo có bấm giờ và quay video dự phòng (T82); R3: chạy trên máy thứ hai theo README, Minh chạy lại một bảng EXPERIMENTS, kiểm UI-1 ở mạng không chặn tile.
+- **Phần còn lại cần người:** điền MSSV ở bìa essay, cả nhóm đọc chéo, dàn trang Word để đếm trang thật; tập demo có bấm giờ và quay video dự phòng (T82). R3/T80 và kiểm UI-1 đã xong 15/11.
 
 ## Bị chặn / rủi ro
-- UI-1 chưa kiểm được trên máy này; nền dự phòng `/api/network` đã có (T56 R8). Kiểm ở R3 trên mạng khác; chuẩn bị video demo.
+- UI-1 đã đạt trên máy Minh (15/11) nhưng mạng vẫn reset một phần tile; khi demo nên có hotspot dự phòng, checklist DEMO mục 3. R8 (nền dự phòng) có thể bật sớm khi 3 tile lỗi đến trước tile thành công đầu tiên — không chặn demo, ghi ở bình luận #103.
 - MVP 08/11 không đạt đúng hạn (PROGRESS mục 1); không ảnh hưởng kế hoạch mới vì không còn hạn nộp.
 
 ## Quyết định
@@ -41,10 +42,10 @@ Bộ nhớ dự án: mục tiêu, phạm vi, quyết định ở [PROJECT_BRIEF.
 ## Bước tiếp theo
 1. Essay: điền MSSV, đọc chéo, dàn trang Word (Times New Roman 12, double spaced, lề 1 inch), đếm trang.
 2. T82: tập kịch bản DEMO ba lần có bấm giờ (≤ 4 phút), quay video dự phòng trên máy tải được tile OSM.
-3. R3 / T80: clone sạch trên máy thứ hai → tải dữ liệu từ Release → kiểm hash → chạy demo theo README; Minh chạy lại một bảng EXPERIMENTS; kiểm UI-1.
+3. ~~R3 / T80: clone sạch trên máy thứ hai → tải dữ liệu từ Release → kiểm hash → chạy demo theo README; Minh chạy lại một bảng EXPERIMENTS; kiểm UI-1.~~ **Xong 15/11** (PROGRESS nhật ký 15/11, #37/#31).
 
 ## Bộ kiểm nhanh (chạy đầu mỗi session)
-- `.venv\Scripts\python.exe -m pytest -q` → 14/11 trên main: 429 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; có đồ thị demo thì các test `realdata` khác vẫn chạy)
+- `.venv\Scripts\python.exe -m pytest -q` → 15/11 trên `main`: 464 passed; clone sạch chưa có `crop_r*.json`: 458 passed, 6 skipped (6 test của `test_crops.py` tự bỏ qua khi máy chưa dựng 4 file `crop_r*.json` bằng `make_crops.py`; các test `realdata` khác vẫn chạy sau `build --area demo`)
 - `cd frontend; npm run build` → build được (Vite cảnh báo chunk > 500 KB, chấp nhận vì chạy local)
 - `python scripts/tracking/create_backlog.py --dry-run` → không lỗi (48 task, 147 giờ ước lượng)
 - Mỗi tuần: `.venv\Scripts\python.exe -m pip_audit -r requirements-lock.txt` · `cd frontend; npm audit` (job `audit` trong CI chạy ở mỗi PR)

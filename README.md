@@ -77,6 +77,13 @@ npm run dev
 
 Mở http://localhost:5173. Frontend gọi backend qua proxy `/api` → `http://127.0.0.1:8000`.
 
+Mặc định backend nạp `tests/fixtures/mini.json` (đồ thị mẫu nhỏ). Muốn chạy bằng dữ liệu thật của bản demo: tải và dựng dữ liệu theo [ONBOARDING mục "Tải dữ liệu"](docs/team/ONBOARDING.md#tải-dữ-liệu), rồi đặt biến môi trường trước khi chạy backend:
+
+```powershell
+$env:SAIGO_GRAPH = "data\processed\hcm-benthanh-r2000-20261024.json"
+uvicorn app.main:app --reload --app-dir backend
+```
+
 Chạy test: `.venv\Scripts\python.exe -m pytest -q`.
 
 Nên clone vào thư mục không dấu (ví dụ `C:\dev\SaiGo`): trên Windows, `pip install -e` lỗi khi đường dẫn có chữ tiếng Việt. Script ở trên không dùng `-e` nên vẫn chạy được ở đường dẫn có dấu.
