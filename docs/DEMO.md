@@ -22,8 +22,8 @@ Bố cục đổi theo độ rộng cửa sổ:
 ≥ 1440 px
 ┌──────────────┬──────────────────────────────────┬────────────────┐
 │ Chế độ       │                                  │ Kết quả        │
-│ Case demo    │   Bản đồ Leaflet (nền tile OSM   │ đo được        │
-│ Kịch bản     │   hoặc nền dự phòng)             │ Dijkstra / A*  │
+│ Case demo    │   Bản đồ Leaflet (nền Esri xám,  │ đo được        │
+│ Kịch bản     │   OSM hoặc nền rút gọn)          │ Dijkstra / A*  │
 │ Địa danh     │   điểm, tuyến, vùng ùn tắc,      │ Thẻ tour       │
 │ Nút, công tắc│   đoạn đóng, chú giải nổi        │ So với lần trước│
 └──────────────┴──────────────────────────────────┴────────────────┘
@@ -51,9 +51,9 @@ Bố cục đổi theo độ rộng cửa sổ:
 | Đoạn đang đóng | Đỏ nét đứt có viền sáng, nằm trên tuyến và dưới marker; hiện ngay khi bấm, không chờ kết quả |
 | Tour | Nét tím có mũi tên chỉ chiều; kho là ô vuông xanh "K"; điểm giao là vòng tím đánh số theo thẻ đang xem, tên đặt cạnh số |
 | Điểm không đi được | Marker tô đỏ (tour không khả thi); app tự thu phóng vào điểm hỏng và đoạn đóng |
-| Viền vùng có dữ liệu | Khung nét đứt xám: đặt điểm trong khung này mới snap được |
+| Vùng có dữ liệu | Phần ngoài khung phủ mờ, viền mảnh; đặt điểm trong khung mới snap được; bản đồ không kéo xa khỏi vùng |
 | Chú giải | Góc dưới trái, chỉ liệt kê những gì đang vẽ |
-| Nền dự phòng | Khi không tải được tile OSM: mạng đường vẽ nét xám từ dữ liệu đồ thị (`/api/network`), kèm dòng báo; vẫn ghi nguồn OSM |
+| Nền bản đồ | Thứ tự: Esri Light Gray (xám nhạt, có tên đường; ảnh tới zoom 16, phóng to từ đó) → OSM → **nền rút gọn** tự vẽ từ `/api/network` (đường trắng ba cấp theo loại đường, nhãn nhỏ "Nền rút gọn từ dữ liệu đồ thị" góc trên phải; không có tên đường). Nguồn nào lỗi cả lượt tải hoặc treo 6 s thì sang nguồn kế; tile tải lại được thì nền rút gọn tự gỡ. Luôn ghi "Dữ liệu tuyến © OpenStreetMap contributors" cùng nguồn của nền đang dùng |
 
 Rê chuột lên tuyến thì đoạn sẽ đóng tô đỏ kèm "Bấm để đóng đoạn đang tô đỏ"; **bấm một lần là đóng** (không có nút xác nhận), cả cạnh đối nếu có, rồi tìm lại. Bấm trượt ra ngoài tuyến khi đang có kết quả không xoá gì (chỉ hiện gợi ý bấm Xóa). Bản đồ luôn dùng màu sáng, kể cả khi máy để chế độ tối. Không vẽ đường thẳng nối hai điểm khi không có đường.
 
@@ -111,7 +111,7 @@ Khoản cắt 4 của đề xuất phạm vi 26/10 (đóng đường qua API/CLI
 - [ ] Số trong khối Dijkstra/A* và thẻ tour khớp với response API, không có số viết tay.
 - [ ] Đóng đoạn rồi bấm **Mở lại tất cả** trả về đúng tuyến ban đầu.
 - [ ] Công tắc Phần mở rộng và Hiện node đã mở rộng đang tắt khi bắt đầu.
-- [ ] Ghi nguồn © OpenStreetMap contributors hiển thị trên bản đồ.
+- [ ] Ghi nguồn hiển thị trên bản đồ: dữ liệu tuyến © OpenStreetMap contributors và nguồn của nền (Esri hoặc OSM).
 - [ ] Có bản quay màn hình dự phòng nếu máy demo lỗi.
-- [ ] Đã thử mở app khi mạng chặn tile OSM: nền dự phòng hiện, demo vẫn chạy trọn.
+- [ ] Đã mở app trên mạng của phòng chiếu: nền Esri hiện; nếu bị chặn cả Esri lẫn OSM thì nền rút gọn hiện và demo vẫn chạy trọn.
 - [ ] `/api/dataset` trả đúng `hcm-benthanh-r2000-20261024` (case demo khóa theo dataset này).

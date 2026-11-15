@@ -16,7 +16,7 @@ from app.api.routes import router
 from app.graph.closures import reverse_twins
 from app.graph.model import load_graph
 from app.graph.scenario import load_scenarios
-from app.services.routing import network_lines
+from app.services.routing import network_kinds, network_lines
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI):
     app.state.twins = reverse_twins(graph, meta)
     # Nền dự phòng khi không tải được tile OSM (T56 R8): dựng một lần, request chỉ trả lại.
     app.state.network = network_lines(graph, meta, app.state.twins)
+    app.state.network_kinds = network_kinds(graph, meta, app.state.twins)
 
     app.state.graph = graph
     app.state.meta = meta
