@@ -35,28 +35,44 @@ export default function MapView({ onReady, onClick }: {
     const layers = new MapLayers(map)
     onReady(layers)
 
-    // T56 R8: mạng chặn tile OSM (vd. DNS không phân giải được) thì nền trống. Lỗi liên tiếp mà chưa tile nào
-    // tải được → vẽ mạng đường từ dữ liệu đồ thị làm nền; vẫn giữ dòng ghi nguồn OSM.
-    let loaded = 0
-    let failed = 0
+    // T56 R8: mạng chặn tile OSM (vd. DNS không phân giải được) thì nền trống → vẽ mạng đường từ dữ liệu đồ thị làm
+    // nền; vẫn giữ dòng ghi nguồn OSM. Xét theo từng lượt tải tile (từ 'loading' tới 'load'): lượt xong mà có ≥ 3 tile
+    // lỗi và lỗi nhiều hơn tải được thì bật nền dự phòng; một lượt sau tải đủ, không lỗi, thì gỡ đi. Trước đây chỉ bật khi
+    // chưa tile nào tải được và không bao giờ gỡ, nên mạng chập chờn (3 lỗi về trước tile đầu tiên) để nền dự phòng
+    // đè lên tile thật mãi, còn mạng mất một nửa tile thì không có nền dự phòng (R3 15/11, Minh).
+    const NOTE = 'Không tải được nền OSM: đang vẽ mạng đường từ dữ liệu'
+    let batchLoaded = 0
+    let batchFailed = 0
     let fallback = false
     let retry: number | undefined
     let disposed = false   // bản đồ đã gỡ: request nền đang chạy về sau thì bỏ, không hẹn thử lại (góp ý #147)
-    tiles.on('tileload', () => { loaded += 1 })
-    tiles.on('tileerror', () => {
-      failed += 1
-      if (fallback || loaded > 0 || failed < 3) return
+    const showFallback = () => {
       fallback = true
       const load = () => getNetwork()
         .then((n) => {
-          if (disposed) return
+          if (disposed || !fallback) return
           layers.setNetwork(n.lines)
-          map.attributionControl.addAttribution('Không tải được nền OSM: đang vẽ mạng đường từ dữ liệu')
+          map.attributionControl.addAttribution(NOTE)
         })
         // Backend chưa sẵn sàng: tự thử lại sau 3 s, không đợi tới lần lỗi tile sau (lúc đó bản đồ có thể đã nạp
         // hết tile lỗi và không còn lỗi mới, nên nền cứ xám trống; review 14/11 đợt 3, QA-15).
-        .catch(() => { if (!disposed) retry = window.setTimeout(load, 3000) })
+        .catch(() => { if (!disposed && fallback) retry = window.setTimeout(load, 3000) })
       load()
+    }
+    const hideFallback = () => {
+      fallback = false
+      window.clearTimeout(retry)
+      layers.setNetwork(null)
+      map.attributionControl.removeAttribution(NOTE)
+    }
+    tiles.on('loading', () => { batchLoaded = 0; batchFailed = 0 })
+    tiles.on('tileload', () => { batchLoaded += 1 })
+    tiles.on('tileerror', () => { batchFailed += 1 })
+    // Quyết định khi cả lượt đã xong (góp ý #156): xét ngay ở lỗi thứ 3 thì 3 tile lỗi về trước 13 tile tải được vẫn
+    // bật nền dự phòng cho cả lượt. Mạng chặn hẳn (DNS) thì mọi tile lỗi ngay nên lượt xong gần như tức thì.
+    tiles.on('load', () => {
+      if (!fallback && batchFailed >= 3 && batchFailed > batchLoaded) showFallback()
+      else if (fallback && batchFailed === 0 && batchLoaded > 0) hideFallback()
     })
     // Khung bản đồ đổi kích thước theo bố cục: báo Leaflet tính lại để không bị ô trắng.
     const resize = new ResizeObserver(() => map.invalidateSize())

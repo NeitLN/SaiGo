@@ -102,6 +102,8 @@ export class MapLayers {
   private closed = L.layerGroup()
   private points = L.layerGroup()
   private network: L.Layer | null = null
+  private networkRenderer: L.Canvas | null = null
+  private quietHitsFor: object | null = null   // kết quả vừa bấm đóng đoạn: chưa gắn lại gợi ý (addHitSegments)
   private previous = L.layerGroup()
   private area = L.layerGroup()
   private trace = L.layerGroup()
@@ -160,12 +162,18 @@ export class MapLayers {
    * Pane riêng nằm trên lớp tile, dưới mọi lớp vẽ khác; canvas cho ~2.700 đường; không bấm được để
    * cú bấm vẫn rơi xuống bản đồ (chọn điểm).
    */
-  setNetwork(lines: [number, number][][]) {
+  setNetwork(lines: [number, number][][] | null) {
     if (this.network) this.network.remove()
+    // Gỡ cả renderer: gỡ polyline thôi thì canvas vẫn nằm lại, mỗi lần bật lại thêm một canvas.
+    if (this.networkRenderer) this.networkRenderer.remove()
+    this.network = null
+    this.networkRenderer = null
+    if (!lines) return     // tile OSM tải lại được: gỡ nền dự phòng (MapView)
     const pane = this.map.getPane('basemap') ?? this.map.createPane('basemap')
     pane.style.zIndex = '250'
     pane.style.pointerEvents = 'none'
     const renderer = L.canvas({ pane: 'basemap' })
+    this.networkRenderer = renderer
     this.network = L.polyline(lines.map(toLatLngs), {
       pane: 'basemap', renderer, color: this.palette.road, weight: 1.5, opacity: 0.35, interactive: false,
     }).addTo(this.map)
@@ -248,7 +256,7 @@ export class MapLayers {
           .addTo(this.routes)
       }
     }
-    if (onSegmentClick && d) this.addHitSegments(routeSegments(d), onSegmentClick)
+    if (onSegmentClick && d) this.addHitSegments(routeSegments(d), onSegmentClick, res)
   }
 
   /**
@@ -257,7 +265,7 @@ export class MapLayers {
    * khi rê chuột hoặc bấm, chọn cạnh có hình học gần con trỏ nhất (tính bằng pixel) và tô sáng trước đúng
    * cạnh đó, để người dùng thấy sẽ đóng gì.
    */
-  private addHitSegments(segs: RouteSegment[], onSegmentClick: (seg: RouteSegment) => void) {
+  private addHitSegments(segs: RouteSegment[], onSegmentClick: (seg: RouteSegment) => void, source: object) {
     const preview = L.layerGroup().addTo(this.routes)
     const showPreview = (seg: RouteSegment | null) => {
       preview.clearLayers()
@@ -271,14 +279,23 @@ export class MapLayers {
           .addTo(preview)
       }
     }
+    const hits: L.Polyline[] = []
     for (const seg of segs) {
-      L.polyline(seg.latlngs, { weight: 18, opacity: 0, className: 'route-hit' })
-        .bindTooltip('Bấm để đóng đoạn đang tô đỏ', { sticky: true })
+      const hit = L.polyline(seg.latlngs, { weight: 18, opacity: 0, className: 'route-hit' })
+      hits.push(hit)
+      // Sau khi bấm đóng một đoạn, tuyến cũ được vẽ lại ngay (để hiện nét đỏ) trong lúc chờ kết quả; vùng bấm mới nằm
+      // dưới con trỏ nên gợi ý mở lại. Không gắn gợi ý cho tới khi có kết quả mới (test lại 15/11).
+      if (this.quietHitsFor !== source) hit.bindTooltip('Bấm để đóng đoạn đang tô đỏ', { sticky: true })
+      hit
         .on('mousemove', (e: L.LeafletMouseEvent) => showPreview(this.nearestSegment(segs, e.containerPoint)))
         .on('mouseout', () => showPreview(null))
         .on('click', (e: L.LeafletMouseEvent) => {
           L.DomEvent.stop(e) // không để cú bấm lọt xuống bản đồ (chọn lại điểm)
           showPreview(null)
+          // Bỏ gợi ý "Bấm để đóng…" ngay, không để tới khi rê chuột đi (test lại 15/11); vùng bấm chồng nhau nên gỡ
+          // ở mọi nét, không chỉ nét được bấm.
+          for (const h of hits) h.unbindTooltip()
+          this.quietHitsFor = source
           onSegmentClick(this.nearestSegment(segs, e.containerPoint) ?? seg)
         })
         .addTo(this.routes)
@@ -321,6 +338,10 @@ export class MapLayers {
    */
   setTourPoints(depot: TourPoint | null, stops: TourPoint[], order?: string[], broken: ReadonlySet<string> = new Set()) {
     this.points.clearLayers()
+    // Bản đồ hẹp (điện thoại): tên cố định của 5–14 điểm đè lên nhau (test lại 15/11, A-10), nên chỉ hiện khi chạm /
+    // rê chuột; điểm hỏng vẫn ghi tên cố định.
+    const w = this.map.getSize().x
+    const narrow = w > 0 && w < 600
     // Tên đọc được cho trình đọc màn hình (A-4): "Điểm 1: Nhà hát Thành phố", kho cũng có tên.
     const label = (m: L.Marker, text: string, bad: boolean) => {
       const el = m.getElement()
@@ -347,7 +368,7 @@ export class MapLayers {
         title: s.label, keyboard: false,
       })
         // Điểm có tên (case demo) thì hiện tên cố định cạnh số; tên mặc định "Điểm n" thì chỉ hiện khi rê chuột.
-        .bindTooltip(s.label, { direction: 'right', offset: [12, 0], permanent: bad || !/^Điểm \d+$/.test(s.label), className: 'stop-label' })
+        .bindTooltip(s.label, { direction: 'right', offset: [12, 0], permanent: bad || (!/^Điểm \d+$/.test(s.label) && !narrow), className: 'stop-label' })
         .addTo(this.points)
       label(sm, `Điểm ${n}: ${s.label}`, bad)
     })
@@ -356,6 +377,13 @@ export class MapLayers {
   /** Thu phóng cho vừa các điểm (kết quả mới hoặc case vừa nạp); không gọi khi chỉ đóng thêm một đoạn. */
   fitTo(points: L.LatLng[], rightPad = 40) {
     if (!points.length) return
+    // Bản đồ vừa tạo lại khi đổi bố cục có thể chưa có kích thước (0 px): fitBounds lúc đó ra mức zoom sai và không
+    // ai thu phóng lại (test lại 15/11, A-10). Đợi lần đổi kích thước đầu tiên rồi mới thu phóng.
+    const size = this.map.getSize()
+    if (size.x === 0 || size.y === 0) {
+      this.map.once('resize', () => this.fitTo(points, rightPad))
+      return
+    }
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     // rightPad: chừa chỗ cho nhãn tên điểm đặt bên phải marker (tour), để tên không bị cắt ở mép.
     this.map.fitBounds(L.latLngBounds(points), {
@@ -379,7 +407,7 @@ export class MapLayers {
         m.getElement()?.setAttribute('aria-hidden', 'true')
       }
     }
-    if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick)
+    if (onSegmentClick) this.addHitSegments(routeSegments(cand), onSegmentClick, cand)
   }
 
   /**

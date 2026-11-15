@@ -20,7 +20,8 @@ foreach ($cmd in "git", "python", "node", "npm") {
 $py = (python -c "import sys; print('%d.%d' % sys.version_info[:2])")
 if ([version]$py -lt [version]"3.11") { Fail "cần Python 3.11 trở lên, máy đang có $py" }
 if ($py -ne "3.11") {
-    Write-Host "CHÚ Ý: nhóm và CI dùng Python 3.11; máy đang có $py nên vài thư viện có thể khác phiên bản đã khóa. Số liệu benchmark phải chạy trên 3.11." -ForegroundColor Yellow
+    # Rõ phần nào bị ảnh hưởng (R3/T80 15/11: máy Minh chạy 3.14, hash dữ liệu và số E5b vẫn trùng).
+    Write-Host "CHÚ Ý: nhóm và CI dùng Python 3.11; máy đang có $py nên không dùng file khóa phiên bản và vài thư viện có thể khác. Dữ liệu (sha256), chi phí tuyến/tour, số node mở rộng vẫn như trên 3.11; riêng thời gian chạy (ms) trong bảng benchmark phải đo trên 3.11." -ForegroundColor Yellow
 }
 $node = (node -p "process.versions.node.split('.')[0]")
 if ([int]$node -lt 20) { Fail "cần Node.js 20 trở lên, máy đang có $node" }

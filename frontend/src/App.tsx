@@ -90,6 +90,9 @@ export default function App() {
   const announce = useAnnounce()
   const announceRef = useRef(announce)
   announceRef.current = announce
+  // Tạo sẵn vùng đọc (rỗng) ngay khi mở trang: vùng live chèn vào cùng lúc với nội dung thì trình đọc màn hình thường bỏ
+  // qua câu đầu tiên (test lại 15/11, A-9). Câu rỗng chỉ xoá trạng thái, không đọc gì.
+  useEffect(() => { announceRef.current('') }, [])
   // Gợi ý khi cú bấm bản đồ bị bỏ qua vì đang hiện kết quả (review 14/11, QA-1): bấm trượt không được xoá kết quả.
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -130,7 +133,11 @@ export default function App() {
   const tourBlocked = useMemo(() => blockedIds(tourCaseBlocked, tourClosed), [tourClosed, tourCaseBlocked])
   // Thứ tự của phương án đang xem; lúc người dùng bấm đóng một đoạn thì đây là "thứ tự cũ" gửi lên API.
   const shownTourOrder = useRef<string[] | undefined>(undefined)
-  shownTourOrder.current = tour && tourMethod ? tour.candidates[tourMethod]?.stop_order : undefined
+  // Đang xem thẻ Held–Karp (chỉ để đối chứng, không phải tour đang chạy) thì "thứ tự cũ" là của phương án được chọn
+  // (test lại 15/11: trước đây đóng đường lúc xem thẻ tối ưu làm "Giữ thứ tự cũ" rẻ hơn hẳn và nhận badge "Rẻ nhất",
+  // dù thứ tự đó chưa từng được chọn).
+  const keepFrom = tourMethod === 'optimal' ? tour?.chosen : tourMethod
+  shownTourOrder.current = tour && keepFrom ? tour.candidates[keepFrom]?.stop_order : undefined
   const keepOrderOnClose = useRef<string[] | undefined>(undefined)
   // Bật khi nạp case, bấm Tìm đường hoặc Lập tour: kết quả kế tiếp sẽ được thu phóng cho vừa (QA-2). Không bật
   // khi đóng đoạn hay đổi kịch bản, để bản đồ không nhảy giữa lúc thao tác.
@@ -228,21 +235,27 @@ export default function App() {
     }
   }, [tourQuery, checkServer, markServerUp])
 
+  // Trace chỉ phụ thuộc hai điểm, kịch bản và cạnh đóng: bật/tắt Phần mở rộng hay bấm lại Tìm đường với cùng tham số
+  // không gửi lại request trace (test lại 15/11; trước đây mỗi lần đều gửi lại và nháy lớp chấm).
+  const traceKey = routeQuery
+    ? JSON.stringify([latLon(routeQuery.source), latLon(routeQuery.target), routeQuery.scenarioId, routeQuery.blocked])
+    : null
   useEffect(() => {
-    if (!showTrace || !routeQuery || mode !== 'route') {
+    if (!showTrace || !traceKey || mode !== 'route') {
       setTrace(null)
       return
     }
     setTrace(null)   // bỏ chấm của truy vấn cũ ngay, không để hiện lẫn tới khi trace mới về (review #139)
+    const [source, target, scenarioId, blocked] = JSON.parse(traceKey) as [LatLon, LatLon, string, number[]]
     const ctl = new AbortController()
     postRoute({
-      source: latLon(routeQuery.source), target: latLon(routeQuery.target), algorithms: ['dijkstra', 'astar'],
-      scenario_id: routeQuery.scenarioId, blocked_edge_ids: routeQuery.blocked, trace_limit: TRACE_LIMIT,
+      source, target, algorithms: ['dijkstra', 'astar'],
+      scenario_id: scenarioId, blocked_edge_ids: blocked, trace_limit: TRACE_LIMIT,
     }, ctl.signal)
       .then(setTrace)
       .catch(() => { if (!ctl.signal.aborted) setTrace(null) })   // lớp phụ: lỗi thì chỉ không vẽ chấm
     return () => ctl.abort()
-  }, [showTrace, routeQuery, mode])
+  }, [showTrace, traceKey, mode])
 
   const toggleExt = (on: boolean) => {
     setShowExt(on)
