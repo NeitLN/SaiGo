@@ -198,6 +198,7 @@ export default function MapView({ onReady, onClick }: {
     const paint = () => buttons.forEach(([c, b]) => b.setAttribute('aria-pressed', String(c === choice)))
     paint()
     L.DomEvent.disableClickPropagation(switcher)
+    L.DomEvent.disableScrollPropagation(switcher)   // lăn chuột trên nút không zoom bản đồ (góp ý #162)
     const Switcher = L.Control.extend({ onAdd: () => switcher })
     new Switcher({ position: 'topright' }).addTo(map)
 
