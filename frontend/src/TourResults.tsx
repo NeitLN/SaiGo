@@ -49,7 +49,7 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
       </Text>
       {orderChanged(chosenStops(previous.res), chosenStops(res)) && (
         <Text type="body">
-          Thứ tự giao đã đổi, nên chênh lệch này gồm cả phần do sắp lại, không chỉ do kịch bản hay đường đóng.
+          Thứ tự giao đã đổi, nên chênh lệch này gồm cả phần do sắp lại, không chỉ do điều kiện giao thông hay đường đóng.
           {res.candidates.kept_order ? ' Ảnh hưởng của riêng việc đóng đường: xem thẻ "Giữ thứ tự cũ".' : ''}
         </Text>
       )}
@@ -74,14 +74,14 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
       <VStack gap={3}>
         {compareLine}
         <Banner status="error" title="Không lập được tour đầy đủ" collapsible={false}
-          description="Có chặng không đi được trong kịch bản này, nên không hiện tour thiếu điểm. Điểm hỏng được tô đỏ trên bản đồ.">
+          description="Có chặng không đi được với điều kiện giao thông này, nên không hiện tour thiếu điểm. Điểm hỏng được tô đỏ trên bản đồ.">
           <VStack gap={1}>
             {unreachableGroups(res.unreachable).map((g) => (
               <Text key={g.id} type="body" weight="semibold">{describeIssue(g, others, name)}</Text>
             ))}
           </VStack>
         </Banner>
-        <Text type="supporting">Kịch bản: {scenarioLabel}</Text>
+        <Text type="supporting">Điều kiện giao thông: {scenarioLabel}</Text>
       </VStack>
     )
   }
@@ -151,7 +151,7 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
       <Text type="supporting">
         Thời gian tính toán: ma trận {num(res.matrix_runtime_ms, 2)} ms, sắp thứ tự {num(res.order_runtime_ms ?? 0, 2)} ms
       </Text>
-      <Text type="supporting">Kịch bản: {scenarioLabel}</Text>
+      <Text type="supporting">Điều kiện giao thông: {scenarioLabel}</Text>
     </VStack>
   )
 }
