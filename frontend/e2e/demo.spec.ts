@@ -112,3 +112,26 @@ test('Khung 1280 × 800: không cuộn trang, nút chính và số chính nằm 
   await expect(page.getByRole('button', { name: 'Tìm đường', exact: true })).toBeInViewport()
   await expect(page.getByText('Thời gian di chuyển ước tính').first()).toBeInViewport()
 })
+
+test('Khay phân tích thu gọn được, bản đồ cao lên và vẫn thấy cả tuyến', async ({ page }) => {
+  await choose(page, 'Lộ trình mẫu', 'Hai điểm qua trung tâm')
+  await expectAll(page, ['186,1'])
+  const map = page.locator('.map-frame')
+  const before = (await map.boundingBox())!.height
+  await page.getByRole('button', { name: 'Thu gọn', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Mở rộng', exact: true })).toHaveAttribute('aria-expanded', 'false')
+  // aria-controls trỏ tới phần tử có thật, ẩn khi thu gọn (góp ý review #165).
+  await expect(page.locator('#tray-body')).toBeHidden()
+  await expect(page.locator('#tray-body')).toHaveCount(1)
+  await expect.poll(async () => (await map.boundingBox())!.height).toBeGreaterThan(before + 100)
+  // Thu phóng lại sau khi đổi kích thước: hai marker vẫn nằm trong khung bản đồ.
+  await page.waitForTimeout(800)
+  const box = (await map.boundingBox())!
+  for (const m of await page.locator('.leaflet-marker-pane .leaflet-marker-icon').all()) {
+    const b = (await m.boundingBox())!
+    expect(b.y >= box.y && b.y + b.height <= box.y + box.height, 'marker trong khung bản đồ').toBe(true)
+  }
+  await page.getByRole('button', { name: 'Mở rộng', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Thu gọn', exact: true })).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('#tray-body')).toBeVisible()
+})

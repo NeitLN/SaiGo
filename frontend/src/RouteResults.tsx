@@ -72,8 +72,10 @@ const routeCost = (r: RouteResponse): number | null => {
   return d && d.status === 'ok' && d.cost_s !== null ? d.cost_s : null
 }
 
-export default function RouteResults({ res, scenarioLabel, previous }: {
+export default function RouteResults({ res, scenarioLabel, previous, hasSummary = false }: {
   res: RouteResponse
+  // Đợt UI "Bàn điều phối": ô số chính đã ở dải tóm tắt đầu panel trái, khay phân tích không lặp lại.
+  hasSummary?: boolean
   scenarioLabel: string
   // Lần trước cùng hai điểm, khác kịch bản hoặc cạnh đóng (review 14/11 đợt 2: PM-1, UX-5, AI-7).
   previous?: { res: RouteResponse; label: string } | null
@@ -103,13 +105,13 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
   const tableData = ok && same ? data.slice(2) : data
   return (
     <VStack gap={3}>
-      {ok ? (
+      {ok ? (hasSummary ? null : (
         <Grid columns={2} gap={2}>
           <Kpi label="Thời gian di chuyển ước tính" value={minutes(now.cost_s!)}
             sub={`theo điều kiện giao thông · ${secondsRaw(now.cost_s!)}${same ? '' : ' · theo Dijkstra'}`} />
           <Kpi label="Quãng đường" value={km(now.distance_m ?? 0)} sub={metersRaw(now.distance_m ?? 0)} />
         </Grid>
-      ) : (
+      )) : (
         <Kpi label="Thời gian di chuyển ước tính" value="Không có đường"
           sub="Không còn đường đi giữa hai điểm với điều kiện giao thông này." />
       )}

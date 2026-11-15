@@ -34,8 +34,10 @@ function improvementText(pct: number): string {
   return pct > 0 ? `Nhanh hơn thứ tự nhập ${num(pct)}%` : `Chậm hơn thứ tự nhập ${num(-pct)}%`
 }
 
-export default function TourResults({ res, labels, selected, onSelect, scenarioLabel, previous }: {
+export default function TourResults({ res, labels, selected, onSelect, scenarioLabel, previous, hasSummary = false }: {
   res: TourResponse
+  // Ô số chính đã ở dải tóm tắt đầu panel trái (đợt UI "Bàn điều phối"), thẻ "Đang xem" không lặp lại.
+  hasSummary?: boolean
   labels: Record<string, string>
   selected: TourMethod | null
   onSelect: (m: TourMethod) => void
@@ -141,10 +143,12 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
                 {viewKey === 'optimal' && <Badge variant="neutral" label="Đối chứng" />}
               </HStack>
             </HStack>
-            <Grid columns={2} gap={2}>
-              <Kpi label="Thời gian di chuyển ước tính" value={minutes(view.cost_s)} sub={secondsRaw(view.cost_s)} />
-              <Kpi label="Quãng đường" value={km(view.distance_m)} sub={metersRaw(view.distance_m)} />
-            </Grid>
+            {!hasSummary && (
+              <Grid columns={2} gap={2}>
+                <Kpi label="Thời gian di chuyển ước tính" value={minutes(view.cost_s)} sub={secondsRaw(view.cost_s)} />
+                <Kpi label="Quãng đường" value={km(view.distance_m)} sub={metersRaw(view.distance_m)} />
+              </Grid>
+            )}
             <Text type="supporting">
               {view.stop_order.length} điểm giao · gồm chặng về kho
               {viewKey !== 'input' ? ` · ${improvementText(view.improvement_pct).toLowerCase()}` : ''}

@@ -471,6 +471,12 @@ export class MapLayers {
     })
   }
 
+  /** Sau khi khung bản đồ đổi kích thước (thu/mở khay phân tích): thu phóng lại cho vừa tuyến / tour đang vẽ. */
+  refitAfterResize() {
+    const d = this.drawn
+    if (d) this.map.once('resize', () => this.fitTo(d.points, d.rightPad))
+  }
+
   /** Thu phóng cho vừa các điểm (kết quả mới hoặc case vừa nạp); không gọi khi chỉ đóng thêm một đoạn. */
   fitTo(points: L.LatLng[], rightPad = 40) {
     if (!points.length) return
