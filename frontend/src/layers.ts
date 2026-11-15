@@ -158,6 +158,8 @@ export class MapLayers {
   private map: L.Map
   private legendEl: HTMLDivElement
   private legendCollapsed = false
+  private legendBtn: HTMLButtonElement
+  private legendRows: HTMLDivElement
 
   constructor(map: L.Map) {
     this.map = map
@@ -177,6 +179,25 @@ export class MapLayers {
     // Bấm hay cuộn trên chú giải không lan xuống bản đồ (review #143: bấm chú giải từng đặt điểm, cuộn thì zoom).
     L.DomEvent.disableClickPropagation(this.legendEl)
     L.DomEvent.disableScrollPropagation(this.legendEl)
+    // Chú giải luôn hiện khi có kết quả, thu gọn được về một dòng tiêu đề (đợt UI "Bàn điều phối": ở 1280 px nó có thể
+    // đè đoạn tuyến ở góc dưới trái). Nút và vùng dòng tạo một lần; trạng thái thu gọn giữ qua các lần vẽ lại.
+    this.legendBtn = L.DomUtil.create('button', 'legend-title', this.legendEl) as HTMLButtonElement
+    this.legendBtn.type = 'button'
+    this.legendBtn.setAttribute('aria-controls', 'map-legend-rows')
+    this.legendBtn.innerHTML = '<span>Chú giải</span><svg class="legend-chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">'
+      + '<path d="M3 7.5 6 4.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    this.legendRows = L.DomUtil.create('div', '', this.legendEl) as HTMLDivElement
+    this.legendRows.id = 'map-legend-rows'
+    const paintLegend = () => {
+      const open = !this.legendCollapsed
+      this.legendBtn.setAttribute('aria-expanded', String(open))
+      this.legendRows.hidden = !open
+    }
+    this.legendBtn.addEventListener('click', () => {
+      this.legendCollapsed = !this.legendCollapsed
+      paintLegend()
+    })
+    paintLegend()
     const legendEl = this.legendEl
     const Legend = L.Control.extend({ onAdd: () => legendEl })
     new Legend({ position: 'bottomleft' }).addTo(map)
@@ -603,19 +624,9 @@ export class MapLayers {
       depot: `<i class="legend-square" style="background:${this.palette.ink}"></i>`,
       stop: `<i class="legend-pin" style="background:${this.palette.tour}"></i>`,
     }
-    // Chú giải luôn hiện khi có kết quả, thu gọn được về một dòng tiêu đề (đợt UI "Bàn điều phối": ở 1280 px nó có thể
-    // đè đoạn tuyến ở góc dưới trái). Trạng thái thu gọn giữ qua các lần vẽ lại.
-    const open = !this.legendCollapsed
-    this.legendEl.innerHTML = `<button type="button" class="legend-title" aria-expanded="${open}" aria-controls="map-legend-rows">`
-      + `<span>Chú giải</span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="transform:rotate(${open ? 0 : 180}deg)">`
-      + `<path d="M3 7.5 6 4.5 9 7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
-      + `<div id="map-legend-rows"${open ? '' : ' hidden'}>`
-      + items.map((it) => `<div class="legend-row">${sw[it.kind]}<span>${escapeHtml(it.label)}</span></div>`).join('') + '</div>'
-    this.legendEl.querySelector('button')?.addEventListener('click', () => {
-      this.legendCollapsed = !this.legendCollapsed
-      this.setLegend(items)
-      this.legendEl.querySelector('button')?.focus()
-    })
+    // Chỉ thay các dòng; nút "Chú giải" giữ nguyên phần tử nên người dùng bàn phím đang đứng ở nút không mất focus khi
+    // có kết quả mới (góp ý review #166).
+    this.legendRows.innerHTML = items.map((it) => `<div class="legend-row">${sw[it.kind]}<span>${escapeHtml(it.label)}</span></div>`).join('')
     this.legendEl.style.display = items.length ? '' : 'none'
   }
 

@@ -149,4 +149,9 @@ test('Bản đồ: ký hiệu A/B có tên địa danh, chú giải thu gọn đ
   await expect(page.locator('#map-legend-rows')).toBeHidden()
   await page.getByRole('button', { name: 'Chú giải' }).click()
   await expect(page.locator('#map-legend-rows')).toBeVisible()
+  // Nút giữ focus khi bản đồ vẽ lại vì có kết quả mới (góp ý review #166).
+  await page.getByRole('button', { name: 'Chú giải' }).focus()
+  await page.getByRole('button', { name: 'Đảo chiều', exact: true }).evaluate((b: HTMLElement) => b.click())
+  await expectAll(page, ['193,0'])
+  await expect(page.getByRole('button', { name: 'Chú giải' })).toBeFocused()
 })
