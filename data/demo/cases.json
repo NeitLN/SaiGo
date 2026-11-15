@@ -29,7 +29,7 @@
       "mode": "route",
       "demo_steps": [7],
       "source": {"name": "Dinh Độc Lập", "lat": 10.77871, "lon": 106.69593},
-      "target": {"name": "Nguyễn Du – Công trường Công xã Paris (node 351)", "lat": 10.7791894, "lon": 106.7001527},
+      "target": {"name": "Nguyễn Du – Công trường Công xã Paris", "lat": 10.7791894, "lon": 106.7001527},
       "scenario_id": "baseline",
       "blocked_edge_ids": [1029, 3123],
       "_comment": "Đóng cả 2 cạnh đi vào node đích nên không còn đường có hướng tới đích.",

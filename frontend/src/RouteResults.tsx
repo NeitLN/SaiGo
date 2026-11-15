@@ -91,7 +91,9 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
   })
   const before = previous?.res.results.dijkstra
   const now = res.results.dijkstra
-  const moved = before?.status === 'ok' && now?.status === 'ok' && before.edge_ids?.join() !== now.edge_ids?.join()
+  // Cùng điều kiện với App khi vẽ tuyến lần trước (test lại 15/11, R-4): cả khi lần này không còn đường.
+  const moved = before?.status === 'ok' && (now?.status !== 'ok' || before.edge_ids?.join() !== now.edge_ids?.join())
+  const lost = before?.status === 'ok' && now?.status !== 'ok'
   return (
     <VStack gap={3}>
       <HStack gap={2}>
@@ -103,7 +105,9 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
             So với lần trước: {deltaText(costDelta(routeCost(previous.res), routeCost(res)))}
           </Text>
           <Text type="supporting">
-            Lần trước: {previous.label}.{moved ? ' Tuyến lần trước vẽ nét xám mờ trên bản đồ.' : ''}
+            {/* Ghi cả hai kịch bản (R-7): so với lần ngay trước, không phải với Cơ sở. */}
+            Lần trước: {previous.label}. Lần này: {scenarioLabel}.
+            {lost ? ' Nét xám mờ trên bản đồ là tuyến lần trước, nay không đi được.' : moved ? ' Tuyến lần trước vẽ nét xám mờ trên bản đồ.' : ''}
           </Text>
         </VStack>
       )}
@@ -136,8 +140,11 @@ export default function RouteResults({ res, scenarioLabel, previous }: {
             ]}
           />
           <Text type="supporting">
-            Cùng chi phí với Dijkstra: {extAlgos.every((a) => sameCost(res.results[a], res.results.dijkstra)) ? 'có' : 'không'}.
-            Số đo trên nhiều cặp: EXPERIMENTS mục E2b.
+            {/* Cả bốn cùng không có đường thì không gọi là "cùng chi phí" (R-3), như dòng của bảng chính. */}
+            {extAlgos.every((a) => res.results[a]?.status === 'no_path') && res.results.dijkstra?.status === 'no_path'
+              ? 'Cả bốn thuật toán cùng báo không có đường.'
+              : `Cùng chi phí với Dijkstra: ${extAlgos.every((a) => sameCost(res.results[a], res.results.dijkstra)) ? 'có' : 'không'}.`}
+            {' '}Số đo trên nhiều cặp điểm nằm ở phần thí nghiệm của báo cáo.
           </Text>
         </VStack>
       )}

@@ -30,15 +30,22 @@ export function costDelta(rawBefore: number | null, rawAfter: number | null): De
 const fmt = (x: number) => x.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const signed = (x: number) => `${x > 0 ? '+' : '−'}${fmt(Math.abs(x))}`
 
-/** Một dòng: "186,1 s → 300,0 s: +113,9 s (+61,2%)". */
-export function deltaText(d: Delta): string {
+// Phần trăm dưới 0,05% làm tròn ra "+0,0%" (test lại 15/11, T-7: "+0,3 s (+0,0%)"), nên ghi "< 0,1%".
+const pctText = (p: number) => (Math.abs(p) < 0.05 ? `${p > 0 ? '+' : '−'}< 0,1%` : `${signed(p)}%`)
+
+/**
+ * Một dòng: "186,1 s → 300,0 s: +113,9 s (+61,2%)". `what` = 'tour' thì trạng thái không có kết quả gọi là "tour
+ * không lập được" thay vì "không có đường" (test lại 15/11, T-7).
+ */
+export function deltaText(d: Delta, what: 'route' | 'tour' = 'route'): string {
+  const none = what === 'tour' ? 'không lập được tour đầy đủ' : 'không có đường'
   switch (d.kind) {
-    case 'both-none': return 'trước và sau đều không có đường'
-    case 'found': return `trước không có đường → ${fmt(d.after!)} s`
-    case 'lost': return `${fmt(d.before!)} s → không còn đường`
+    case 'both-none': return `trước và sau đều ${none}`
+    case 'found': return `trước ${none} → ${fmt(d.after!)} s`
+    case 'lost': return `${fmt(d.before!)} s → ${what === 'tour' ? none : 'không còn đường'}`
     case 'same': return `không đổi (${fmt(d.after!)} s)`
     case 'changed': {
-      const pct = d.pct === null ? '' : ` (${signed(d.pct)}%)`
+      const pct = d.pct === null ? '' : ` (${pctText(d.pct)})`
       return `${fmt(d.before!)} s → ${fmt(d.after!)} s: ${signed(d.diff!)} s${pct}`
     }
   }

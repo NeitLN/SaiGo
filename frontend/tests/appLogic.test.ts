@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  addTourPoint, blockedIds, distanceText, fmt, nextPrevious, nextRoutePoint, removeLastTourPoint, renameIds,
+  addTourPoint, blockedIds, closedMore, runLabel, distanceText, fmt, nextPrevious, nextRoutePoint, removeLastTourPoint, renameIds,
   routeAnnouncement, sameIdList, tourAnnouncement, traceLegend, type Run, type TourPt,
 } from '../src/appLogic.ts'
 import type { RouteResponse, TourResponse } from '../src/api.ts'
@@ -111,4 +111,17 @@ test('tourAnnouncement: phương án được chọn hoặc không khả thi', (
   assert.equal(tourAnnouncement(ok as unknown as TourResponse), 'Lập tour xong: phương án được chọn 898,1 giây.')
   assert.equal(tourAnnouncement({ status: 'infeasible_under_model', chosen: null } as unknown as TourResponse),
     'Không lập được tour đầy đủ: có chặng không đi được.')
+})
+
+test('closedMore: cùng kịch bản và chỉ đóng thêm thì mới so "trước khi đóng" (T-1)', () => {
+  assert.ok(closedMore({ scenarioId: 'baseline', blocked: [] }, { scenarioId: 'baseline', blocked: [1666] }))
+  assert.ok(!closedMore({ scenarioId: 'baseline', blocked: [1666] }, { scenarioId: 'peak', blocked: [1666] }))
+  assert.ok(!closedMore({ scenarioId: 'baseline', blocked: [1666] }, { scenarioId: 'baseline', blocked: [] }))
+  assert.ok(!closedMore(null, { scenarioId: 'baseline', blocked: [1] }))
+})
+
+test('runLabel: bỏ vế "không đóng đường" khi có cạnh đóng (T-7)', () => {
+  assert.equal(runLabel('Cơ sở — không ùn tắc, không đóng đường', 0), 'Cơ sở — không ùn tắc, không đóng đường')
+  assert.equal(runLabel('Cơ sở — không ùn tắc, không đóng đường', 1), 'Cơ sở — không ùn tắc; đóng 1 cạnh')
+  assert.equal(runLabel('Cao điểm mô phỏng — trung tâm', 2), 'Cao điểm mô phỏng — trung tâm; đóng 2 cạnh')
 })
