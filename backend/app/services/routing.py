@@ -75,9 +75,20 @@ def blocked_edges(graph: Graph, meta: GraphMeta, blocked_edge_ids: list[int]) ->
     return [BlockedEdge(edge_id=e, geometry=edge_coords(graph, meta, e)) for e in dict.fromkeys(blocked_edge_ids)]
 
 
+def _network_edges(graph: Graph, twins: list[int | None]) -> list[int]:
+    """Các cạnh vẽ ở nền: cạnh có cạnh đối chỉ lấy cạnh id nhỏ hơn (đoạn hai chiều vẽ một lần)."""
+    return [e for e in range(len(graph.edge_u)) if twins[e] is None or e < twins[e]]
+
+
 def network_lines(graph: Graph, meta: GraphMeta, twins: list[int | None]) -> list[list[list[float]]]:
-    """Hình học mọi đoạn đường để vẽ nền (T56 R8); cạnh có cạnh đối chỉ lấy cạnh id nhỏ hơn."""
-    return [edge_coords(graph, meta, e) for e in range(len(graph.edge_u)) if twins[e] is None or e < twins[e]]
+    """Hình học mọi đoạn đường để vẽ nền (T56 R8)."""
+    return [edge_coords(graph, meta, e) for e in _network_edges(graph, twins)]
+
+
+def network_kinds(graph: Graph, meta: GraphMeta, twins: list[int | None]) -> list[str | None]:
+    """Loại đường OSM (`highway`) của từng phần tử trong `network_lines`, cùng thứ tự: để nền dự phòng vẽ đường
+    chính dày hơn đường nhỏ (đợt UI 15/11). `None` khi dữ liệu không ghi loại."""
+    return [meta.edge_highway[e] for e in _network_edges(graph, twins)]
 
 
 def build_geometry(

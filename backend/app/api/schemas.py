@@ -166,6 +166,8 @@ class NetworkResponse(BaseModel):
 
     dataset_id: str
     lines: list[list[list[float]]]
+    # Thêm 15/11 (chỉ thêm trường): loại đường OSM của lines[i], để nền dự phòng phân cấp đường chính / phụ.
+    kinds: list[str | None] = Field(default_factory=list)
 
 
 class BBox(BaseModel):

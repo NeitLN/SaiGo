@@ -47,3 +47,13 @@ def test_network_coordinates_are_lon_lat(client, mini):
     first = client.get("/api/network").json()["lines"][0]
     u = graph.edge_u[0]
     assert first[0] == [graph.node_lon[u], graph.node_lat[u]]   # [lon, lat] như GeoJSON
+
+
+def test_network_kinds_parallel_to_lines(client, mini):
+    """Đợt UI 15/11: `kinds[i]` là loại đường OSM của `lines[i]`, để nền dự phòng vẽ đường chính dày hơn."""
+    graph, meta = mini
+    twins = reverse_twins(graph, meta)
+    body = client.get("/api/network").json()
+    kept = [e for e in range(len(graph.edge_u)) if twins[e] is None or e < twins[e]]
+    assert body["kinds"] == [meta.edge_highway[e] for e in kept]
+    assert len(body["kinds"]) == len(body["lines"])

@@ -98,7 +98,7 @@ tests/
 frontend/src/        (React + Astryx từ 13/11, T56)
   main.tsx           gắn App, theme Astryx
   App.tsx            bố cục 3 cột, trạng thái, gọi API, chế độ tìm đường / tour
-  MapView.tsx        bọc Leaflet; nền dự phòng /api/network khi tile OSM lỗi (R8)
+  MapView.tsx        bọc Leaflet; chuỗi nền Esri Light Gray → OSM → nền rút gọn /api/network (R8, đợt UI 15/11)
   layers.ts          vẽ tuyến, vùng ùn tắc, cạnh đóng, marker tour (Leaflet trực tiếp)
   RouteResults.tsx   khối Dijkstra / A*
   TourResults.tsx    3 thẻ tour
@@ -120,7 +120,7 @@ results/             <run_id>/queries.csv, measurements.csv, env.json
 | GET | `/api/dataset` | `dataset_id`, số node/cạnh, danh sách kịch bản | T51 |
 | POST | `/api/route` | Tìm đường giữa hai điểm | T13 (skeleton), T51 |
 | POST | `/api/tour` | Tour nhiều điểm | T72 |
-| GET | `/api/network` | Mạng đường của vùng đang nạp, **chỉ** để vẽ nền khi không tải được tile OSM | T56 (R8) |
+| GET | `/api/network` | Mạng đường của vùng đang nạp, **chỉ** để vẽ nền khi không tải được tile; từ 15/11 thêm `kinds[i]` = loại đường OSM của `lines[i]` để vẽ đường chính / phụ (chỉ thêm trường) | T56 (R8) |
 | GET | `/api/snap?lat=&lon=` | Node gần nhất (trong SCC) và khoảng cách, `ok` theo ngưỡng 150 m như `/api/route`, `/api/tour`; UI kiểm điểm ngay lúc bấm. `/api/dataset` thêm `bbox` (khung bao mọi node) để vẽ viền vùng có dữ liệu | Review UI 14/11 |
 
 Ngày 26/10 ([PROJECT_BRIEF](PROJECT_BRIEF.md) D12) đã bỏ việc vẽ toàn mạng đường lên bản đồ (T32). 13/11 `/api/network` quay lại với vai trò khác: nền dự phòng khi mạng chặn tile OSM (DNS không phân giải được `tile.openstreetmap.org`, gặp trên máy Minh và máy Tiến). Trả `{"dataset_id", "lines": [[[lon, lat], …], …]}`, mỗi đoạn đường hai chiều một lần (bỏ cạnh đối có id lớn hơn); dựng một lần lúc khởi động. Vùng demo: 2.668 đường, ~277 KB; từ 14/11 backend nén gzip mọi response từ 1 KB khi client nhận gzip (`GZipMiddleware`), `/api/network` còn ~72 KB trên đường truyền. Không tải sẵn tile OSM vì chính sách sử dụng tile của OSM cấm tải hàng loạt.

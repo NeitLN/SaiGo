@@ -180,6 +180,7 @@ export const MAX_TOUR_STOPS = 14 // khớp schemas.MAX_TOUR_STOPS của backend
 export interface NetworkResponse {
   dataset_id: string
   lines: [number, number][][]
+  kinds?: (string | null)[]   // loại đường OSM của lines[i] (thêm 15/11); backend cũ không có
 }
 
 export async function getNetwork(): Promise<NetworkResponse> {

@@ -45,6 +45,16 @@ const ROAD_KIND: Record<string, string> = {
   residential: 'đường nội khu', unclassified: 'đường nhỏ',
 }
 
+/** Cấp đường cho nền rút gọn: 2 = trục chính, 1 = đường cấp 2–3, 0 = còn lại. */
+export function roadLevel(kind: string | null): 0 | 1 | 2 {
+  const k = (kind ?? '').replace(/_link$/, '')
+  if (k === 'motorway' || k === 'trunk' || k === 'primary') return 2
+  if (k === 'secondary' || k === 'tertiary') return 1
+  return 0
+}
+// [viền, lõi] (px ở z16) theo cấp đường.
+const ROAD_WIDTH: Record<number, [number, number]> = { 0: [3.5, 2], 1: [5.5, 3.5], 2: [8, 6] }
+
 export type LegendKind = 'dijkstra' | 'astar' | 'same' | 'zone' | 'closed' | 'previous' | 'trace' | 'tour' | 'broken'
 export interface LegendItem { kind: LegendKind; label: string }
 
@@ -162,21 +172,54 @@ export class MapLayers {
    * Pane riêng nằm trên lớp tile, dưới mọi lớp vẽ khác; canvas cho ~2.700 đường; không bấm được để
    * cú bấm vẫn rơi xuống bản đồ (chọn điểm).
    */
-  setNetwork(lines: [number, number][][] | null) {
+  setNetwork(lines: [number, number][][] | null, kinds?: (string | null)[]) {
     if (this.network) this.network.remove()
     // Gỡ cả renderer: gỡ polyline thôi thì canvas vẫn nằm lại, mỗi lần bật lại thêm một canvas.
     if (this.networkRenderer) this.networkRenderer.remove()
+    this.map.off('zoomend', this.restyleNetwork)
+    this.map.getContainer().classList.remove('map-fallback')
     this.network = null
     this.networkRenderer = null
-    if (!lines) return     // tile OSM tải lại được: gỡ nền dự phòng (MapView)
+    if (!lines) return     // tile tải lại được: gỡ nền dự phòng (MapView)
     const pane = this.map.getPane('basemap') ?? this.map.createPane('basemap')
     pane.style.zIndex = '250'
     pane.style.pointerEvents = 'none'
     const renderer = L.canvas({ pane: 'basemap' })
     this.networkRenderer = renderer
-    this.network = L.polyline(lines.map(toLatLngs), {
-      pane: 'basemap', renderer, color: this.palette.road, weight: 1.5, opacity: 0.35, interactive: false,
-    }).addTo(this.map)
+    // Nền rút gọn trông như bản đồ thật (đợt UI 15/11): đường trắng có viền xám trên nền xám nhạt, chia ba cấp theo
+    // loại đường OSM (`kinds` từ /api/network); vẽ cấp nhỏ trước, cấp lớn đè lên. Backend cũ không có `kinds` thì mọi
+    // đường là cấp nhỏ. Không có tên đường: dữ liệu đồ thị không lưu tên.
+    const groups: [number, number][][][] = [[], [], []]
+    lines.forEach((ln, i) => groups[roadLevel(kinds?.[i] ?? null)].push(ln))
+    const group = L.layerGroup()
+    this.networkStyles = []
+    groups.forEach((g, level) => {
+      if (!g.length) return
+      const latlngs = g.map(toLatLngs)
+      const [casingW, coreW] = ROAD_WIDTH[level]
+      const casing = L.polyline(latlngs, {
+        pane: 'basemap', renderer, color: this.palette.road, opacity: 0.35, weight: casingW, interactive: false,
+        lineCap: 'round', lineJoin: 'round',
+      }).addTo(group)
+      const core = L.polyline(latlngs, {
+        pane: 'basemap', renderer, color: this.palette.surface, opacity: 1, weight: coreW, interactive: false,
+        lineCap: 'round', lineJoin: 'round',
+      }).addTo(group)
+      this.networkStyles.push([casing, casingW], [core, coreW])
+    })
+    // Vẽ lõi sau mọi viền để chỗ giao nhau liền mạch như bản đồ thật.
+    for (const [layer] of this.networkStyles.filter((_, i) => i % 2 === 1)) (layer as L.Polyline).bringToFront()
+    this.network = group.addTo(this.map)
+    this.map.getContainer().classList.add('map-fallback')
+    this.restyleNetwork()
+    this.map.on('zoomend', this.restyleNetwork)
+  }
+
+  // Độ dày đường theo mức zoom: chuẩn ở z16, gấp đôi mỗi mức (giới hạn để không phủ kín bản đồ).
+  private networkStyles: [L.Polyline, number][] = []
+  private restyleNetwork = () => {
+    const k = Math.min(4, Math.max(0.35, 2 ** (this.map.getZoom() - 16)))
+    for (const [layer, w] of this.networkStyles) layer.setStyle({ weight: w * k })
   }
 
   // Vùng ùn tắc của kịch bản: hình tròn tô nhạt, không bấm được để không chặn thao tác chọn điểm.
@@ -413,13 +456,25 @@ export class MapLayers {
   /**
    * Viền vùng có dữ liệu (review 14/11 đợt 2, PM-7/UX-3): khung bao mọi node, nét đứt xám, không bấm được.
    * Người dùng thấy ngay đặt điểm ở đâu thì snap được, thay vì bấm ra ngoài rồi mới bị báo lỗi.
+   * Đợt UI 15/11: phủ mờ phần ngoài khung thay cho nét gạch đen cắt ngang bản đồ (trông như lỗi), viền mảnh liền;
+   * giới hạn kéo bản đồ quanh vùng để không lạc ra ngoài lúc demo. Khung chỉ là "vùng có dữ liệu", không có nghĩa mọi
+   * điểm bên trong đều đi được (điểm vẫn được kiểm khi đặt).
    */
   setDataArea(b: { south: number; west: number; north: number; east: number } | null) {
     this.area.clearLayers()
     if (!b) return
-    L.rectangle([[b.south, b.west], [b.north, b.east]], {
-      pane: 'previous', color: this.palette.road, weight: 2, dashArray: '8 6', fill: false, interactive: false,
+    const inner: L.LatLngTuple[] = [[b.south, b.west], [b.north, b.west], [b.north, b.east], [b.south, b.east]]
+    const pad = 0.5
+    const outer: L.LatLngTuple[] = [[b.south - pad, b.west - pad], [b.north + pad, b.west - pad],
+      [b.north + pad, b.east + pad], [b.south - pad, b.east + pad]]
+    L.polygon([outer, inner], {
+      pane: 'previous', stroke: false, fillColor: this.palette.casing, fillOpacity: 0.08, interactive: false,
     }).addTo(this.area)
+    L.rectangle([[b.south, b.west], [b.north, b.east]], {
+      pane: 'previous', color: this.palette.road, weight: 1.5, opacity: 0.7, fill: false, interactive: false,
+    }).addTo(this.area)
+    this.map.setMaxBounds(L.latLngBounds([b.south, b.west], [b.north, b.east]).pad(0.6))
+    this.map.setMinZoom(13)
   }
 
   /** Tuyến của lần trước (cùng điểm, khác kịch bản/cạnh đóng): nét xám mờ làm mốc so (review 14/11 đợt 2, AI-7). */

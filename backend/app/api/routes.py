@@ -76,7 +76,8 @@ def snap_check(request: Request, lat: float = Query(..., ge=-90, le=90, allow_in
 def network(request: Request) -> NetworkResponse:
     """Mạng đường của vùng đang nạp, cho UI vẽ nền khi không tải được tile OSM (T56 R8)."""
     graph, _ = _loaded(request)
-    return NetworkResponse(dataset_id=graph.dataset_id, lines=request.app.state.network)
+    return NetworkResponse(dataset_id=graph.dataset_id, lines=request.app.state.network,
+                           kinds=request.app.state.network_kinds)
 
 
 @router.post("/route", response_model=RouteResponse)
