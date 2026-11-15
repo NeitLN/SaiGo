@@ -20,14 +20,15 @@ import {
   type BlockedEdge, type LatLon, type RouteResponse, type TourMethod, type TourResponse,
 } from './api'
 import { DEMO_CASES, DEMO_DATASET_ID, NAMED_PLACES } from './cases'
-import { toLatLngs, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
+import { costDelta, deltaText } from './compare'
+import { routeSegments, segmentLength, toLatLngs, type LegendItem, type MapLayers, type RouteSegment, type TourPoint } from './layers'
 import MapView from './MapView'
 import RouteResults from './RouteResults'
 import TourResults from './TourResults'
 import { unreachableGroups } from './tourIssues'
 import {
   TRACE_LIMIT, addTourPoint, blockedIds, distanceText, fmt, latLon, nextPrevious, nextRoutePoint, removeLastTourPoint,
-  closedMore, renameIds, routeAnnouncement, routePoints, runLabel as scenarioRunLabel, sameIdList, tourAnnouncement, tourPoints, traceLegend, type Mode, type Pt,
+  closedMore, renameIds, routeAnnouncement, routePoints, runLabel as scenarioRunLabel, sameIdList, segmentLabels, tourAnnouncement, tourPoints, traceLegend, type Mode, type Pt,
   type Run,
 } from './appLogic'
 import { useServerStatus } from './useServerStatus'
@@ -55,8 +56,9 @@ const SNAP_TIMEOUT_MS = 4000
 
 export default function App() {
   const narrow = useMediaQuery('(max-width: 767px)')
-  // Ba cột chỉ từ 1366 px: máy chiếu 1280 × 800 dùng bố cục hai cột, bản đồ 920 px thay vì 620 (góp ý #141).
-  const medium = useMediaQuery('(max-width: 1365px)')
+  // Ba cột chỉ từ 1440 px: máy chiếu 1280 × 800 dùng bố cục hai cột, bản đồ 920 px thay vì 620 (góp ý #141); ở
+  // 1366 × 768 ba cột chỉ còn 706 px cho bản đồ và cắt chữ ô kịch bản (test lại 15/11, A-7), nên cũng hai cột.
+  const medium = useMediaQuery('(max-width: 1439px)')
   const layersRef = useRef<MapLayers | null>(null)
   const [mapReady, setMapReady] = useState(0)
   const onMapReady = useCallback((l: MapLayers) => {
@@ -397,6 +399,8 @@ export default function App() {
       if (next.restart) resetRoute()
       setSource(next.source)
       setTarget(next.target)
+      // Đọc cho trình đọc màn hình (test lại 15/11, A-6): trước đây đặt điểm không có thông báo nào.
+      announceRef.current(next.target ? `Đã đặt điểm đến: ${fmt(next.target)}.` : `Đã đặt điểm đi: ${fmt(next.source)}.`)
       return
     }
     if (tour) {
@@ -412,8 +416,14 @@ export default function App() {
       return
     }
     resetTour()
-    if (added.kind === 'depot') setDepot(added.depot)
-    else setStops(added.stops)
+    if (added.kind === 'depot') {
+      setDepot(added.depot)
+      announceRef.current(`Đã đặt kho: ${added.depot.label}.`)
+    } else {
+      setStops(added.stops)
+      const last = added.stops[added.stops.length - 1]
+      announceRef.current(`Đã thêm điểm giao ${added.stops.length}: ${last.label}.`)
+    }
   }
   const placePointRef = useRef(placePoint)
   placePointRef.current = placePoint
@@ -605,6 +615,28 @@ export default function App() {
   const routeScenarioLabel = route ? runLabel(route) : ''
   const tourScenarioLabel = tourScenario ? runLabel(tourScenario) : ''
 
+  // Đóng đoạn bằng bàn phím (test lại 15/11, A-1): vùng bấm trên bản đồ chỉ dùng được bằng chuột, nên liệt kê các
+  // đoạn của tuyến / tour đang xem trong một ô chọn; chọn một đoạn như bấm vào nó trên bản đồ.
+  const shownCand = tour && tourMethod ? tour.candidates[tourMethod] : undefined
+  const keySegs = mode === 'route'
+    ? (route && !noPath && route.res.results.dijkstra ? routeSegments(route.res.results.dijkstra) : [])
+    : (tour?.status === 'ok' && shownCand ? routeSegments(shownCand) : [])
+  const keyLabels = segmentLabels(keySegs.map(segmentLength), mode === 'route' ? 'điểm đi' : 'kho')
+  const closeByKey = (v: string) => {
+    const seg = keySegs[Number(v)]
+    if (seg) (mode === 'route' ? closeSegment : closeTourSegment)(seg)
+  }
+
+  // Tóm tắt kết quả ở đầu cột trái khi không có cột kết quả riêng (< 1440 px; test lại 15/11, D-2): ở máy chiếu
+  // 1280 px, bảng kết quả nằm dưới điều khiển nên người xem không thấy số nếu không cuộn.
+  const routeCost = (r: RouteResponse) => (r.results.dijkstra?.status === 'ok' ? r.results.dijkstra.cost_s : null)
+  const tourCost = (r: TourResponse) => (r.status === 'ok' && r.chosen ? r.candidates[r.chosen]?.cost_s ?? null : null)
+  const summary = mode === 'route'
+    ? (route ? routeAnnouncement(route.res)
+      + (prevRoute ? ` So với lần trước: ${deltaText(costDelta(routeCost(prevRoute.res), routeCost(route.res)))}.` : '') : null)
+    : (tour ? tourAnnouncement(tour)
+      + (prevTour ? ` So với lần trước: ${deltaText(costDelta(tourCost(prevTour.res), tourCost(tour)), 'tour')}.` : '') : null)
+
   const hint = mode === 'route'
     ? (!source ? 'Bấm lên bản đồ để chọn điểm đi.'
       : !target ? 'Bấm để chọn điểm đến.'
@@ -623,6 +655,12 @@ export default function App() {
         <SegmentedControlItem value="route" label="Tìm đường" />
         <SegmentedControlItem value="tour" label="Tour" />
       </SegmentedControl>
+      {(medium || narrow) && summary && (
+        <VStack gap={0.5}>
+          <Text type="body" weight="semibold">{summary}</Text>
+          <Text type="supporting">Bảng chi tiết ở mục Kết quả đo được bên dưới.</Text>
+        </VStack>
+      )}
       <Selector
         label="Case demo"
         placeholder="Chọn case minh họa"
@@ -690,6 +728,15 @@ export default function App() {
             </HStack>
           )}
         </VStack>
+      )}
+      {keySegs.length > 0 && (
+        <Selector
+          label={mode === 'route' ? 'Đóng một đoạn trên tuyến' : 'Đóng một đoạn trên tour'}
+          placeholder="Chọn đoạn (thay cho bấm trên bản đồ)"
+          options={keyLabels.map((label, i) => ({ value: String(i), label }))}
+          value=""
+          onChange={closeByKey}
+        />
       )}
       <Switch label="Phần mở rộng" value={showExt} onChange={toggleExt}
         description={mode === 'route' ? 'Thêm ALT và Dijkstra hai chiều vào bảng (ngoài proposal).' : 'Thêm thẻ NN + 2-opt + Or-opt (ngoài proposal, chưa đo ở E5).'} />
@@ -759,7 +806,7 @@ export default function App() {
       <Layout
         header={header}
         start={
-          // 768–1365 px (máy chiếu 1024/1280): kết quả gộp xuống dưới điều khiển ở cột trái, bỏ cột phải.
+          // 768–1439 px (máy chiếu 1024/1280, laptop 1366): kết quả gộp xuống dưới điều khiển ở cột trái, bỏ cột phải.
           <LayoutPanel width={medium ? 360 : 300} hasDivider padding={4} label="Bảng điều khiển">
             {medium ? <VStack gap={6}>{controls}{resultsBlock}</VStack> : controls}
           </LayoutPanel>

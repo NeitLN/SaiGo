@@ -84,6 +84,13 @@ export function routeSegments(r: EdgePath): RouteSegment[] {
   return ids.map((edgeId, i) => ({ edgeId, twinId: r.edge_twin_ids?.[i] ?? null, latlngs: toLatLngs(geoms[i]) }))
 }
 
+/** Độ dài một đoạn (mét), cho danh sách đóng đoạn bằng bàn phím. */
+export function segmentLength(seg: RouteSegment): number {
+  let m = 0
+  for (let i = 1; i < seg.latlngs.length; i++) m += seg.latlngs[i - 1].distanceTo(seg.latlngs[i])
+  return m
+}
+
 export interface TourPoint extends LatLon {
   id: string
   label: string

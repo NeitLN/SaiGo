@@ -114,6 +114,19 @@ export function renameIds(message: string, stops: TourPt[]): string {
 export const distanceText = (m: number) =>
   m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} km`
 
+/**
+ * Nhãn cho danh sách đóng đoạn bằng bàn phím (test lại 15/11, A-1): mỗi đoạn ghi thứ tự, độ dài và khoảng cách từ
+ * điểm đầu tuyến/tour, để người không dùng chuột vẫn chọn được đoạn cần đóng.
+ */
+export function segmentLabels(lengths: number[], from: string): string[] {
+  let before = 0
+  return lengths.map((len, i) => {
+    const label = `Đoạn ${i + 1}/${lengths.length}: ${Math.round(len)} m, bắt đầu cách ${from} ${distanceText(before)}`
+    before += len
+    return label
+  })
+}
+
 const vn = (x: number, d = 1) => x.toLocaleString('vi-VN', { maximumFractionDigits: d })
 
 /** Câu đọc cho trình đọc màn hình khi có kết quả tìm đường (FE-3); số lấy từ response. */

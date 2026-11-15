@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   addTourPoint, blockedIds, closedMore, runLabel, distanceText, fmt, nextPrevious, nextRoutePoint, removeLastTourPoint, renameIds,
-  routeAnnouncement, sameIdList, tourAnnouncement, traceLegend, type Run, type TourPt,
+  routeAnnouncement, sameIdList, segmentLabels, tourAnnouncement, traceLegend, type Run, type TourPt,
 } from '../src/appLogic.ts'
 import type { RouteResponse, TourResponse } from '../src/api.ts'
 
@@ -124,4 +124,12 @@ test('runLabel: bỏ vế "không đóng đường" khi có cạnh đóng (T-7)'
   assert.equal(runLabel('Cơ sở — không ùn tắc, không đóng đường', 0), 'Cơ sở — không ùn tắc, không đóng đường')
   assert.equal(runLabel('Cơ sở — không ùn tắc, không đóng đường', 1), 'Cơ sở — không ùn tắc; đóng 1 cạnh')
   assert.equal(runLabel('Cao điểm mô phỏng — trung tâm', 2), 'Cao điểm mô phỏng — trung tâm; đóng 2 cạnh')
+})
+
+test('segmentLabels: thứ tự, độ dài, khoảng cách từ điểm đầu (A-1)', () => {
+  assert.deepEqual(segmentLabels([120.4, 980, 45], 'điểm đi'), [
+    'Đoạn 1/3: 120 m, bắt đầu cách điểm đi 0 m',
+    'Đoạn 2/3: 980 m, bắt đầu cách điểm đi 120 m',
+    'Đoạn 3/3: 45 m, bắt đầu cách điểm đi 1,1 km',
+  ])
 })
