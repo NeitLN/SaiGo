@@ -236,7 +236,7 @@
     --color-error-muted: light-dark(#ffc4be, #ff98903D);
     --color-warning-muted: light-dark(#fae19e, #e2b6233D);
     --color-border: light-dark(#DCE3E1, #2A3533);
-    --color-border-emphasized: light-dark(#8A9693, #4A5754);
+    --color-border-emphasized: light-dark(#7A8784, #6A7774);
     --color-skeleton: light-dark(#f1f1f1, #525252);
     --color-shadow: light-dark(#0000001A, #0000004D);
     --color-tint-hover: light-dark(#000000, #ffffff);

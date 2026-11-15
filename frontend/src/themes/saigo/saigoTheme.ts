@@ -37,7 +37,8 @@ export const saigoTheme = defineTheme({
     '--color-icon-primary': ['#16201F', '#E8EEEC'],
     '--color-icon-secondary': ['#5D6B69', '#8E9B98'],
     '--color-border': ['#DCE3E1', '#2A3533'],
-    '--color-border-emphasized': ['#8A9693', '#4A5754'],
+    // Viền ô chọn, rãnh công tắc đang tắt: ≥ 3:1 trên nền trắng / nền tối (A-8; trước đây là luật riêng trong globals.css).
+    '--color-border-emphasized': ['#7A8784', '#6A7774'],
 
     // Chênh lệch "chậm hơn" dùng chữ hổ phách (≥ 4,5:1 cả hai chế độ), đỏ chỉ cho lỗi.
     '--color-success': ['#1B7F3B', '#5FB97E'],

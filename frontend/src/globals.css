@@ -200,12 +200,6 @@
   font-size: 13px;
 }
 
-/* Viền ô chọn và rãnh công tắc đang tắt chỉ đạt 1,48:1 trên nền trắng (A-8): đậm hơn để đạt 3:1. */
-:root,
-[data-astryx-theme] {
-  --color-border-emphasized: light-dark(#7d8894, #6b7380);
-}
-
 /* Đợt UI 15/11: nền khung bản đồ khi dùng nền rút gọn tự vẽ (layers.setNetwork): xám nhạt như ô phố, đường trắng. */
 .map-frame.map-fallback {
   background: var(--color-background-muted);
