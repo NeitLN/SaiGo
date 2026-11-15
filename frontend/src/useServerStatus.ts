@@ -8,6 +8,8 @@ export interface ServerBadge { text: string; ok: boolean | null }
 export function useServerStatus() {
   const [server, setServer] = useState<ServerBadge>({ text: 'Đang kiểm tra server…', ok: null })
   const [datasetId, setDatasetId] = useState<string | null>(null)
+  // Số node của đồ thị: trục của thanh node ở khay phân tích (đợt UI "Bàn điều phối"), không viết cứng 1.889.
+  const [nodeCount, setNodeCount] = useState<number | null>(null)
   const [dataArea, setDataArea] = useState<BBox | null>(null)   // viền vùng có dữ liệu (PM-7, UX-3)
   const [scenarios, setScenarios] = useState<Scenario[]>([BASELINE])
   const [scenarioNote, setScenarioNote] = useState<string | null>(null)
@@ -36,6 +38,7 @@ export function useServerStatus() {
         }
         setScenarioNote(null)
         setDatasetId(d.dataset_id)
+        setNodeCount(d.node_count ?? null)
         if (d.scenarios.length) setScenarios(d.scenarios)
         setDataArea(d.bbox ?? null)
       })
@@ -76,5 +79,5 @@ export function useServerStatus() {
     }
   }, [loadDataset])
 
-  return { server, datasetId, dataArea, scenarios, scenarioNote, checkServer, markServerUp }
+  return { server, datasetId, nodeCount, dataArea, scenarios, scenarioNote, checkServer, markServerUp }
 }

@@ -2,12 +2,14 @@
 import { Badge } from '@astryxdesign/core/Badge'
 import { Banner } from '@astryxdesign/core/Banner'
 import { HStack } from '@astryxdesign/core/HStack'
+import { StackItem } from '@astryxdesign/core/Stack'
 import { Table } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { VStack } from '@astryxdesign/core/VStack'
 import { ALGORITHM_LABEL, type Algorithm, type AlgorithmResult, type RouteResponse } from './api'
-import { costDelta, deltaText } from './compare'
+import { costDelta, deltaText, nodeComparison } from './compare'
 import { Grid } from '@astryxdesign/core/Grid'
+import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import Kpi, { km, metersRaw, minutes, secondsRaw } from './Kpi'
 
 const ALGOS: Algorithm[] = ['dijkstra', 'astar']
@@ -72,8 +74,60 @@ const routeCost = (r: RouteResponse): number | null => {
   return d && d.status === 'ok' && d.cost_s !== null ? d.cost_s : null
 }
 
-export default function RouteResults({ res, scenarioLabel, previous, hasSummary = false }: {
+/**
+ * Số node mở rộng bằng thanh ngang cùng trục 0 → số node của đồ thị (đợt UI "Bàn điều phối", RQ1): độ dài thanh so
+ * được giữa các lần chạy. Số in cạnh thanh nên không chỉ dựa vào độ dài hay màu. Màu thanh trùng màu chấm node trên
+ * bản đồ (Dijkstra xám, A* cam).
+ */
+function NodeBars({ res, nodeCount }: { res: RouteResponse; nodeCount?: number }) {
+  const rows = ALGOS.filter((a) => res.results[a]).map((a) => ({ a, n: res.results[a]!.expanded }))
+  if (!rows.length) return null
+  const total = nodeCount && nodeCount > 0 ? nodeCount : Math.max(...rows.map((r) => r.n), 1)
+  const d = res.results.dijkstra
+  const a = res.results.astar
+  const both = d?.status === 'ok' && a?.status === 'ok' && d.expanded > 0
+  const none = d?.status === 'no_path' && a?.status === 'no_path'
+  const cmp = both ? nodeComparison(d.expanded, a.expanded) : null
+  return (
+    <VStack gap={2}>
+      <Text type="body" weight="semibold">
+        Node đã mở rộng{nodeCount ? ` (trên ${num(nodeCount, 0)} node của đồ thị)` : ''}
+      </Text>
+      {rows.map(({ a: algo, n }) => (
+        <HStack key={algo} gap={3} vAlign="center">
+          <VStack width={72}><Text type="body" weight="semibold">{ALGORITHM_LABEL[algo]}</Text></VStack>
+          <StackItem size="fill">
+            <VStack className={`node-bar node-bar-${algo}`}>
+              <ProgressBar label={`${ALGORITHM_LABEL[algo]}: ${num(n, 0)} node đã mở rộng`} isLabelHidden value={n} max={total}
+                variant="neutral" />
+            </VStack>
+          </StackItem>
+          <VStack width={136} hAlign="end">
+            <Text type="body" hasTabularNumbers textWrap="nowrap">
+              <Text type="large" weight="bold" hasTabularNumbers>{num(n, 0)}</Text> node
+              {nodeCount ? ` · ${num((100 * n) / total, 1)}%` : ''}
+            </Text>
+          </VStack>
+        </HStack>
+      ))}
+      {both && cmp && (
+        <Text type="body">
+          {cmp.kind === 'same' ? 'A* mở bằng số node của Dijkstra' : (
+            <>A* mở {cmp.kind === 'fewer' ? 'ít hơn' : 'nhiều hơn'}{' '}
+              <Text type="inherit" weight="bold">{num(cmp.pct, 1)}%</Text> node so với Dijkstra</>
+          )}
+          {res.costs_match ? (cmp.kind === 'fewer' ? ' mà vẫn ra cùng chi phí.' : ', cùng chi phí.') : '.'}
+        </Text>
+      )}
+      {none && <Text type="body">Không có đường: cả hai thuật toán duyệt hết phần đồ thị đi tới được rồi dừng.</Text>}
+    </VStack>
+  )
+}
+
+export default function RouteResults({ res, scenarioLabel, previous, hasSummary = false, nodeCount }: {
   res: RouteResponse
+  // Số node của đồ thị (/api/dataset), làm trục cho thanh node; không có thì trục theo thuật toán mở nhiều nhất.
+  nodeCount?: number
   // Đợt UI "Bàn điều phối": ô số chính đã ở dải tóm tắt đầu panel trái, khay phân tích không lặp lại.
   hasSummary?: boolean
   scenarioLabel: string
@@ -117,9 +171,11 @@ export default function RouteResults({ res, scenarioLabel, previous, hasSummary 
       )}
       {previous && (
         <VStack gap={0.5}>
-          <Text type="body" weight="semibold">
-            So với lần trước: {deltaText(costDelta(routeCost(previous.res), routeCost(res)))}
-          </Text>
+          {!hasSummary && (
+            <Text type="body" weight="semibold">
+              So với lần trước: {deltaText(costDelta(routeCost(previous.res), routeCost(res)))}
+            </Text>
+          )}
           <Text type="supporting">
             {/* Ghi cả hai kịch bản (R-7): so với lần ngay trước, không phải với Cơ sở. */}
             Lần trước: {previous.label}. Lần này: {scenarioLabel}.
@@ -127,6 +183,33 @@ export default function RouteResults({ res, scenarioLabel, previous, hasSummary 
           </Text>
         </VStack>
       )}
+      {hasSummary && (
+        <HStack gap={6} vAlign="start" wrap="wrap">
+          <VStack style={{ flex: '1 1 340px', minWidth: 0 }}><NodeBars res={res} nodeCount={nodeCount} /></VStack>
+          <VStack gap={2} style={{ flex: '0 1 220px' }}>
+            <Text type="body" weight="semibold">Chi phí trùng khớp</Text>
+            {res.costs_match === true && ok ? (
+              <HStack gap={2} vAlign="center">
+                <Badge variant="success" label="Có" />
+                <Text type="body" hasTabularNumbers>Cùng {secondsRaw(now.cost_s!)} · {metersRaw(now.distance_m ?? 0)}</Text>
+              </HStack>
+            ) : (
+              <Text type="body">{costLine(res)}</Text>
+            )}
+          </VStack>
+          <VStack gap={2} style={{ flex: '0 1 200px' }}>
+            <Text type="body" weight="semibold">Thời gian tính toán (1 lần chạy)</Text>
+            {algos.map((a) => (
+              <HStack key={a} gap={2} hAlign="between">
+                <Text type="body">{ALGORITHM_LABEL[a]}</Text>
+                <Text type="body" hasTabularNumbers>{num(res.results[a]!.runtime_ms, 2)} ms</Text>
+              </HStack>
+            ))}
+            <Text type="supporting">Một lần chạy trên máy này, dao động giữa các lần; không dùng để so tốc độ.</Text>
+          </VStack>
+        </HStack>
+      )}
+      {(!hasSummary || (ok && !same)) && (<>
       <HStack gap={2} vAlign="center" hAlign="between">
         <Text type="body" weight="semibold">So sánh thuật toán</Text>
         <HStack gap={1}>
@@ -142,12 +225,15 @@ export default function RouteResults({ res, scenarioLabel, previous, hasSummary 
           ...algos.map((a) => ({ key: a, header: ALGORITHM_LABEL[a], align: 'end' as const })),
         ]}
       />
-      <Text type="body" weight="semibold">{costLine(res)}</Text>
-      {nodes && <Text type="body">{nodes}</Text>}
-      <Text type="supporting">
-        Thời gian tính là một lần chạy trên máy này, dao động giữa các lần; không dùng để so tốc độ hai thuật toán.
-      </Text>
-      <Text type="supporting">Điều kiện giao thông: {scenarioLabel}</Text>
+      {!hasSummary && <Text type="body" weight="semibold">{costLine(res)}</Text>}
+      {!hasSummary && nodes && <Text type="body">{nodes}</Text>}
+      {!hasSummary && (
+        <Text type="supporting">
+          Thời gian tính là một lần chạy trên máy này, dao động giữa các lần; không dùng để so tốc độ hai thuật toán.
+        </Text>
+      )}
+      </>)}
+      {!hasSummary && <Text type="supporting">Điều kiện giao thông: {scenarioLabel}</Text>}
       {extAlgos.length > 0 && (
         <VStack gap={2}>
           <Text type="body" weight="semibold">Phần mở rộng (ngoài proposal)</Text>

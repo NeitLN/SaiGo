@@ -18,10 +18,14 @@ export const kmText = (m: number) => km(m).join(' ')
 export const secondsRaw = (s: number) => `${vn(s, 1)} s`
 export const metersRaw = (m: number) => `${vn(m, 0)} m`
 
-export default function Kpi({ label, value, sub }: { label: string; value: [string, string] | string; sub?: string }) {
+export default function Kpi({ label, value, sub, isPlain = false }: {
+  label: string; value: [string, string] | string; sub?: string
+  // Không khung (dải tóm tắt đầu panel, đợt UI "Bàn điều phối"): số đứng trên nền panel như ô số của sản phẩm thật.
+  isPlain?: boolean
+}) {
   const [num, unit] = typeof value === 'string' ? [value, ''] : value
   return (
-    <Card variant="muted" padding={3}>
+    <Card variant={isPlain ? 'transparent' : 'muted'} padding={isPlain ? 0 : 3}>
       <VStack gap={0.5}>
         <Text type="supporting">{label}</Text>
         <HStack gap={1} vAlign="end">

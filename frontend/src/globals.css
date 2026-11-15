@@ -307,3 +307,44 @@
 .map-frame .leaflet-bottom.leaflet-left {
   bottom: 34px;
 }
+
+/* Khay "Phân tích thuật toán" (đợt UI "Bàn điều phối"): thanh số node mở rộng cùng màu chấm node trên bản đồ
+   (Dijkstra xám, A* cam), cao hơn mặc định để đọc được trên máy chiếu. */
+/* Theme gán rãnh ProgressBar bằng --color-background-muted := viền nhấn (để thanh tiến độ đạt 3:1); thanh node có số in
+   cạnh nên dùng rãnh nhạt hơn, chỉ trong khay. */
+.node-bar .astryx-progress-bar {
+  --color-background-muted: var(--color-border);
+}
+
+.node-bar .astryx-progress-bar-track {
+  height: 14px;
+  border-radius: 4px;
+}
+
+.node-bar .astryx-progress-bar-fill {
+  border-radius: 4px;
+}
+
+.node-bar-dijkstra .astryx-progress-bar-fill {
+  background: var(--color-text-secondary);
+}
+
+.node-bar-astar .astryx-progress-bar-fill {
+  background: var(--color-data-categorical-orange);
+}
+
+/* Chênh lệch "so với lần trước": chậm hơn chữ hổ phách, nhanh hơn chữ xanh (token theme ≥ 4,5:1), luôn kèm mũi tên
+   và dấu +/−; đỏ chỉ dành cho lỗi. */
+.delta svg {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+
+.delta-slow {
+  color: var(--color-text-warning);
+}
+
+.delta-fast {
+  color: var(--color-text-success);
+}

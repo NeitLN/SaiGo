@@ -2,6 +2,7 @@
 // Chế độ "Tìm đường hai điểm" (T14, T52, T53, đóng đoạn đường T54) và "Tour" (T73).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppShell } from '@astryxdesign/core/AppShell'
+import { Badge } from '@astryxdesign/core/Badge'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Divider } from '@astryxdesign/core/Divider'
@@ -85,7 +86,7 @@ export default function App() {
     setMapReady((n) => n + 1)
   }, [])
 
-  const { server, datasetId, dataArea, scenarios, scenarioNote, checkServer, markServerUp } = useServerStatus()
+  const { server, datasetId, nodeCount, dataArea, scenarios, scenarioNote, checkServer, markServerUp } = useServerStatus()
   const [scenarioId, setScenarioId] = useState('baseline')
   const [mode, setMode] = useState<Mode>('route')
   // Ô Case demo nhớ riêng theo chế độ (test lại 15/11, R-8/T-7): trước đây đổi chế độ rồi quay lại thì ô trống dù
@@ -678,6 +679,7 @@ export default function App() {
           timeNote: 'theo điều kiện giao thông',
           cost: routeCost(route.res)!, dist: route.res.results.dijkstra?.distance_m ?? 0,
           delta: prevRoute ? deltaText(costDelta(routeCost(prevRoute.res), routeCost(route.res))) : null,
+          diff: prevRoute ? costDelta(routeCost(prevRoute.res), routeCost(route.res)).diff : null,
         }
       : null)
     : (viewedTour
@@ -685,6 +687,7 @@ export default function App() {
           timeNote: TOUR_METHOD_LABEL[tourMethod!],
           cost: viewedTour.cost_s, dist: viewedTour.distance_m,
           delta: prevTour ? deltaText(costDelta(tourCost(prevTour.res), tourCost(tour!)), 'tour') : null,
+          diff: prevTour ? costDelta(tourCost(prevTour.res), tourCost(tour!)).diff : null,
         }
       : null)
 
@@ -703,19 +706,43 @@ export default function App() {
   // Đợt UI "Bàn điều phối" (họp thiết kế 9 vai, Tiến duyệt mockup 16/11): một bố cục cho mọi độ rộng từ 768 px.
   // Panel trái ba tầng: tóm tắt kết quả (luôn thấy) / phần giữa cuộn được / đáy dính có điều kiện giao thông và nút
   // chính. Bản đồ bên phải, khay phân tích dưới bản đồ thu gọn được; không lớp nào che tuyến.
+  // Tiêu đề và nhãn điều kiện của lần chạy đang hiện (theo request đã chạy, không theo ô chọn đang đổi dở).
+  const run = mode === 'route' ? route : tourScenario
+  const runScenario = run ? scenarios.find((s) => s.id === run.scenarioId)?.label ?? run.scenarioId : null
+  const runTitle = mode === 'route'
+    ? (route ? `${source?.name ?? 'Điểm đi'} → ${target?.name ?? 'Điểm đến'}` : null)
+    : (tour && depot ? `Tour từ ${depot.label === 'Kho' ? 'kho' : depot.label} · ${stops.length} điểm giao` : null)
   const summaryBlock = (
     <VStack gap={2} as="section" aria-label="Kết quả đo được">
-      <Heading level={2}>Kết quả đo được</Heading>
+      <Text type="supporting" weight="semibold">Kết quả đo được</Text>
+      {runTitle && (
+        <HStack gap={2} vAlign="center" wrap="wrap">
+          <Heading level={2}>{runTitle}</Heading>
+          {runScenario && (
+            <Badge variant={run && run.scenarioId !== 'baseline' ? 'yellow' : 'neutral'}
+              label={runScenario.replace(/^Cơ sở — .*$/, 'Cơ sở').replace('Cao điểm mô phỏng — ', 'Cao điểm — ')} />
+          )}
+          {run && run.blocked.length > 0 && <Badge variant="neutral" label={`Đóng ${run.blocked.length} cạnh`} />}
+        </HStack>
+      )}
       {summaryKpi ? (
         <VStack gap={1}>
-          <Grid columns={2} gap={2}>
-            <Kpi label="Thời gian di chuyển ước tính" value={minutes(summaryKpi.cost)}
+          <Grid columns={2} gap={4}>
+            <Kpi isPlain label="Thời gian di chuyển ước tính" value={minutes(summaryKpi.cost)}
               sub={`${summaryKpi.timeNote} · ${secondsRaw(summaryKpi.cost)}`} />
-            <Kpi label="Quãng đường" value={km(summaryKpi.dist)} sub={metersRaw(summaryKpi.dist)} />
+            <Kpi isPlain label="Quãng đường" value={km(summaryKpi.dist)} sub={metersRaw(summaryKpi.dist)} />
           </Grid>
-          {/* Tour: so theo phương án được chọn như dòng ở khay kết quả, nên ghi rõ (góp ý #160). */}
+          {/* Tour: so theo phương án được chọn như dòng ở khay kết quả, nên ghi rõ (góp ý #160). Chậm hơn chữ hổ
+              phách, nhanh hơn chữ xanh, luôn kèm dấu +/− và mũi tên, không chỉ dựa vào màu; đỏ chỉ dành cho lỗi. */}
           {summaryKpi.delta && (
-            <Text type="body" weight="semibold">
+            <Text type="body" weight="semibold"
+              className={summaryKpi.diff ? (summaryKpi.diff > 0 ? 'delta delta-slow' : 'delta delta-fast') : 'delta'}>
+              {summaryKpi.diff ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+                  strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={summaryKpi.diff > 0 ? 'M12 19V5M5 12l7-7 7 7' : 'M12 5v14M5 12l7 7 7-7'} />
+                </svg>
+              ) : null}
               So với lần trước{mode === 'tour' ? ', phương án được chọn' : ''}: {summaryKpi.delta}
             </Text>
           )}
@@ -869,7 +896,7 @@ export default function App() {
     />
   )
   const results = mode === 'route'
-    ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel} hasSummary
+    ? (route ? <RouteResults res={route.res} scenarioLabel={routeScenarioLabel} hasSummary nodeCount={nodeCount ?? undefined}
       previous={prevRoute ? { res: prevRoute.res, label: runLabel(prevRoute) } : null} /> : empty)
     : (tour ? <TourResults res={tour} labels={tourLabels} hasSummary selected={tourMethod} onSelect={setTourMethod} scenarioLabel={tourScenarioLabel}
       previous={prevTour ? { res: prevTour.res, label: runLabel(prevTour), closedMore: closedMore(prevTour, tourScenario) } : null} />
