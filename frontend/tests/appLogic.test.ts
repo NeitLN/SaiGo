@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   addTourPoint, blockedIds, closedMore, runLabel, distanceText, fmt, nextPrevious, nextRoutePoint, removeLastTourPoint, renameIds,
-  routeAnnouncement, sameIdList, segmentLabels, tourAnnouncement, traceLegend, type Run, type TourPt,
+  routeAnnouncement, sameIdList, segmentLabels, shortScenario, tourAnnouncement, traceLegend, type Run, type TourPt,
 } from '../src/appLogic.ts'
 import type { RouteResponse, TourResponse } from '../src/api.ts'
 
@@ -132,4 +132,11 @@ test('segmentLabels: thứ tự, độ dài, khoảng cách từ điểm đầu 
     'Đoạn 2/3: 980 m, bắt đầu cách điểm đi 120 m',
     'Đoạn 3/3: 45 m, bắt đầu cách điểm đi 1,1 km',
   ])
+})
+
+test('shortScenario: nhãn chip điều kiện giao thông', () => {
+  assert.equal(shortScenario('Cơ sở — không ùn tắc, không đóng đường'), 'Cơ sở')
+  assert.equal(shortScenario('Cao điểm mô phỏng — trung tâm'), 'Cao điểm — trung tâm')
+  assert.equal(shortScenario('Cao điểm mô phỏng — vòng xoay Bến Thành'), 'Cao điểm — Bến Thành')
+  assert.equal(shortScenario('Kịch bản khác'), 'Kịch bản khác')
 })
