@@ -12,7 +12,10 @@ nhất một trong hai file CSV. Chỉ in ra stdout, **không** ghi vào `docs/E
 số vào tài liệu ở T65).
 
 `r = expanded_A* / expanded_D` và `s = t_D / t_A*` được tính **từng cặp** rồi mới lấy median và tứ
-phân vị (mục 3.2), không lấy tỉ số của hai trung bình; `ms = runtime_ns_median / 1e6`. Gộp nhiều lần
+phân vị (mục 3.2), không lấy tỉ số của hai trung bình; `ms = runtime_ns_median / 1e6`. Bảng tỉ số E2
+và E2b (suite `compare` của `scripts/compare_algorithms.py`) kèm khoảng tin cậy 95% của median r và
+median s bằng bootstrap percentile (`bootstrap_median_ci`, 10.000 lần lấy mẫu lại các cặp, seed cố
+định nên chạy lại ra đúng số cũ). Gộp nhiều lần
 chạy thì khoá ghép cặp luôn có `run_id` vì `query_id` chỉ duy nhất trong một lần chạy. Suite không
 có dữ liệu thì bảng đó bị bỏ qua kèm lý do; số in theo dấu phẩy thập phân như văn phong tài liệu.
 """
@@ -22,6 +25,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import random
 import statistics
 import sys
 from dataclasses import dataclass, field
@@ -38,6 +42,12 @@ MEASUREMENT_COLUMNS = (
 ALGO_ORDER = ("dijkstra", "astar")
 ALGO_LABEL = {"dijkstra": "Dijkstra", "astar": "A*"}
 SUITE_DEMO, SUITE_SCALING, SUITE_SCENARIO = "demo", "scaling", "scenario"
+SUITE_COMPARE = "compare"             # scripts/compare_algorithms.py (E2b)
+COMPARE_ALGO_ORDER = ("bidijkstra", "astar", "alt")
+COMPARE_ALGO_LABEL = {"bidijkstra": "Hai chiều", "astar": "A*", "alt": "ALT"}
+BOOT_N = 10_000                       # số lần lấy mẫu lại của bootstrap
+BOOT_SEED = 20261116                  # seed cố định: cùng dữ liệu thì cùng khoảng tin cậy
+BOOT_LEVEL = 0.95
 STRATUM_ORDER = ("ngan", "trung_binh", "dai")
 STRATUM_LABEL = {"ngan": "ngắn (δ<0,2)", "trung_binh": "trung bình", "dai": "dài (δ≥0,5)"}
 ALL_STRATA = "tất cả"
@@ -263,6 +273,41 @@ def quartiles(values: Sequence[float]) -> tuple[float | None, float | None]:
     return percentile(values, 0.25), percentile(values, 0.75)
 
 
+def bootstrap_median_ci(values: Sequence[float], n_boot: int = BOOT_N, seed: int = BOOT_SEED,
+                        level: float = BOOT_LEVEL) -> tuple[float, float] | None:
+    """Khoảng tin cậy bootstrap percentile cho **median** của `values`.
+
+    Lấy mẫu lại có hoàn lại `n_boot` lần, mỗi lần đủ `len(values)` phần tử, tính median, rồi lấy
+    phân vị `(1 − level)/2` và `(1 + level)/2` của các median đó (nội suy như `percentile`). Mỗi
+    phần tử là một cặp truy vấn, nên khoảng này phản ánh việc chọn cặp, **không** phản ánh dao động
+    thời gian của máy giữa các lần chạy. Dùng `random.Random(seed)` riêng: cùng dữ liệu, cùng seed
+    thì cùng kết quả. Ít hơn 2 giá trị thì không có khoảng (`None`).
+    """
+    data = list(values)
+    if n_boot < 1:
+        raise ValueError(f"n_boot = {n_boot!r} phải ≥ 1")
+    if not 0.0 < level < 1.0:
+        raise ValueError(f"level = {level!r} phải nằm trong (0, 1)")
+    if len(data) < 2:
+        return None
+    rng = random.Random(seed)
+    k = len(data)
+    medians = [statistics.median(rng.choices(data, k=k)) for _ in range(n_boot)]
+    alpha = (1.0 - level) / 2.0
+    return percentile(medians, alpha), percentile(medians, 1.0 - alpha)
+
+
+def fmt_median_ci(values: Sequence[float], digits: int = 3) -> str:
+    """`median [thấp; cao]` kiểu tài liệu; không đủ 2 giá trị thì chỉ in median."""
+    if not values:
+        return MISSING
+    text = fmt_number(median(values), digits)
+    ci = bootstrap_median_ci(values)
+    if ci is None:
+        return text
+    return f"{text} [{fmt_number(ci[0], digits)}; {fmt_number(ci[1], digits)}]"
+
+
 def fmt_number(value: float | None, digits: int = 4) -> str:
     """Số kiểu tài liệu: dấu phẩy thập phân, bỏ số 0 thừa; `None` → `—`."""
     if value is None:
@@ -304,6 +349,8 @@ def stratum_label(stratum: str) -> str:
 def source_line(rows: Sequence[Row], metas: Sequence[RunMeta], n_pairs: int) -> str:
     """Dòng nguồn của mỗi bảng: run_id, dataset_id, số cặp, Python, git_commit, git_dirty."""
     run_ids = first_seen(r.run_id for r in rows if r.run_id) or first_seen(m.run_id for m in metas)
+    # Chỉ lấy môi trường của các lần chạy có dòng trong bảng này (gộp E2 với E2b thì không lẫn)
+    metas = [m for m in metas if m.run_id in run_ids] or list(metas)
     datasets = first_seen(r.dataset_id for r in rows if r.dataset_id) or [MISSING]
     pythons = first_seen(m.python for m in metas) or [MISSING]
     commits = first_seen(m.git_commit for m in metas) or [MISSING]
@@ -357,6 +404,83 @@ def e2_section(rows: Sequence[Row], metas: Sequence[RunMeta]) -> Section:
                   "1e-6·max(1, cost_D); cả hai `no_path` cũng tính khớp."),
     )
     return Section(title, table, source_line(demo, metas, len(pairs)))
+
+
+def _ratio_cells(pairs: Sequence[tuple[Row, Row]]) -> tuple[str, str, str, str]:
+    """Số cặp, median r [CI], median s [CI], số cặp chậm hơn Dijkstra (s < 1) của một nhóm cặp.
+
+    Mỗi phần tử của `pairs` là (dòng Dijkstra, dòng thuật toán so sánh) của cùng một cặp.
+    """
+    ratios = [other.expanded / dij.expanded for dij, other in pairs if dij.expanded > 0]
+    speeds = [dij.runtime_ms / other.runtime_ms for dij, other in pairs if other.runtime_ms > 0]
+    slower = sum(1 for value in speeds if value < 1.0)
+    return (str(len(pairs)), fmt_median_ci(ratios), fmt_median_ci(speeds, 2),
+            f"{slower} / {len(speeds)}")
+
+
+def _ratio_formulas(name: str) -> str:
+    return (f"r = expanded_{name}/expanded_D và s = t_D/t_{name} tính **từng cặp** rồi mới lấy "
+            f"median (mục 3.2); s > 1 là {name} nhanh hơn Dijkstra. Trong ngoặc: khoảng tin cậy "
+            f"95% của median, bootstrap percentile {BOOT_N} lần lấy mẫu lại các cặp, seed "
+            f"{BOOT_SEED}; khoảng này chỉ tính độ bất định do chọn cặp, không tính dao động của "
+            "máy giữa các lần chạy. Bỏ cặp expanded_D = 0 khi tính r.")
+
+
+def e2_ratio_section(rows: Sequence[Row], metas: Sequence[RunMeta]) -> Section:
+    """Bảng tỉ số E2 theo tầng: median r, median s (kèm CI 95% bootstrap), số cặp A* chậm hơn."""
+    title = "E2 — Tỉ số r và s theo từng cặp, khoảng tin cậy 95%"
+    demo = [r for r in rows if r.suite == SUITE_DEMO]
+    if not demo:
+        return Section(title, skipped="không có dòng nào thuộc suite demo (E2)")
+    pairs = pair_stats(demo, ("run_id", "query_id"))
+    if not pairs:
+        return Section(title, skipped="không có cặp nào đủ kết quả của cả hai thuật toán")
+    table_rows: list[tuple[str, ...]] = []
+    for key in [*order_strata(r.stratum for r in demo), ALL_STRATA]:
+        group = [(p.dijkstra, p.astar) for p in pairs.values()
+                 if key == ALL_STRATA or p.stratum == key]
+        if group:
+            table_rows.append((stratum_label(key), *_ratio_cells(group)))
+    table = Table(
+        headers=("Tầng", "Số cặp", "Median r [CI 95%]", "Median s [CI 95%]",
+                 "Số cặp A* chậm hơn (s < 1)"),
+        rows=tuple(table_rows),
+        formulas=_ratio_formulas("A*"),
+    )
+    return Section(title, table, source_line(demo, metas, len(pairs)))
+
+
+def e2b_ratio_section(rows: Sequence[Row], metas: Sequence[RunMeta]) -> Section:
+    """Bảng E2b (suite `compare`): đồ thị × tầng × thuật toán so với Dijkstra, kịch bản baseline."""
+    title = "E2b — Tỉ số so với Dijkstra (baseline), khoảng tin cậy 95%"
+    compare = [r for r in rows if r.suite == SUITE_COMPARE and r.scenario_id == BASELINE]
+    if not compare:
+        return Section(title, skipped="không có dòng `baseline` nào thuộc suite compare (E2b)")
+    buckets: dict[tuple, dict[str, Row]] = {}
+    for row in compare:
+        buckets.setdefault((row.run_id, row.dataset_id, row.query_id), {})[row.algo] = row
+    graphs = sorted(first_seen((r.dataset_id, r.n_nodes) for r in compare), key=lambda g: g[1])
+    algos = [a for a in COMPARE_ALGO_ORDER if any(r.algo == a for r in compare)]
+    table_rows: list[tuple[str, ...]] = []
+    n_pairs = 0
+    for dataset_id, n_nodes in graphs:
+        in_graph = [b for (_run, ds, _query), b in buckets.items()
+                    if ds == dataset_id and "dijkstra" in b]
+        n_pairs += len(in_graph)
+        for key in [*order_strata(b["dijkstra"].stratum for b in in_graph), ALL_STRATA]:
+            for algo in algos:
+                group = [(b["dijkstra"], b[algo]) for b in in_graph
+                         if algo in b and (key == ALL_STRATA or b["dijkstra"].stratum == key)]
+                if group:
+                    table_rows.append((f"{dataset_id} ({n_nodes})", stratum_label(key),
+                                       COMPARE_ALGO_LABEL[algo], *_ratio_cells(group)))
+    table = Table(
+        headers=("Đồ thị (|V|)", "Tầng", "Thuật toán X", "Số cặp", "Median r [CI 95%]",
+                 "Median s [CI 95%]", "Số cặp X chậm hơn (s < 1)"),
+        rows=tuple(table_rows),
+        formulas=_ratio_formulas("X") + " Chỉ kịch bản `baseline`.",
+    )
+    return Section(title, table, source_line(compare, metas, n_pairs))
 
 
 def _e3_group(row: Row) -> tuple:
@@ -753,8 +877,9 @@ def e5_oropt_section(tour_rows: Sequence[TourRow]) -> Section | None:
 
 def render(rows: Sequence[Row], metas: Sequence[RunMeta],
            tour_rows: Sequence[TourRow] = ()) -> str:
-    """Toàn bộ báo cáo Markdown của các bảng E2, E3, E4, E5 (thêm bảng Or-opt khi CSV có Or-opt)."""
-    sections = (e2_section(rows, metas), e3_section(rows, metas), e4_section(rows, metas),
+    """Toàn bộ báo cáo Markdown của các bảng E2 (kèm tỉ số), E2b, E3, E4, E5 (thêm bảng Or-opt khi CSV có Or-opt)."""
+    sections = (e2_section(rows, metas), e2_ratio_section(rows, metas),
+                e2b_ratio_section(rows, metas), e3_section(rows, metas), e4_section(rows, metas),
                 e5_section(tour_rows, metas))
     oropt = e5_oropt_section(tour_rows)
     if oropt is not None:

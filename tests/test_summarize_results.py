@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -224,6 +225,75 @@ def test_e2_cost_mismatch_is_reported(tmp_path):
     cells = cells_by_key(section)
     assert cells[("A*", "dài (δ≥0,5)")][3] == "0,0 %"
     assert cells[("A*", "tất cả")][3] == "66,7 %"       # 2/3 cặp khớp
+
+
+# --- Bootstrap CI và bảng tỉ số E2/E2b ---
+
+def test_bootstrap_is_deterministic_with_fixed_seed():
+    rng = random.Random(5)
+    values = [rng.uniform(0.5, 1.5) for _ in range(40)]   # dữ liệu THỬ, số thực khác nhau
+    first = summary.bootstrap_median_ci(values)
+    assert first == summary.bootstrap_median_ci(list(values))          # chạy lại: y hệt
+    assert first == summary.bootstrap_median_ci(values, n_boot=summary.BOOT_N,
+                                                seed=summary.BOOT_SEED, level=0.95)
+    low, high = first
+    assert low <= summary.median(values) <= high
+    assert min(values) <= low <= high <= max(values)
+
+
+def test_bootstrap_edge_cases():
+    assert summary.bootstrap_median_ci([]) is None
+    assert summary.bootstrap_median_ci([1.0]) is None
+    assert summary.bootstrap_median_ci([2.0, 2.0, 2.0], n_boot=50) == (2.0, 2.0)
+    narrow = summary.bootstrap_median_ci(list(range(101)), n_boot=500, level=0.5)
+    wide = summary.bootstrap_median_ci(list(range(101)), n_boot=500, level=0.99)
+    assert wide[0] <= narrow[0] <= narrow[1] <= wide[1]
+    with pytest.raises(ValueError):
+        summary.bootstrap_median_ci([1.0, 2.0], level=1.0)
+    with pytest.raises(ValueError):
+        summary.bootstrap_median_ci([1.0, 2.0], n_boot=0)
+
+
+def test_e2_ratio_section_hand_computed(tmp_path):
+    run = write_run(tmp_path / "run", demo_rows())
+    section = summary.e2_ratio_section(summary.read_rows(run), [summary.read_meta(run)])
+    assert section.table is not None, section.skipped
+    cells = {row[0]: row[1:] for row in section.table.rows}
+    # một cặp mỗi tầng: không có khoảng tin cậy, chỉ median (r = 0,5 / 0,5 / 0,75; s = 2 / 2 / 1,33)
+    assert cells["ngắn (δ<0,2)"] == ("1", "0,5", "2", "0 / 1")
+    assert cells["dài (δ≥0,5)"] == ("1", "0,75", "1,33", "0 / 1")
+    count, r_cell, s_cell, slower = cells["tất cả"]
+    assert (count, slower) == ("3", "0 / 3")
+    assert r_cell.startswith("0,5 [") and s_cell.startswith("2 [")
+    assert "bootstrap" in section.table.formulas and str(summary.BOOT_SEED) in section.table.formulas
+    assert RUN_ID in section.source
+
+
+def test_e2b_ratio_section_uses_baseline_and_each_algorithm(tmp_path):
+    rows = []
+    for query_id, (exp_d, ms_d) in enumerate(((100, 2.0), (200, 4.0))):
+        common = {"suite": "compare", "query_id": str(query_id), "stratum": "dai"}
+        rows.append(make_row(algo="dijkstra", expanded=exp_d, runtime_ms=ms_d, **common))
+        rows.append(make_row(algo="astar", expanded=exp_d // 2, runtime_ms=ms_d / 2, **common))
+        rows.append(make_row(algo="alt", expanded=exp_d // 10, runtime_ms=ms_d * 2, **common))
+        # kịch bản khác baseline bị bỏ qua
+        rows.append(make_row(algo="dijkstra", expanded=1, runtime_ms=1.0,
+                             scenario_id="peak-center", **common))
+    run = write_run(tmp_path / "run", rows)
+    section = summary.e2b_ratio_section(summary.read_rows(run), [summary.read_meta(run)])
+    assert section.table is not None, section.skipped
+    cells = {(row[1], row[2]): row[3:] for row in section.table.rows}
+    assert cells[("dài (δ≥0,5)", "A*")] == ("2", "0,5 [0,5; 0,5]", "2 [2; 2]", "0 / 2")
+    assert cells[("dài (δ≥0,5)", "ALT")] == ("2", "0,1 [0,1; 0,1]", "0,5 [0,5; 0,5]", "2 / 2")
+    assert ("dài (δ≥0,5)", "Hai chiều") not in cells                 # không có dữ liệu thì không có dòng
+    assert "baseline" in section.table.formulas
+
+
+def test_ratio_sections_skip_without_data(tmp_path):
+    run = write_run(tmp_path / "run", scaling_rows())
+    rows, metas = summary.read_rows(run), [summary.read_meta(run)]
+    assert summary.e2_ratio_section(rows, metas).skipped
+    assert "compare" in summary.e2b_ratio_section(rows, metas).skipped
 
 
 # --- E3 ---
@@ -507,7 +577,8 @@ def test_cli_prints_markdown_and_exit_codes(tmp_path, capsys):
 def test_duplicate_directory_argument_is_counted_once(tmp_path, capsys):
     run = write_run(tmp_path / "run", demo_rows())
     assert summary.main([str(run), str(run)]) == 0
-    assert capsys.readouterr().out.count("· 3 cặp") == 1
+    out = capsys.readouterr().out
+    assert "· 6 cặp" not in out and out.count("· 3 cặp") == 2      # bảng E2 và bảng tỉ số E2
 
 
 def test_duplicate_run_id_warns_on_stderr(tmp_path, capsys):
