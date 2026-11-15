@@ -3,14 +3,17 @@
 Với mỗi n điểm giao, sinh `--sets` bộ (seed), mỗi bộ = kho + n điểm trong SCC, cách nhau ≥ `--min-sep` m.
 Mỗi bộ: dựng ma trận chi phí từ đồ thị (`services/tour.cost_matrix`, cùng hàm với `/api/tour`), rồi xếp thứ tự
 bằng 4 phương án: thứ tự nhập, Nearest Neighbor, NN + 2-opt, Held–Karp (tối ưu, khi n + 1 ≤ 11).
+`--or-opt` thêm phương án thứ 5 `nearest_neighbor_2opt_oropt` (Or-opt chạy tiếp từ NN + 2-opt, như
+`/api/tour` khi `include_or_opt`); mặc định tắt, nên lệnh cũ ra đúng các dòng cũ.
 Ghi `tour_measurements.csv` đúng 15 cột mà `plot_results.py` và `summarize_results.py` đọc.
 
 Thời gian ghi riêng (U3): `matrix_ns` một lần mỗi bộ; `order_ns` là thời gian ra thứ tự của phương án đó
-(NN + 2-opt tính cả NN); `route_ns` là thời gian nối các chặng thành tuyến và cộng chi phí.
+(NN + 2-opt tính cả NN, Or-opt tính cả NN + 2-opt); `route_ns` là thời gian nối các chặng thành tuyến và cộng chi phí.
 
 Ví dụ:
     python scripts/run_tour.py --graph data/processed/hcm-benthanh-r2000-20261024.json --seed 42
     python scripts/run_benchmarks.py --suite tour --graph data/processed/hcm-benthanh-r2000-20261024.json --seed 42
+    python scripts/run_tour.py --graph data/processed/hcm-benthanh-r2000-20261024.json --sizes 4 5 6 8 10 --or-opt
 """
 from __future__ import annotations
 
@@ -27,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from app.algorithms.tour import HELD_KARP_MAX_POINTS, held_karp, nearest_neighbor, two_opt  # noqa: E402
+from app.algorithms.tour import HELD_KARP_MAX_POINTS, held_karp, nearest_neighbor, or_opt, two_opt  # noqa: E402
 from app.graph.geo import haversine_m  # noqa: E402
 from app.graph.model import Graph, GraphMeta, load_graph  # noqa: E402
 from app.graph.scenario import Snapshot, baseline_snapshot  # noqa: E402
@@ -38,6 +41,14 @@ TOUR_COLUMNS = (
     "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
 )
 METHODS = ("input", "nearest_neighbor", "nearest_neighbor_2opt", "held_karp")
+OR_OPT_METHOD = "nearest_neighbor_2opt_oropt"   # chỉ có khi bật --or-opt (cùng tên candidate của /api/tour)
+
+
+def methods_for(include_or_opt: bool) -> tuple[str, ...]:
+    """Các phương án ghi vào CSV; Or-opt đứng ngay sau NN + 2-opt."""
+    if not include_or_opt:
+        return METHODS
+    return ("input", "nearest_neighbor", "nearest_neighbor_2opt", OR_OPT_METHOD, "held_karp")
 
 
 def _rel(path: Path) -> Path:
@@ -69,8 +80,13 @@ def sample_sets(graph: Graph, meta: GraphMeta, n_stops: int, count: int, seed: i
     return sets
 
 
-def plan_set(graph: Graph, snap: Snapshot, nodes: list[int]) -> dict:
-    """Ma trận + 4 phương án cho một bộ `nodes` (chỉ số 0 là kho). Bộ có chặng không đi được → không khả thi (U4)."""
+def plan_set(graph: Graph, snap: Snapshot, nodes: list[int], include_or_opt: bool = False) -> dict:
+    """Ma trận + 4 phương án (5 khi `include_or_opt`) cho một bộ `nodes` (chỉ số 0 là kho).
+
+    Bộ có chặng không đi được → không khả thi (U4). Or-opt dùng đúng `or_opt` của `/api/tour`, chạy từ
+    tour NN + 2-opt; `order_ns` của nó cộng cả thời gian NN và 2-opt.
+    """
+    methods_list = methods_for(include_or_opt)
     t0 = time.perf_counter_ns()
     D, legs = cost_matrix(graph, snap, nodes)
     matrix_ns = time.perf_counter_ns() - t0
@@ -78,7 +94,7 @@ def plan_set(graph: Graph, snap: Snapshot, nodes: list[int]) -> dict:
     feasible = all(D[i][j] < math.inf for i in range(n) for j in range(n) if i != j)
     methods: dict[str, dict] = {}
     if not feasible:
-        for m in METHODS:
+        for m in methods_list:
             methods[m] = {"cost_s": None, "order": [], "order_ns": 0, "route_ns": 0}
         return {"feasible": False, "matrix_ns": matrix_ns, "methods": methods}
 
@@ -89,13 +105,18 @@ def plan_set(graph: Graph, snap: Snapshot, nodes: list[int]) -> dict:
     orders["nearest_neighbor"] = (nn, nn_ns)
     t0 = time.perf_counter_ns()
     opt = two_opt(D, nn)
-    orders["nearest_neighbor_2opt"] = (opt, nn_ns + time.perf_counter_ns() - t0)
+    opt_ns = nn_ns + time.perf_counter_ns() - t0
+    orders["nearest_neighbor_2opt"] = (opt, opt_ns)
+    if include_or_opt:
+        t0 = time.perf_counter_ns()
+        oropt = or_opt(D, opt)
+        orders[OR_OPT_METHOD] = (oropt, opt_ns + time.perf_counter_ns() - t0)
     if n <= HELD_KARP_MAX_POINTS:
         t0 = time.perf_counter_ns()
         hk = held_karp(D)
         orders["held_karp"] = (hk, time.perf_counter_ns() - t0)
 
-    for m in METHODS:
+    for m in methods_list:
         if m not in orders:
             methods[m] = {"cost_s": None, "order": [], "order_ns": 0, "route_ns": 0}
             continue
@@ -111,7 +132,10 @@ def plan_set(graph: Graph, snap: Snapshot, nodes: list[int]) -> dict:
 
 
 def check_order_costs(rows: list[dict]) -> list[dict]:
-    """Bộ khả thi: Held–Karp ≤ NN + 2-opt ≤ NN (2-opt chỉ nhận nước làm giảm chi phí). Rỗng là đạt."""
+    """Bộ khả thi: Held–Karp ≤ NN + 2-opt ≤ NN (2-opt chỉ nhận nước làm giảm chi phí). Rỗng là đạt.
+
+    Có dòng Or-opt thì kiểm thêm Held–Karp ≤ Or-opt ≤ NN + 2-opt (Or-opt chạy tiếp từ NN + 2-opt).
+    """
     bad = []
     by_set: dict[str, dict[str, dict]] = {}
     for r in rows:
@@ -122,6 +146,10 @@ def check_order_costs(rows: list[dict]) -> list[dict]:
         hk, opt, nn = (float(g[m]["cost_s"]) for m in ("held_karp", "nearest_neighbor_2opt", "nearest_neighbor"))
         if not (hk <= opt + 1e-6 and opt <= nn + 1e-6):
             bad.append({"set_id": set_id, "held_karp": hk, "nn_2opt": opt, "nn": nn})
+        elif OR_OPT_METHOD in g:
+            oropt = float(g[OR_OPT_METHOD]["cost_s"])
+            if not (hk <= oropt + 1e-6 and oropt <= opt + 1e-6):
+                bad.append({"set_id": set_id, "held_karp": hk, "nn_2opt_oropt": oropt, "nn_2opt": opt})
     return bad
 
 
@@ -140,7 +168,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-sep", type=float, default=150.0)
     ap.add_argument("--out", type=Path, default=ROOT / "results")
     ap.add_argument("--run-id", default=None)
+    ap.add_argument("--or-opt", action="store_true",
+                    help=f"thêm phương án {OR_OPT_METHOD} (Or-opt chạy tiếp từ NN + 2-opt); mặc định tắt")
     args = ap.parse_args(argv)
+    methods_list = methods_for(args.or_opt)
 
     sys.path.insert(0, str(ROOT / "scripts"))
     from run_benchmarks import _get_git_info, collect_env
@@ -167,9 +198,9 @@ def main(argv: list[str] | None = None) -> int:
     infeasible = 0
     for n, sets in all_sets:
         for nodes in sets:
-            res = plan_set(graph, snap, nodes)
+            res = plan_set(graph, snap, nodes, include_or_opt=args.or_opt)
             infeasible += 0 if res["feasible"] else 1
-            for m in METHODS:
+            for m in methods_list:
                 r = res["methods"][m]
                 rows.append({
                     "run_id": run_id, "suite": "tour", "dataset_id": graph.dataset_id, "set_id": set_id,
@@ -190,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
                                       encoding="utf-8", newline="\n")
     config = {"run_id": run_id, "suite": "tour", "graph": _rel(graph_path).as_posix(), "sizes": args.sizes,
               "sets": args.sets, "seed": args.seed, "min_sep_m": args.min_sep, "infeasible_sets": infeasible,
-              "held_karp_max_points": HELD_KARP_MAX_POINTS}
+              "held_karp_max_points": HELD_KARP_MAX_POINTS, "or_opt": args.or_opt}
     (run_dir / "config.json").write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8",
                                          newline="\n")
 
@@ -198,7 +229,8 @@ def main(argv: list[str] | None = None) -> int:
         bad = check_order_costs(list(csv.DictReader(f)))
     if bad:
         (run_dir / "violations.json").write_text(json.dumps(bad, indent=2), encoding="utf-8", newline="\n")
-        sys.stderr.write(f"Lỗi: {len(bad)} bộ vi phạm Held–Karp ≤ NN + 2-opt ≤ NN (xem violations.json)\n")
+        sys.stderr.write(f"Lỗi: {len(bad)} bộ vi phạm Held–Karp ≤ (Or-opt ≤) NN + 2-opt ≤ NN "
+                         "(xem violations.json)\n")
         return 1
     print(f"Xong: {run_dir} ({set_id} bộ, {infeasible} bộ không khả thi)")
     return 0

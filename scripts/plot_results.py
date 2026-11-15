@@ -124,11 +124,13 @@ TOUR_COLUMNS = (
     "run_id", "suite", "dataset_id", "set_id", "n_stops", "seed", "depot_node", "stop_nodes",
     "method", "feasible", "cost_s", "order", "matrix_ns", "order_ns", "route_ns",
 )
-TOUR_METHOD_ORDER = ("input", "nearest_neighbor", "nearest_neighbor_2opt", "held_karp")
+TOUR_OR_OPT = "nearest_neighbor_2opt_oropt"     # chỉ có khi run_tour.py chạy với --or-opt
+TOUR_METHOD_ORDER = ("input", "nearest_neighbor", "nearest_neighbor_2opt", TOUR_OR_OPT, "held_karp")
 TOUR_METHOD_LABEL = {"input": "thứ tự nhập", "nearest_neighbor": "NN",
-                     "nearest_neighbor_2opt": "NN + 2-opt", "held_karp": "Held–Karp"}
+                     "nearest_neighbor_2opt": "NN + 2-opt", TOUR_OR_OPT: "NN + 2-opt + Or-opt",
+                     "held_karp": "Held–Karp"}
 TOUR_METHOD_COLOR = {"input": "#9467bd", "nearest_neighbor": "#2ca02c",
-                     "nearest_neighbor_2opt": "#ff7f0e", "held_karp": "#7f7f7f"}
+                     "nearest_neighbor_2opt": "#ff7f0e", TOUR_OR_OPT: "#d62728", "held_karp": "#7f7f7f"}
 
 
 @dataclass(frozen=True)

@@ -394,6 +394,58 @@ def test_inverted_row_order_still_sorts_by_n_stops(tmp_path):
     assert sizes == sorted(sizes, key=int) and sizes[0] == "4"
 
 
+
+def oropt_rows() -> list[dict[str, str]]:
+    """Dữ liệu THỬ có Or-opt, số tính tay được.
+
+    set0 (n=4): NN+2-opt 60, Or-opt 50, HK 50 → Or-opt rẻ hơn, cải thiện thêm 100·10/60 = 16,67 %; Or-opt trùng tối ưu.
+    set1 (n=4): NN+2-opt 100, Or-opt 100, HK 100 → cả hai trùng tối ưu, cải thiện thêm 0.
+    set2 (n=6): NN+2-opt 80, Or-opt 76, HK 72 → Or-opt rẻ hơn (5 %), chưa trùng tối ưu.
+    order_ns: NN+2-opt 12 ms, Or-opt 15 ms → phần chỉ do Or-opt 3 ms.
+    """
+    scenario = {
+        (4, 0): {"input": 100.0, "nearest_neighbor": 80.0, "nearest_neighbor_2opt": 60.0,
+                 "nearest_neighbor_2opt_oropt": 50.0, "held_karp": 50.0},
+        (4, 1): {"input": 120.0, "nearest_neighbor": 110.0, "nearest_neighbor_2opt": 100.0,
+                 "nearest_neighbor_2opt_oropt": 100.0, "held_karp": 100.0},
+        (6, 2): {"input": 100.0, "nearest_neighbor": 90.0, "nearest_neighbor_2opt": 80.0,
+                 "nearest_neighbor_2opt_oropt": 76.0, "held_karp": 72.0},
+    }
+    rows = []
+    for (n_stops, set_id), costs in scenario.items():
+        for method, cost in costs.items():
+            extra = {"order_ns": 15_000_000} if method == "nearest_neighbor_2opt_oropt" else {}
+            rows.append(make_tour_row(set_id=set_id, n_stops=n_stops, method=method, cost_s=cost, **extra))
+    return rows
+
+
+def test_e5_oropt_table_hand_computed(tmp_path):
+    run = write_tour(tmp_path / "run", oropt_rows())
+    tour_rows = summary.read_tour_rows(run)
+    section = summary.e5_oropt_section(tour_rows)
+    assert section is not None and section.table is not None
+    assert section.table.rows == (
+        ("4", "1/2", "2/2", "1/2", "8,33", "16,67", "16,67", "3"),
+        ("6", "0/1", "0/1", "1/1", "5", "5", "5", "3"),
+        ("tất cả", "1/3", "2/3", "2/3", "5", "10,83", "16,67", "3"),
+    )
+    assert "run_id `20261105-0800-tour-abc9999`" in section.source
+    # bảng chính có thêm dòng Or-opt, đứng sau NN + 2-opt
+    main_rows = summary.e5_section(tour_rows, [summary.read_meta(run)]).table.rows
+    labels = [row[1] for row in main_rows if row[0] == "6"]
+    assert labels == ["thứ tự nhập", "NN", "NN + 2-opt", "NN + 2-opt + Or-opt", "Held–Karp"]
+    assert next(r for r in main_rows if r[:2] == ("6", "NN + 2-opt + Or-opt"))[4] == "5,56"   # gap 100·4/72
+
+
+def test_e5_oropt_section_only_when_oropt_rows(tmp_path):
+    run = write_tour(tmp_path / "run", tour_scenario_rows())
+    assert summary.e5_oropt_section(summary.read_tour_rows(run)) is None
+    text = summary.render([], [summary.read_meta(run)], summary.read_tour_rows(run))
+    assert "Or-opt so với NN + 2-opt" not in text                    # run cũ: báo cáo không đổi
+    run2 = write_tour(tmp_path / "run2", oropt_rows())
+    text2 = summary.render([], [summary.read_meta(run2)], summary.read_tour_rows(run2))
+    assert "## E5 — Or-opt so với NN + 2-opt" in text2
+
 # --- Lỗi dữ liệu và CLI ---
 
 def test_read_rows_rejects_missing_column_bad_number_and_missing_dir(tmp_path):

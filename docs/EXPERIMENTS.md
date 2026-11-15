@@ -150,43 +150,62 @@ Hình: `fig_e4_ratio_by_scenario.png` trong thư mục run.
 
 ## E5 — Kết quả: tour (T74)
 
-**Run:** `20261113-0448-tour-12dd1e0` (n = 4, 6, 8, 10; lệnh `python scripts/run_benchmarks.py --suite tour --graph data/processed/hcm-benthanh-r2000-20261024.json --seed 42`; commit `12dd1e0`) và `20261114-0517-tour-04a0d7e` (n = 5, thêm ở R2 để có cùng cỡ với case demo; lệnh `python scripts/run_tour.py --graph data/processed/hcm-benthanh-r2000-20261024.json --sizes 5 --sets 20 --seed 42`; commit `04a0d7e`) · cả hai `git_dirty: false` · đồ thị demo (sha256 `928c1f8b…`), kịch bản cơ sở · máy: laptop Windows 11 của Tiến, Python 3.11.9.
+**Run:** `20261116-0355-tour-bf6d766` (n = 4, 5, 6, 8, 10, thêm phương án Or-opt; lệnh `python scripts/run_tour.py --graph data/processed/hcm-benthanh-r2000-20261024.json --sizes 4 5 6 8 10 --sets 20 --seed 42 --or-opt`; commit `bf6d766`). Hai run trước, cùng bộ điểm nhưng chưa có Or-opt: `20261113-0448-tour-12dd1e0` (n = 4, 6, 8, 10; lệnh `python scripts/run_benchmarks.py --suite tour --graph data/processed/hcm-benthanh-r2000-20261024.json --seed 42`; commit `12dd1e0`) và `20261114-0517-tour-04a0d7e` (n = 5, thêm ở R2 để có cùng cỡ với case demo; lệnh `python scripts/run_tour.py --graph data/processed/hcm-benthanh-r2000-20261024.json --sizes 5 --sets 20 --seed 42`; commit `04a0d7e`) · cả ba `git_dirty: false` · đồ thị demo (sha256 `928c1f8b…`), kịch bản cơ sở · máy: laptop Windows 11 của Tiến, Python 3.11.9.
 
-**Cách đo:** n ∈ {4, 5, 6, 8, 10} điểm giao × 20 bộ (seed 42); kho và điểm giao lấy ngẫu nhiên trong SCC, mọi cặp điểm cách nhau ≥ 150 m; thứ tự nhập = thứ tự sinh. Ma trận chi phí dựng từ đồ thị bằng đúng hàm của `/api/tour` (`services/tour.cost_matrix`). Bảng dưới do `python scripts/summarize_results.py results/20261113-0448-tour-12dd1e0 results/20261114-0517-tour-04a0d7e` sinh ra.
+**Cách đo:** n ∈ {4, 5, 6, 8, 10} điểm giao × 20 bộ (seed 42); kho và điểm giao lấy ngẫu nhiên trong SCC, mọi cặp điểm cách nhau ≥ 150 m; thứ tự nhập = thứ tự sinh. Bộ điểm sinh tất định theo (seed, n), nên run 16/11 dùng đúng 100 bộ của hai run trước. Ma trận chi phí dựng từ đồ thị bằng đúng hàm của `/api/tour` (`services/tour.cost_matrix`). Năm phương án: thứ tự nhập, NN, NN + 2-opt, NN + 2-opt + Or-opt (hàm `or_opt` mà `/api/tour` dùng khi `include_or_opt`, chạy tiếp từ tour NN + 2-opt; thời gian sắp thứ tự cộng cả NN và 2-opt), Held–Karp. Hai bảng dưới do `python scripts/summarize_results.py results/20261116-0355-tour-bf6d766` sinh ra.
 
-**Kiểm tính đúng (đạt hết):** 100/100 bộ khả thi; mọi bộ có Held–Karp ≤ NN + 2-opt ≤ NN; bộ "Kho + 5 điểm giao" của T55 chạy qua cùng hàm ra 1.066,0 / 1.003,3 / 898,1 / 627,8 s, khớp `/api/tour` (test `realdata`).
+**Kiểm tính đúng (đạt hết):** 100/100 bộ khả thi; mọi bộ có Held–Karp ≤ NN + 2-opt + Or-opt ≤ NN + 2-opt ≤ NN; chi phí và thứ tự của bốn phương án cũ trùng từng dòng với hai run trước (400/400 dòng, so theo kho, điểm giao và phương án); bộ "Kho + 5 điểm giao" của T55 chạy qua cùng hàm ra 1.066,0 / 1.003,3 / 898,1 / 627,8 s, khớp `/api/tour` (test `realdata`). Thời gian là đo lại nên lệch nhẹ so với hai run trước (mỗi bộ đo một lần; ví dụ median Held–Karp n = 10: 3,814 ms ở run 13/11, 4,237 ms ở run 16/11); mọi số thời gian dưới đây lấy từ run 16/11.
 
 | Điểm giao | Phương án | Median Improvement % | IQR Improvement % | Median Gap % | IQR Gap % | p90 Gap % | Max Gap % | Median thời gian sắp thứ tự (ms) | Bộ khả thi |
 |---|---|---|---|---|---|---|---|---|---|
 | 4 | thứ tự nhập | — | — | 13,17 | [6,34; 26,45] | 37,5 | 58,23 | 0 | 20/20 |
-| 4 | NN | 9,53 | [3,89; 20,9] | 1,7 | [0; 6,69] | 11,39 | 14,53 | 0,007 | 20/20 |
-| 4 | NN + 2-opt | 11,58 | [5,96; 20,9] | 0 | [0; 0,07] | 3,39 | 11,31 | 0,022 | 20/20 |
+| 4 | NN | 9,53 | [3,89; 20,9] | 1,7 | [0; 6,69] | 11,39 | 14,53 | 0,006 | 20/20 |
+| 4 | NN + 2-opt | 11,58 | [5,96; 20,9] | 0 | [0; 0,07] | 3,39 | 11,31 | 0,02 | 20/20 |
+| 4 | NN + 2-opt + Or-opt | 11,63 | [5,96; 20,9] | 0 | [0; 0] | 0 | 0 | 0,059 | 20/20 |
 | 4 | Held–Karp | — | — | — | — | — | — | 0,019 | 20/20 |
 | 5 | thứ tự nhập | — | — | 35,3 | [30,39; 41,31] | 52,86 | 64,04 | 0 | 20/20 |
-| 5 | NN | 21,22 | [10,2; 25,07] | 6,63 | [1,24; 16,37] | 20,83 | 21,39 | 0,009 | 20/20 |
-| 5 | NN + 2-opt | 25,41 | [19,99; 27,49] | 0 | [0; 0,48] | 7,36 | 12,22 | 0,033 | 20/20 |
-| 5 | Held–Karp | — | — | — | — | — | — | 0,044 | 20/20 |
+| 5 | NN | 21,22 | [10,2; 25,07] | 6,63 | [1,24; 16,37] | 20,83 | 21,39 | 0,012 | 20/20 |
+| 5 | NN + 2-opt | 25,41 | [19,99; 27,49] | 0 | [0; 0,48] | 7,36 | 12,22 | 0,037 | 20/20 |
+| 5 | NN + 2-opt + Or-opt | 26,09 | [23,27; 29,2] | 0 | [0; 0] | 0 | 0 | 0,113 | 20/20 |
+| 5 | Held–Karp | — | — | — | — | — | — | 0,046 | 20/20 |
 | 6 | thứ tự nhập | — | — | 39,05 | [30,99; 54,7] | 61,16 | 64,12 | 0 | 20/20 |
-| 6 | NN | 24,57 | [16,46; 29,28] | 8,08 | [3,35; 12,91] | 16,54 | 24,53 | 0,01 | 20/20 |
+| 6 | NN | 24,57 | [16,46; 29,28] | 8,08 | [3,35; 12,91] | 16,54 | 24,53 | 0,011 | 20/20 |
 | 6 | NN + 2-opt | 27,84 | [23,63; 35,17] | 0 | [0; 0,71] | 1,64 | 13,85 | 0,046 | 20/20 |
-| 6 | Held–Karp | — | — | — | — | — | — | 0,106 | 20/20 |
+| 6 | NN + 2-opt + Or-opt | 28,08 | [23,63; 35,36] | 0 | [0; 0] | 0 | 0 | 0,163 | 20/20 |
+| 6 | Held–Karp | — | — | — | — | — | — | 0,107 | 20/20 |
 | 8 | thứ tự nhập | — | — | 57,53 | [45,05; 70,57] | 93,78 | 131,45 | 0 | 20/20 |
 | 8 | NN | 30,03 | [23,74; 35,44] | 9,27 | [6,6; 13,3] | 19,95 | 24,63 | 0,014 | 20/20 |
-| 8 | NN + 2-opt | 36,4 | [29,51; 40,45] | 0,19 | [0; 3,88] | 5,89 | 13,52 | 0,082 | 20/20 |
-| 8 | Held–Karp | — | — | — | — | — | — | 0,616 | 20/20 |
+| 8 | NN + 2-opt | 36,4 | [29,51; 40,45] | 0,19 | [0; 3,88] | 5,89 | 13,52 | 0,087 | 20/20 |
+| 8 | NN + 2-opt + Or-opt | 36,5 | [31,06; 41,31] | 0 | [0; 0] | 0 | 0 | 0,435 | 20/20 |
+| 8 | Held–Karp | — | — | — | — | — | — | 0,64 | 20/20 |
 | 10 | thứ tự nhập | — | — | 71,62 | [61,99; 81,83] | 89,6 | 136,76 | 0 | 20/20 |
-| 10 | NN | 32,37 | [28,59; 39,39] | 14,09 | [7,96; 20,25] | 23,05 | 34,51 | 0,022 | 20/20 |
-| 10 | NN + 2-opt | 41,04 | [36,79; 42,46] | 1,76 | [0; 5,06] | 8,61 | 14,07 | 0,147 | 20/20 |
-| 10 | Held–Karp | — | — | — | — | — | — | 3,814 | 20/20 |
+| 10 | NN | 32,37 | [28,59; 39,39] | 14,09 | [7,96; 20,25] | 23,05 | 34,51 | 0,024 | 20/20 |
+| 10 | NN + 2-opt | 41,04 | [36,79; 42,46] | 1,76 | [0; 5,06] | 8,61 | 14,07 | 0,154 | 20/20 |
+| 10 | NN + 2-opt + Or-opt | 41,73 | [38,27; 44,99] | 0 | [0; 0] | 0 | 0,81 | 1,245 | 20/20 |
+| 10 | Held–Karp | — | — | — | — | — | — | 4,237 | 20/20 |
 
-Dựng ma trận (một lần mỗi bộ): median 2,79 / 4,67 / 6,29 / 7,78 ms với n = 4 / 6 / 8 / 10; n = 5 (run sau, cùng máy) 3,84 ms. NN + 2-opt trùng tối ưu ở 45/80 bộ của run đầu. Hình: `fig_e5_tour.png` trong thư mục run đầu (chỉ có n = 4, 6, 8, 10; chưa vẽ lại với n = 5).
+**Or-opt so với NN + 2-opt** (cùng run, tính từng bộ):
+
+| Điểm giao | NN + 2-opt trùng tối ưu | Or-opt trùng tối ưu | Or-opt rẻ hơn NN + 2-opt | Median cải thiện thêm % | Median cải thiện thêm % (bộ được cải thiện) | Max cải thiện thêm % | Median thời gian thêm (ms) |
+|---|---|---|---|---|---|---|---|
+| 4 | 15/20 | 20/20 | 5/20 | 0 | 3,21 | 10,16 | 0,038 |
+| 5 | 14/20 | 20/20 | 6/20 | 0 | 5,97 | 10,89 | 0,07 |
+| 6 | 14/20 | 20/20 | 6/20 | 0 | 1,26 | 12,16 | 0,106 |
+| 8 | 10/20 | 20/20 | 10/20 | 0,19 | 3,93 | 11,91 | 0,338 |
+| 10 | 6/20 | 19/20 | 14/20 | 1,72 | 4,41 | 12,33 | 1,072 |
+| tất cả | 59/100 | 99/100 | 41/100 | 0 | 3,79 | 12,33 | 0,158 |
+
+Cải thiện thêm % = 100·(C_NN+2-opt − C_Or-opt)/C_NN+2-opt; "trùng tối ưu" khi chi phí bằng Held–Karp (chênh ≤ 10⁻⁶ s, mức làm tròn trong CSV); thời gian thêm = thời gian của Or-opt trừ thời gian của NN + 2-opt cùng bộ, tức phần chỉ do Or-opt.
+
+Dựng ma trận (một lần mỗi bộ): median 2,74 / 4,02 / 4,38 / 6,30 / 8,06 ms với n = 4 / 5 / 6 / 8 / 10. NN + 2-opt trùng tối ưu ở 59/100 bộ (45/80 nếu chỉ tính n = 4, 6, 8, 10 như run đầu). Hình: `fig_e5_tour.png` trong thư mục run 16/11 (n = 4–10, có Or-opt); hình cũ trong thư mục run 13/11 chỉ có n = 4, 6, 8, 10.
 
 **Diễn giải (không phải số đo):**
 
 - Sắp lại thứ tự có lợi rõ và lợi càng lớn khi nhiều điểm: NN + 2-opt rẻ hơn thứ tự nhập median 11,6% (n = 4) đến 41,0% (n = 10). Phần 2-opt cải thiện thêm so với NN, tính trên **từng bộ** (Improvement của NN + 2-opt trừ Improvement của NN cùng bộ) rồi lấy median: 0,36 / 4,56 / 4,40 / 4,87 / 6,01 điểm phần trăm với n = 4 / 5 / 6 / 8 / 10. (Hiệu giữa hai median trong bảng là 2,05 / 4,19 / 3,27 / 6,37 / 8,67 điểm với n = 4 / 5 / 6 / 8 / 10, khác vì median của hiệu khác hiệu của median.) Thứ tự nhập ở đây là thứ tự sinh ngẫu nhiên, nên Improvement đo so với một thứ tự ngẫu nhiên, không phải so với cách người điều phối thật xếp tuyến.
 - NN + 2-opt gần tối ưu: median gap 0–1,8%, p75 ≤ 5,1%. NN một mình kém hơn hẳn (median gap 1,7–14,1%).
-- Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) gấp khoảng 128 lần (n = 4) đến 53 lần (n = 10) thời gian sắp thứ tự bằng NN + 2-opt (dưới 0,15 ms). Held–Karp tăng nhanh theo n (median 0,019 → 0,106 → 0,616 → 3,814 ms), cùng chiều với độ phức tạp lý thuyết O(2ⁿ·n²). Mỗi phương án chỉ đo một lần mỗi bộ, theo thứ tự cố định, không warm-up riêng, nên bốn điểm đo này không đủ để xác nhận bậc tăng; chỉ dùng chúng để nói Held–Karp đắt dần và vì vậy chỉ làm đối chứng tới 10 điểm giao.
-- **Case demo không đại diện được bằng E5:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). Trong 20 bộ ngẫu nhiên cùng cỡ (n = 5, thêm ở R2), gap lớn nhất của NN + 2-opt chỉ 12,2% (p90 7,4%); trong cả 100 bộ (n = 4–10) lớn nhất là 14,1%. Vậy gap lớn như case demo không gặp trong 100 bộ ngẫu nhiên; case demo dùng để giải thích cực trị địa phương, không đại diện cho mức gap thường gặp. #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; **Or-opt chỉ dùng minh họa**: không nằm trong các phương án đo ở E5, nên không có số đo tổng quát nào về nó.
+- Thời gian: dựng ma trận (vài ms, n + 1 lần Dijkstra một-nguồn-nhiều-đích) gấp khoảng 140 lần (n = 4) đến 52 lần (n = 10) thời gian sắp thứ tự bằng NN + 2-opt (dưới 0,16 ms). Held–Karp tăng nhanh theo n (median 0,019 → 0,046 → 0,107 → 0,64 → 4,237 ms với n = 4 → 10), cùng chiều với độ phức tạp lý thuyết O(2ⁿ·n²). Mỗi phương án chỉ đo một lần mỗi bộ, theo thứ tự cố định, không warm-up riêng, nên năm điểm đo này không đủ để xác nhận bậc tăng; chỉ dùng chúng để nói Held–Karp đắt dần và vì vậy chỉ làm đối chứng tới 10 điểm giao.
+- **Or-opt (phần mở rộng, đo từ 16/11):** chạy tiếp từ NN + 2-opt, Or-opt ra đúng tour tối ưu ở 99/100 bộ; bộ còn lại (n = 10) gap 0,81% (NN + 2-opt ở bộ đó 1,64%). Gap lớn nhất giảm từ 11,3–14,1% (NN + 2-opt) xuống 0–0,81%. Or-opt rẻ hơn NN + 2-opt ở 41/100 bộ, nhiều hơn khi n lớn (5/20 ở n = 4, 14/20 ở n = 10); trên các bộ được cải thiện, median rẻ thêm 3,8%, nhiều nhất 12,3%. Giá phải trả là thời gian sắp thứ tự gấp khoảng 3 lần (n = 4) đến 8 lần (n = 10) NN + 2-opt (median 0,059 so với 0,020 ms; 1,245 so với 0,154 ms), vẫn nhỏ hơn thời gian dựng ma trận. Với n ≤ 6 Or-opt còn chậm hơn chính Held–Karp (0,059 / 0,113 / 0,163 so với 0,019 / 0,046 / 0,107 ms); từ n = 8 mới nhanh hơn (0,435 so với 0,64 ms; 1,245 so với 4,237 ms). Chỉ đo tới n = 10 (để có Held–Karp đối chiếu), 20 bộ mỗi n, một vùng; không suy ra cho n lớn hơn. Or-opt vẫn không dùng để chọn tour (`chosen` chỉ chọn trong thứ tự nhập, NN, NN + 2-opt).
+- **Case demo không đại diện được bằng E5:** ở bộ "Kho + 5 điểm giao" của T55, NN + 2-opt kém tối ưu 43% (tối ưu là tour NN đi ngược chiều; 2-opt nhận nước cải thiện đầu tiên nên kẹt cực trị địa phương trên ma trận bất đối xứng; Minh thấy từ 31/10). Trong 20 bộ ngẫu nhiên cùng cỡ (n = 5, thêm ở R2), gap lớn nhất của NN + 2-opt chỉ 12,2% (p90 7,4%); trong cả 100 bộ (n = 4–10) lớn nhất là 14,1%. Vậy gap lớn như case demo không gặp trong 100 bộ ngẫu nhiên; case demo dùng để giải thích cực trị địa phương, không đại diện cho mức gap thường gặp. #122 thêm Or-opt (tùy chọn) và tìm được tối ưu ở case demo; số đo tổng quát của Or-opt ở ý trên (trùng tối ưu 99/100 bộ).
 
 ## E5b — Tour sau khi đóng đường: giữ thứ tự cũ so với sắp lại (R2)
 

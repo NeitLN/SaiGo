@@ -149,8 +149,8 @@ export default function TourResults({ res, labels, selected, onSelect, scenarioL
       )}
       {m === 'nearest_neighbor_2opt_oropt' && (
         <Text type="supporting">
-          Phần mở rộng: Or-opt xen kẽ 2-opt, chạy tiếp từ NN + 2-opt. Không nằm trong các phương án đã đo ở E5,
-          nên không có số đo tổng quát; không dùng để chọn tour.
+          Phần mở rộng: Or-opt xen kẽ 2-opt, chạy tiếp từ NN + 2-opt. Ở E5 trùng tối ưu 99/100 bộ (4–10 điểm
+          giao); không dùng để chọn tour.
         </Text>
       )}
       {m === 'optimal' && (
