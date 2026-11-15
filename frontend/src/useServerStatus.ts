@@ -1,7 +1,7 @@
 // Trạng thái server và dataset (tách khỏi App.tsx sau review UI 14/11): badge "Server sẵn sàng", danh sách kịch
 // bản, id dataset và khung vùng dữ liệu. Hành vi giữ nguyên như trong App trước đây.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BASELINE, getDataset, getHealth, type BBox, type Scenario } from './api'
+import { BASELINE, getDataset, getEdgeNames, getHealth, type BBox, type Scenario } from './api'
 
 export interface ServerBadge { text: string; ok: boolean | null }
 
@@ -10,6 +10,8 @@ export function useServerStatus() {
   const [datasetId, setDatasetId] = useState<string | null>(null)
   // Số node của đồ thị: trục của thanh node ở khay phân tích (đợt UI "Bàn điều phối"), không viết cứng 1.889.
   const [nodeCount, setNodeCount] = useState<number | null>(null)
+  // Tên đường theo id cạnh (đánh giá dùng thử 16/11), cho danh sách đóng đoạn; lỗi hay backend cũ thì để rỗng.
+  const [edgeNames, setEdgeNames] = useState<(string | null)[]>([])
   const [dataArea, setDataArea] = useState<BBox | null>(null)   // viền vùng có dữ liệu (PM-7, UX-3)
   const [scenarios, setScenarios] = useState<Scenario[]>([BASELINE])
   const [scenarioNote, setScenarioNote] = useState<string | null>(null)
@@ -39,6 +41,7 @@ export function useServerStatus() {
         setScenarioNote(null)
         setDatasetId(d.dataset_id)
         setNodeCount(d.node_count ?? null)
+        getEdgeNames().then((n) => setEdgeNames(n.names)).catch(() => setEdgeNames([]))
         if (d.scenarios.length) setScenarios(d.scenarios)
         setDataArea(d.bbox ?? null)
       })
@@ -79,5 +82,5 @@ export function useServerStatus() {
     }
   }, [loadDataset])
 
-  return { server, datasetId, nodeCount, dataArea, scenarios, scenarioNote, checkServer, markServerUp }
+  return { server, datasetId, nodeCount, edgeNames, dataArea, scenarios, scenarioNote, checkServer, markServerUp }
 }

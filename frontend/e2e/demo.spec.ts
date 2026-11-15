@@ -254,3 +254,16 @@ test('Tour: so với Cơ sở dùng cùng thứ tự giao, cao điểm không ba
   await expect(line).toContainText('+')
   await expect(line).not.toContainText('−')
 })
+
+test('Danh sách đóng đoạn ghi tên đường khi dữ liệu OSM có tên', async ({ page }) => {
+  await choose(page, 'Lộ trình mẫu', 'Hai điểm qua trung tâm')
+  await expectAll(page, ['186,1'])
+  await page.getByRole('combobox', { name: 'Đóng một đoạn trên tuyến' }).click()
+  const options = page.getByRole('option')
+  await expect(options.first()).toBeVisible()
+  const labels = await options.allInnerTexts()
+  // Có tên thì sau "Đoạn i/n: " là chữ, không phải số mét.
+  const named = labels.filter((t) => /^Đoạn \d+\/\d+: [^\d]/.test(t.trim()))
+  expect(named.length, labels.join(' | ')).toBeGreaterThan(labels.length / 2)
+  await page.keyboard.press('Escape')
+})

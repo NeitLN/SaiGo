@@ -16,6 +16,7 @@ frontend/dist/
 data/raw/
 data/processed/*
 !data/processed/*manifest.json
+!data/processed/street-names-*.json
 *.graphml
 cache/
 

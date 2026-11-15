@@ -120,6 +120,7 @@ results/             <run_id>/queries.csv, measurements.csv, env.json
 | GET | `/api/dataset` | `dataset_id`, số node/cạnh, danh sách kịch bản | T51 |
 | POST | `/api/route` | Tìm đường giữa hai điểm | T13 (skeleton), T51 |
 | POST | `/api/tour` | Tour nhiều điểm | T72 |
+| GET | `/api/edge-names` | Tên đường của từng cạnh: `{"dataset_id", "names": [tên hoặc null theo id cạnh]}`, lấy từ bảng phụ `data/processed/street-names-20261024.json` (mã đường OSM → tên, dựng bằng `scripts/build_street_names.py` từ GraphML thô, sha256 nguồn ghi trong file; không sửa file đồ thị). Thiếu bảng thì mọi tên là null. Dùng cho danh sách đóng đoạn (16/11) | Đánh giá 16/11 |
 | GET | `/api/network` | Mạng đường của vùng đang nạp, **chỉ** để vẽ nền khi không tải được tile; từ 15/11 thêm `kinds[i]` = loại đường OSM của `lines[i]` để vẽ đường chính / phụ (chỉ thêm trường) | T56 (R8) |
 | GET | `/api/snap?lat=&lon=` | Node gần nhất (trong SCC) và khoảng cách, `ok` theo ngưỡng 150 m như `/api/route`, `/api/tour`; UI kiểm điểm ngay lúc bấm. `/api/dataset` thêm `bbox` (khung bao mọi node) để vẽ viền vùng có dữ liệu | Review UI 14/11 |
 

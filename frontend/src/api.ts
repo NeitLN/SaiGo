@@ -183,6 +183,15 @@ export interface NetworkResponse {
   kinds?: (string | null)[]   // loại đường OSM của lines[i] (thêm 15/11); backend cũ không có
 }
 
+/** Tên đường của từng cạnh (`names[edge_id]`, null khi OSM không ghi tên); thêm 16/11. Backend cũ không có thì 404. */
+export interface EdgeNamesResponse { dataset_id: string; names: (string | null)[] }
+
+export async function getEdgeNames(): Promise<EdgeNamesResponse> {
+  const res = await fetch('/api/edge-names')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function getNetwork(): Promise<NetworkResponse> {
   const res = await fetch('/api/network')
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

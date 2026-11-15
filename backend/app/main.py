@@ -15,6 +15,7 @@ from app.api.errors import validation_error_handler
 from app.api.routes import router
 from app.graph.closures import reverse_twins
 from app.graph.model import load_graph
+from app.graph.street_names import edge_names, load_street_names
 from app.graph.scenario import load_scenarios
 from app.services.routing import network_kinds, network_lines
 
@@ -31,6 +32,11 @@ def _repo_path(raw: str) -> Path:
 def get_graph_path() -> Path:
     """Lấy đường dẫn file đồ thị từ biến môi trường SAIGO_GRAPH hoặc mặc định tests/fixtures/mini.json."""
     return _repo_path(os.environ.get("SAIGO_GRAPH", "tests/fixtures/mini.json"))
+
+
+def get_street_names_path() -> Path:
+    """Bảng tên đường (tùy chọn) từ SAIGO_STREET_NAMES, mặc định data/processed/street-names-20261024.json."""
+    return _repo_path(os.environ.get("SAIGO_STREET_NAMES", "data/processed/street-names-20261024.json"))
 
 
 def get_scenarios_path() -> Path:
@@ -62,6 +68,8 @@ async def lifespan(app: FastAPI):
     # Nền dự phòng khi không tải được tile OSM (T56 R8): dựng một lần, request chỉ trả lại.
     app.state.network = network_lines(graph, meta, app.state.twins)
     app.state.network_kinds = network_kinds(graph, meta, app.state.twins)
+    # Tên đường theo cạnh (đánh giá dùng thử 16/11): bảng phụ, thiếu thì mọi cạnh là None.
+    app.state.edge_names = edge_names(meta.edge_way_ids, load_street_names(get_street_names_path()))
 
     app.state.graph = graph
     app.state.meta = meta

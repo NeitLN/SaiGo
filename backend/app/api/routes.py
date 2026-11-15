@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from app.api.schemas import (BBox, DatasetResponse, HealthResponse, NetworkResponse, RouteRequest, RouteResponse,
+from app.api.schemas import (BBox, DatasetResponse, EdgeNamesResponse, HealthResponse, NetworkResponse, RouteRequest, RouteResponse,
                              SnapCheckResponse, TourRequest, TourResponse)
 from app.graph.model import Graph, GraphMeta
 from app.graph.snap import SnapError, nearest_node
@@ -78,6 +78,14 @@ def network(request: Request) -> NetworkResponse:
     graph, _ = _loaded(request)
     return NetworkResponse(dataset_id=graph.dataset_id, lines=request.app.state.network,
                            kinds=request.app.state.network_kinds)
+
+
+@router.get("/edge-names", response_model=EdgeNamesResponse)
+def edge_names(request: Request) -> EdgeNamesResponse:
+    """Tên đường của từng cạnh (bảng phụ từ OSM thô), cho danh sách đóng đoạn ghi tên đường (đánh giá 16/11)."""
+    graph, _ = _loaded(request)
+    names = getattr(request.app.state, "edge_names", None) or [None] * len(graph.edge_u)
+    return EdgeNamesResponse(dataset_id=graph.dataset_id, names=names)
 
 
 @router.post("/route", response_model=RouteResponse)
