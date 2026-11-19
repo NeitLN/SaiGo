@@ -1,8 +1,8 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 06:25 19/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 06:37 20/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=44420526396)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=44639211930)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
 - **Đã đóng:** 123 giờ — có bằng chứng (PR/commit) 121 giờ, **đóng tay chưa có PR 2 giờ** · **Còn lại:** 13 giờ, 3 task mở
@@ -37,13 +37,6 @@ _Tự động cập nhật 06:25 19/11/2026 (giờ VN) bởi workflow `tracking.
 - 14/11 · #35 T73 · UI tour tối giản (3 h, qua PR)
 - 14/11 · #28 T63 · Thí nghiệm ùn tắc và đóng đường (3 h, qua commit)
 - 14/11 · #27 T62 · Chạy thí nghiệm tăng quy mô (3 h, qua PR)
-- 13/11 · #78 T34 · Đưa dữ liệu thô lên Release và kiểm hash trên 2 máy (2 h, qua commit)
-- 13/11 · #34 T72 · Ma trận chi phí từ đồ thị và `/api/tour` (4 h, qua commit)
-- 13/11 · #26 T61 · Cắt lồng nhau cho thí nghiệm tăng quy mô (3 h, qua commit)
-- 13/11 · #23 T54 · UI: đóng đoạn đường và báo không có đường (3 h, qua commit)
-- 13/11 · #20 T51 · API `/api/route` và `/api/dataset` (3 h, qua PR)
-- 13/11 · #15 T33 · Dijkstra/A* trên đồ thị thật + đối chứng 200 cặp (3 h, qua PR)
-- 13/11 · #8 T12 · CLI tìm đường (2 h, qua PR)
 
 ### Ghi chú
 
