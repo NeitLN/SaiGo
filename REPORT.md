@@ -1,8 +1,8 @@
 ## 📉 Burndown SaiGo
 
-_Tự động cập nhật 06:37 20/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
+_Tự động cập nhật 06:09 21/11/2026 (giờ VN) bởi workflow `tracking.yml` từ trạng thái issue/PR thật. Số những ngày đã qua được chốt cuối ngày và không bị sửa lại; số hôm nay là tạm tính. Cách tính ở đầu file `scripts/tracking/burndown.py`._
 
-![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=44639211930)
+![Burndown](https://raw.githubusercontent.com/NeitLN/SaiGo/tracking/burndown.png?v=44834624267)
 
 - **Phạm vi hiện tại:** 136 giờ ước lượng, 46 task (đã cắt 3 giờ)
 - **Đã đóng:** 123 giờ — có bằng chứng (PR/commit) 121 giờ, **đóng tay chưa có PR 2 giờ** · **Còn lại:** 13 giờ, 3 task mở
@@ -32,11 +32,6 @@ _Tự động cập nhật 06:37 20/11/2026 (giờ VN) bởi workflow `tracking.
 
 - 15/11 · #37 T80 · Đóng băng tính năng và chạy trên máy thứ hai (3 h, qua PR)
 - 15/11 · #31 T65 · Ghi kết quả vào EXPERIMENTS.md (3 h, qua commit)
-- 14/11 · #38 T81 · Đồng bộ tài liệu (2 h, **đóng tay, chưa có PR**)
-- 14/11 · #36 T74 · Benchmark tour (3 h, qua commit)
-- 14/11 · #35 T73 · UI tour tối giản (3 h, qua PR)
-- 14/11 · #28 T63 · Thí nghiệm ùn tắc và đóng đường (3 h, qua commit)
-- 14/11 · #27 T62 · Chạy thí nghiệm tăng quy mô (3 h, qua PR)
 
 ### Ghi chú
 
